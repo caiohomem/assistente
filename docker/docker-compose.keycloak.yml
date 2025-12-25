@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # ============================================
+      # Configuração para proxy reverso (tunnel HTTPS)
+      # ============================================
+      # Hostname público do Keycloak (usado para gerar URLs corretas)
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      # Proxy headers - necessário quando Keycloak está atrás de proxy reverso
+      KC_PROXY_HEADERS: xforwarded
+      KC_PROXY: edge
+      KC_HTTP_RELATIVE_PATH: /
+      # ============================================
+      # OPÇÃO 1: Sem banco de dados (H2 em memória)
+      # Deixe as linhas abaixo comentadas para usar H2
+      # ============================================
+      
+      # ============================================
+      # OPÇÃO 2: Com SQL Server (descomente abaixo)
+      # ============================================
+      # KC_DB: mssql
+      # KC_DB_URL: jdbc:sqlserver://192.168.1.215:1433;databaseName=keycloak;encrypt=false;trustServerCertificate=true
+      # KC_DB_USERNAME: keycloak
+      # KC_DB_PASSWORD: 123
+      
+      # Para usar modo produção, altere o command para: start
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - keycloak_import:/opt/keycloak/data/import
+      # Theme customizado Assistente Executivo
+      - ../keycloak/themes/assistenteexecutivo:/opt/keycloak/themes/assistenteexecutivo
+    # extra_hosts permite acesso a serviços no host (SQL Server, SMTP, etc)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - keycloak-network
+    restart: unless-stopped
+
+volumes:
+  keycloak_data:
+    driver: local
+  keycloak_import:
+    driver: local
+
+networks:
+  keycloak-network:
+    driver: bridge

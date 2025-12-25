@@ -1,0 +1,25 @@
+name: assistente_executivo_app
+description: Assistente Executivo (Flutter) - PKCE login + protected call
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_appauth: ^6.0.0
+  flutter_secure_storage: ^9.2.2
+  http: ^1.2.2
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+
