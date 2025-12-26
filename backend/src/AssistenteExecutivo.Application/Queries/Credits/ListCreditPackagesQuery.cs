@@ -8,3 +8,4 @@ public class ListCreditPackagesQuery : IRequest<List<CreditPackageDto>>
     public bool IncludeInactive { get; set; } = false;
 }
 
+

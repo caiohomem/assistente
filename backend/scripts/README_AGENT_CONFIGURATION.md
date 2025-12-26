@@ -74,3 +74,4 @@ Após inserir o prompt inicial, você pode editá-lo através da interface web:
 ### O prompt não está sendo usado
 - **Solução**: Verifique se o serviço `QwenOcrRefinementService` está configurado corretamente e se o repositório está registrado no `DependencyInjection.cs`
 
+

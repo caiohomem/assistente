@@ -10,3 +10,4 @@ public interface IAgentConfigurationRepository
     Task UpdateAsync(AgentConfiguration configuration, CancellationToken cancellationToken = default);
 }
 
+

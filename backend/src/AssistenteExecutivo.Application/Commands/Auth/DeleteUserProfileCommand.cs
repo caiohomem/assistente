@@ -7,3 +7,4 @@ public class DeleteUserProfileCommand : IRequest<Unit>
     public Guid UserId { get; set; }
 }
 
+

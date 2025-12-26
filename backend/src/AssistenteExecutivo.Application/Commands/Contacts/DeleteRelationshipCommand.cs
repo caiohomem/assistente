@@ -8,3 +8,4 @@ public class DeleteRelationshipCommand : IRequest
     public Guid OwnerUserId { get; set; }
 }
 
+

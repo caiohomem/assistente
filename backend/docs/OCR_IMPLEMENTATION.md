@@ -195,3 +195,4 @@ Após implementar, teste com:
 6. Testar com dados reais
 7. Remover ou manter `StubOcrProvider` para desenvolvimento
 
+

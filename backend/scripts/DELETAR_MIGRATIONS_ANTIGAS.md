@@ -30,3 +30,4 @@ dotnet ef database update --project backend\src\AssistenteExecutivo.Infrastructu
 
 Isso aplicará apenas a migration `InitialPostgreSQL` que está configurada para PostgreSQL.
 
+

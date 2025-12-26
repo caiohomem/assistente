@@ -17,3 +17,4 @@ public class PurchaseCreditPackageResult
     public decimal CreditsAdded { get; set; }
 }
 
+

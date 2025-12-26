@@ -42,3 +42,4 @@ Se preferir manter as migrations existentes, você pode:
 
 As migrations SQL Server geralmente funcionam no PostgreSQL com pequenos ajustes, mas o snapshot precisa ser regenerado para PostgreSQL.
 
+

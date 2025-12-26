@@ -86,3 +86,4 @@ O theme suporta dark mode automaticamente quando o Keycloak detecta a preferênc
 - CSS é carregado automaticamente pelo Keycloak
 - Mudanças requerem restart do Keycloak para serem aplicadas
 
+

@@ -170,3 +170,4 @@ curl -X POST "http://localhost:8000/ocr" \
 
 Isso retornará informações adicionais como tamanho da imagem, tipo de resultado, etc.
 
+

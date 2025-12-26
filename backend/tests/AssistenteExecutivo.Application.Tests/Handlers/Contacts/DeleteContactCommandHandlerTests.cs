@@ -78,3 +78,4 @@ public class DeleteContactCommandHandlerTests : HandlerTestBase
 }
 
 
+

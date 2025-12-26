@@ -133,3 +133,4 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
         };
     }
 }
+

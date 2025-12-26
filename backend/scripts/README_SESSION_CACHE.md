@@ -58,3 +58,4 @@ DELETE FROM [dbo].[SessionCache] WHERE [ExpiresAtTime] < SYSDATETIMEOFFSET();
 - As sessões são armazenadas de forma segura no banco de dados
 
 
+

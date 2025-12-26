@@ -36,3 +36,4 @@ public class AgentConfigurationConfiguration : IEntityTypeConfiguration<AgentCon
     }
 }
 
+

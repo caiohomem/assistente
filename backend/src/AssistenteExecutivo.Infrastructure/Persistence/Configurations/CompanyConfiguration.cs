@@ -49,3 +49,4 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
 }
 
 
+

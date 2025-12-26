@@ -207,3 +207,4 @@
 - Logs indicam que o cookie `ae.sid` não está sendo enviado nas requisições
 - Backend pode não estar executando o código mais recente (sem logs no arquivo de debug)
 
+

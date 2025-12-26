@@ -472,3 +472,4 @@ O código está **bem estruturado** em geral, com boa separação CQRS e entidad
 Com as refatorações sugeridas, o código estará alinhado com as melhores práticas de Clean Code e DDD.
 
 
+
