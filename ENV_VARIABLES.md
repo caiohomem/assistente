@@ -23,6 +23,13 @@ ConnectionStrings__DefaultConnection="Host=...;Database=...;Username=...;Passwor
   - PostgreSQL: `Host=...;Database=...;Username=...;Password=...;SSL Mode=Require;`
   - SQL Server: `Server=...;Database=...;User Id=...;Password=...;`
 
+#### Redis (Sessão BFF / OAuth state)
+```bash
+ConnectionStrings__Redis="10.0.0.5:6379"
+```
+- **Descrição**: Redis para `IDistributedCache` (necessário em Cloud Run quando usando PostgreSQL, para não perder sessão/state entre instâncias)
+- **Exemplo (com senha/SSL)**: `host:6379,password=...,ssl=True,abortConnect=False`
+
 #### Keycloak (Autenticação)
 ```bash
 Keycloak__BaseUrl="http://localhost:8080"                    # URL interna do Keycloak

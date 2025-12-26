@@ -269,7 +269,29 @@ try
         // Nota: .NET não tem suporte nativo para PostgreSQL distributed cache
         // Usando Memory Cache como fallback (sessões serão perdidas ao reiniciar)
         // Para produção, considere usar Redis ou implementar um provider customizado
-        builder.Services.AddDistributedMemoryCache();
+        // PostgreSQL - preferir Redis (recomendado) para suportar Cloud Run com mais de 1 instAcncia.
+        // Sem Redis, a sessAćo pode cair em instAcncia diferente e perder OAuth state / tokens.
+        var redisConnectionString =
+            builder.Configuration.GetConnectionString("Redis")
+            ?? builder.Configuration["Redis:ConnectionString"]
+            ?? builder.Configuration["Redis:Configuration"];
+
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnectionString;
+                options.InstanceName = "ae:";
+            });
+        }
+        else
+        {
+            if (!builder.Environment.IsDevelopment())
+            {
+                Log.Warning("PostgreSQL detected for SessionCache but Redis is not configured. In Cloud Run with multiple instances this can cause OAuth invalid_state and BFF session loss.");
+            }
+            builder.Services.AddDistributedMemoryCache();
+        }
     }
     else
     {
@@ -300,7 +322,9 @@ try
         options.Cookie.Name = "ae.sid";
         
         // Configurar Domain para funcionar entre subdomínios quando usando PublicBaseUrl
-        if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl) && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri))
+        if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl)
+            && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri)
+            && !apiUri.Host.EndsWith(".run.app", StringComparison.OrdinalIgnoreCase))
         {
             // Extrair o domínio base (ex: callback-local-cchagas.xyz)
             var host = apiUri.Host;
@@ -314,7 +338,8 @@ try
                     : string.Join(".", parts.Skip(parts.Length - 2)); // Para .com, .xyz, etc
                 
                 // Configurar Domain com ponto inicial para funcionar em todos os subdomínios
-                options.Cookie.Domain = $".{domainBase}";
+                // NOTE: Do not set Cookie.Domain. Host-only cookies avoid issues on *.run.app and
+                // when Api:PublicBaseUrl doesn't match the current host.
             }
         }
     });
