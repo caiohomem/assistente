@@ -1,0 +1,274 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "tryAgain": "Réessayer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "loginDescription": "La connexion se fait via Keycloak (redirection par le backend BFF).",
+    "loginButton": "Se connecter",
+    "loginWithGoogle": "Se connecter avec Google (si configuré)",
+    "forgotPassword": "J'ai oublié mon mot de passe",
+    "goToProtectedPage": "Aller à la page protégée",
+    "session": "Session (BFF)",
+    "checkSession": "Consulter /auth/session",
+    "sessionDescription": "Cliquez sur \"Consulter /auth/session\" pour obtenir le token CSRF et l'état d'authentification.",
+    "sessionError": "Échec de la consultation de la session."
+  },
+  "contacts": {
+    "title": "Contacts",
+    "newContact": "Nouveau contact",
+    "editContact": "Modifier le contact",
+    "contactDetails": "Détails du contact",
+    "contactList": "Liste des contacts",
+    "noContacts": "Aucun contact trouvé",
+    "noContactsDescription": "Commencez par ajouter votre premier contact.",
+    "addContact": "Ajouter un contact",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "firstNameRequired": "Le prénom est obligatoire",
+    "lastNameRequired": "Le nom est obligatoire",
+    "emails": "E-mails",
+    "phones": "Téléphones",
+    "jobTitle": "Titre du poste",
+    "company": "Entreprise",
+    "address": "Adresse",
+    "street": "Rue",
+    "city": "Ville",
+    "state": "État/Province",
+    "zipCode": "Code postal",
+    "country": "Pays",
+    "addEmail": "Ajouter un e-mail",
+    "removeEmail": "Retirer l'e-mail",
+    "addPhone": "Ajouter un téléphone",
+    "removePhone": "Retirer le téléphone",
+    "invalidEmail": "E-mail invalide",
+    "invalidPhone": "Téléphone invalide",
+    "saveContact": "Enregistrer le contact",
+    "cancelEdit": "Annuler",
+    "deleteContact": "Supprimer le contact",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce contact ?",
+    "errorSaving": "Erreur lors de l'enregistrement du contact",
+    "errorLoading": "Erreur lors du chargement des contacts",
+    "errorDeleting": "Erreur lors de la suppression du contact",
+    "contactSaved": "Contact enregistré avec succès",
+    "contactDeleted": "Contact supprimé avec succès",
+    "searchPlaceholder": "Rechercher des contacts...",
+    "totalContacts": "Total de contacts",
+    "page": "Page",
+    "of": "sur",
+    "uploadBusinessCard": "Télécharger une carte de visite",
+    "uploadBusinessCardDescription": "Téléchargez une image de carte de visite pour extraire automatiquement les informations à l'aide de l'OCR.",
+    "selectFile": "Sélectionner un fichier",
+    "upload": "Télécharger",
+    "reset": "Réinitialiser",
+    "uploadSuccess": "Carte de visite téléchargée avec succès",
+    "uploadError": "Erreur lors du téléchargement de la carte de visite",
+    "processing": "Traitement en cours...",
+    "notes": "Notes",
+    "audioNotes": "Notes audio",
+    "noNotes": "Aucune note",
+    "addNote": "Ajouter une note",
+    "noteType": {
+      "text": "Texte",
+      "audio": "Audio",
+      "image": "Image"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue dans l'Assistant Exécutif",
+    "welcomeDescription": "Gérez vos contacts, notes et crédits efficacement",
+    "loading": "Chargement du tableau de bord...",
+    "error": "Erreur lors du chargement des données du tableau de bord",
+    "creditBalance": "Solde de crédits",
+    "transactionsPerformed": "transactions effectuées",
+    "totalContacts": "Total de contacts",
+    "contacts": "Contacts",
+    "contactsDescription": "Gérez tous vos contacts professionnels en un seul endroit",
+    "credits": "Crédits",
+    "creditsDescription": "Visualisez votre solde et l'historique des transactions",
+    "uploadMedia": "Télécharger des médias",
+    "uploadMediaDescription": "Téléchargez des cartes de visite et d'autres fichiers",
+    "balance": "Solde",
+    "contact": "contact",
+    "contactsPlural": "contacts",
+    "registered": "enregistré",
+    "registeredPlural": "enregistrés",
+    "recentActivities": "Activités récentes",
+    "transactionTypes": {
+      "grant": "Accordé",
+      "purchase": "Acheté",
+      "consume": "Consommé",
+      "refund": "Remboursé",
+      "expire": "Expiré",
+      "reserve": "Réservé"
+    }
+  },
+  "relationships": {
+    "title": "Nouvelle Relation",
+    "addRelationship": "Ajouter une Relation",
+    "targetContact": "Contact Cible",
+    "selectTargetContact": "Sélectionnez le contact associé",
+    "type": "Type de Relation",
+    "selectType": "Sélectionnez le type",
+    "description": "Description",
+    "descriptionPlaceholder": "Décrivez la relation (optionnel)",
+    "strength": "Force de la Relation",
+    "strengthDescription": "De 0 à 100%",
+    "isConfirmed": "Relation Confirmée",
+    "create": "Créer la Relation",
+    "creating": "Création...",
+    "errorCreating": "Erreur lors de la création de la relation",
+    "successCreating": "Relation créée avec succès",
+    "cannotRelateToSelf": "Impossible de créer une relation avec vous-même",
+    "duplicateRelationship": "Une relation avec ce contact existe déjà",
+    "types": {
+      "colleague": "Collègue",
+      "friend": "Ami",
+      "family": "Famille",
+      "client": "Client",
+      "supplier": "Fournisseur",
+      "partner": "Partenaire",
+      "other": "Autre"
+    }
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite",
+    "network": "Erreur de réseau",
+    "unauthorized": "Non autorisé",
+    "forbidden": "Accès interdit",
+    "notFound": "Ressource non trouvée",
+    "serverError": "Erreur du serveur",
+    "validation": "Erreur de validation"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalidEmail": "E-mail invalide",
+    "invalidPhone": "Téléphone invalide",
+    "invalidFormat": "Format invalide"
+  },
+  "landing": {
+    "header": {
+      "navFeatures": "Fonctionnalités",
+      "navPricing": "Tarifs",
+      "navLogin": "Se connecter",
+      "ctaStart": "Commencer",
+      "selectLanguage": "Sélectionner la langue"
+    },
+    "hero": {
+      "title": "Votre Assistant Exécutif",
+      "titleHighlight": "Intelligent",
+      "subtitle": "Gérez vos contacts, notes et tâches avec l'intelligence artificielle. Transformez votre productivité avec des outils professionnels.",
+      "ctaPrimary": "Commencer Gratuitement",
+      "ctaSecondary": "En Savoir Plus"
+    },
+    "features": {
+      "title": "Fonctionnalités Puissantes",
+      "subtitle": "Tout ce dont vous avez besoin pour gérer vos contacts et augmenter votre productivité",
+      "items": [
+        {
+          "title": "Gestion des Contacts",
+          "description": "Organisez et gérez tous vos contacts professionnels en un seul endroit"
+        },
+        {
+          "title": "Notes Intelligentes",
+          "description": "Créez et organisez des notes avec catégorisation automatique et recherche avancée"
+        },
+        {
+          "title": "Système de Crédits",
+          "description": "Contrôle flexible d'utilisation avec système de crédits et rapports détaillés"
+        },
+        {
+          "title": "Sécurité Avancée",
+          "description": "Vos données protégées par chiffrement et authentification sécurisée"
+        },
+        {
+          "title": "Performance Optimisée",
+          "description": "Interface rapide et réactive pour une productivité maximale"
+        },
+        {
+          "title": "Support Dédié",
+          "description": "Équipe prête à vous aider à tirer le meilleur parti de la plateforme"
+        }
+      ]
+    },
+    "pricing": {
+      "title": "Plans et Tarifs",
+      "subtitle": "Choisissez le plan idéal pour vos besoins",
+      "plans": [
+        {
+          "name": "Basique",
+          "price": "29€/mois",
+          "features": [
+            "Jusqu'à 100 contacts",
+            "500 notes",
+            "1 000 crédits/mois",
+            "Support par email",
+            "Mises à jour régulières"
+          ]
+        },
+        {
+          "name": "Professionnel",
+          "price": "79€/mois",
+          "highlighted": true,
+          "features": [
+            "Contacts illimités",
+            "Notes illimitées",
+            "5 000 crédits/mois",
+            "Support prioritaire",
+            "Fonctionnalités avancées",
+            "Accès API"
+          ]
+        },
+        {
+          "name": "Entreprise",
+          "price": "Sur devis",
+          "features": [
+            "Tout du Professionnel",
+            "Crédits illimités",
+            "Support 24/7",
+            "Formation personnalisée",
+            "Gestion d'équipe",
+            "SLA garanti"
+          ]
+        }
+      ],
+      "popular": "Populaire",
+      "selectPlan": "Sélectionner le Plan",
+      "errorLoadingPlans": "Impossible de charger les plans du serveur. Affichage des informations par défaut."
+    },
+    "footer": {
+      "description": "Transformez votre productivité avec des outils professionnels de gestion de contacts et de notes.",
+      "product": "Produit",
+      "support": "Support",
+      "navFeatures": "Fonctionnalités",
+      "navPricing": "Tarifs",
+      "navLogin": "Se connecter",
+      "documentation": "Documentation",
+      "contact": "Contact",
+      "faq": "FAQ",
+      "copyright": "© {year} AssistenteExecutivo. Tous droits réservés.",
+      "terms": "Conditions",
+      "privacy": "Confidentialité"
+    }
+  }
+}
+

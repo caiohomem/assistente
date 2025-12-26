@@ -1,0 +1,337 @@
+{
+  "common": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "create": "Crea",
+    "search": "Cerca",
+    "clear": "Pulisci",
+    "loading": "Caricamento in corso...",
+    "saving": "Salvataggio in corso...",
+    "saved": "Salvato",
+    "error": "Errore",
+    "success": "Successo",
+    "retry": "Riprova",
+    "back": "Indietro",
+    "next": "Successivo",
+    "previous": "Precedente",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "yes": "Sì",
+    "no": "No",
+    "required": "Obbligatorio",
+    "optional": "Opzionale"
+  },
+  "auth": {
+    "login": "Accedi",
+    "logout": "Esci",
+    "forgotPassword": "Password dimenticata",
+    "resetPassword": "Reimposta password",
+    "loginDescription": "L'accesso viene effettuato tramite Keycloak (reindirizzamento tramite backend BFF).",
+    "loginWithGoogle": "Accedi con Google (se configurato)",
+    "goToProtectedPage": "Vai alla pagina protetta",
+    "session": "Sessione (BFF)",
+    "checkSession": "Consulta /auth/session",
+    "checkingSession": "Controllo in corso...",
+    "sessionInfo": "Fai clic su \"Consulta /auth/session\" per ottenere il token CSRF e lo stato di autenticazione.",
+    "sessionError": "Errore durante la consulta della sessione."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Benvenuto nell'Assistente Esecutivo",
+    "welcomeDescription": "Gestisci i tuoi contatti, note e crediti in modo efficiente",
+    "loading": "Caricamento dashboard...",
+    "error": "Errore durante il caricamento dei dati del dashboard",
+    "creditBalance": "Saldo Crediti",
+    "transactionsPerformed": "transazioni effettuate",
+    "totalContacts": "Totale Contatti",
+    "contacts": "Contatti",
+    "contactsDescription": "Gestisci tutti i tuoi contatti professionali in un unico posto",
+    "credits": "Crediti",
+    "creditsDescription": "Visualizza il tuo saldo e la cronologia delle transazioni",
+    "uploadMedia": "Carica Media",
+    "uploadMediaDescription": "Carica biglietti da visita e altri file",
+    "balance": "Saldo",
+    "contact": "contatto",
+    "contactsPlural": "contatti",
+    "registered": "registrato",
+    "registeredPlural": "registrati",
+    "recentActivities": "Ultime Attività",
+    "transactionTypes": {
+      "grant": "Concesso",
+      "purchase": "Acquistato",
+      "consume": "Consumato",
+      "refund": "Rimborsato",
+      "expire": "Scaduto",
+      "reserve": "Riservato"
+    }
+  },
+  "contacts": {
+    "title": "Contatos",
+    "newContact": "Nuovo Contatto",
+    "editContact": "Modifica Contatto",
+    "contactDetails": "Dettagli Contatto",
+    "contactFound": "contatto trovato",
+    "contactsFound": "contatti trovati",
+    "searchPlaceholder": "Cerca per nome, email, telefono, azienda...",
+    "searching": "Ricerca in corso...",
+    "loadingContacts": "Caricamento contatti...",
+    "noContacts": "Nessun contatto registrato ancora.",
+    "noContactsWithFilters": "Nessun contatto trovato con i filtri applicati.",
+    "createFirstContact": "Crea primo contatto",
+    "firstName": "Nome",
+    "lastName": "Cognome",
+    "emails": "Email",
+    "phones": "Telefoni",
+    "company": "Azienda",
+    "jobTitle": "Ruolo",
+    "address": "Indirizzo",
+    "street": "Via",
+    "city": "Città",
+    "state": "Stato/Provincia",
+    "zipCode": "CAP",
+    "country": "Paese",
+    "addEmail": "Aggiungi email",
+    "addPhone": "Aggiungi telefono",
+    "remove": "Rimuovi",
+    "firstNameRequired": "Il nome è obbligatorio",
+    "invalidEmail": "Email non valida",
+    "invalidPhone": "Telefono non valido",
+    "errorSavingContact": "Errore durante il salvataggio del contato",
+    "errorLoadingContact": "Errore durante il caricamento del contato",
+    "errorLoadingContacts": "Errore durante il caricamento dei contatti",
+    "contactSaved": "Contatto salvato con successo",
+    "contactUpdated": "Contatto aggiornato con successo",
+    "showing": "Mostrando",
+    "to": "a",
+    "of": "di",
+    "results": "risultati",
+    "pagination": {
+      "previous": "Precedente",
+      "next": "Successiva"
+    }
+  },
+  "uploadCard": {
+    "title": "Carica Biglietto da Visita",
+    "description": "Carica un'immagine del biglietto da visita per estrarre automaticamente le informazioni utilizzando OCR.",
+    "selectImage": "Seleziona Immagine",
+    "imageFile": "File Immagine",
+    "preview": "Anteprima",
+    "acceptedFormats": "Formati accettati: JPEG, PNG, WebP. Dimensione massima: 10MB.",
+    "uploadAndProcess": "Carica e Elabora",
+    "uploading": "Caricamento in corso...",
+    "processingOcr": "Elaborazione OCR in corso...",
+    "clear": "Pulisci",
+    "ocrResult": "Risultato OCR",
+    "ocrResultDescription": "Rivedi e modifica le informazioni estratte prima di salvare il contatto.",
+    "firstName": "Nome *",
+    "lastName": "Cognome",
+    "email": "Email",
+    "phone": "Telefono",
+    "company": "Azienda",
+    "jobTitle": "Ruolo",
+    "extractionConfidence": "Confidenza dell'Estrazione",
+    "saveContact": "Salva Contatto",
+    "saving": "Salvataggio in corso...",
+    "processAnotherCard": "Elabora Altro Biglietto",
+    "viewContact": "Visualizza Contatto",
+    "backToContacts": "← Torna alla Lista Contatti",
+    "fileTypeNotSupported": "Tipo di file non supportato. Usa JPEG, PNG o WebP.",
+    "fileTooLarge": "File troppo grande. Dimensione massima: 10MB.",
+    "selectFileFirst": "Seleziona un file prima.",
+    "cardProcessedSuccessfully": "Biglietto elaborato con successo! Rivedi i dati qui sotto.",
+    "contactNotFound": "Contatto non trovato.",
+    "errorProcessingCard": "Errore durante l'elaborazione del biglietto.",
+    "contactUpdatedSuccessfully": "Contatto aggiornato con successo!",
+    "errorUpdatingContact": "Errore durante l'aggiornamento del contatto.",
+    "firstNamePlaceholder": "Nome",
+    "lastNamePlaceholder": "Cognome",
+    "emailPlaceholder": "email@esempio.com",
+    "phonePlaceholder": "(00) 00000-0000",
+    "companyPlaceholder": "Nome dell'azienda",
+    "jobTitlePlaceholder": "Ruolo/Funzione"
+  },
+  "notes": {
+    "title": "Note",
+    "audioNotes": "Note Audio",
+    "noNotes": "Nessuna nota disponibile",
+    "addNote": "Aggiungi Nota",
+    "editNote": "Modifica Nota",
+    "deleteNote": "Elimina Nota",
+    "noteContent": "Contenuto Nota",
+    "noteType": "Tipo Nota",
+    "createdAt": "Creato il",
+    "updatedAt": "Aggiornato il"
+  },
+  "audioCapture": {
+    "title": "Cattura Audio",
+    "record": "Registra",
+    "stop": "Ferma",
+    "pause": "Pausa",
+    "resume": "Riprendi",
+    "upload": "Carica",
+    "processing": "Elaborazione in corso...",
+    "transcribing": "Trascrizione in corso...",
+    "completed": "Completato",
+    "error": "Errore",
+    "pending": "In attesa",
+    "extractedTasks": "Attività Estratte",
+    "dueDate": "Scadenza",
+    "priority": "Priorità",
+    "jobId": "ID Job",
+    "requestedAt": "Richiesto il",
+    "completedAt": "Completato il"
+  },
+  "relationships": {
+    "title": "Nuova Relazione",
+    "addRelationship": "Aggiungi Relazione",
+    "targetContact": "Contatto di Destinazione",
+    "selectTargetContact": "Seleziona il contatto correlato",
+    "type": "Tipo di Relazione",
+    "selectType": "Seleziona il tipo",
+    "description": "Descrizione",
+    "descriptionPlaceholder": "Descrivi la relazione (opzionale)",
+    "strength": "Forza della Relazione",
+    "strengthDescription": "Da 0 a 100%",
+    "isConfirmed": "Relazione Confermata",
+    "create": "Crea Relazione",
+    "creating": "Creazione...",
+    "errorCreating": "Errore durante la creazione della relazione",
+    "successCreating": "Relazione creata con successo",
+    "cannotRelateToSelf": "Impossibile creare una relazione con te stesso",
+    "duplicateRelationship": "Esiste già una relazione con questo contatto",
+    "types": {
+      "colleague": "Collega",
+      "friend": "Amico",
+      "family": "Famiglia",
+      "client": "Cliente",
+      "supplier": "Fornitore",
+      "partner": "Partner",
+      "other": "Altro"
+    }
+  },
+  "errors": {
+    "generic": "Si è verificato un errore. Riprova più tardi.",
+    "network": "Errore di connessione. Verifica la tua connessione internet.",
+    "unauthorized": "Non autorizzato. Effettua l'accesso per continuare.",
+    "forbidden": "Accesso negato. Non hai i permessi necessari.",
+    "notFound": "Risorsa non trovata.",
+    "serverError": "Errore del server. Riprova più tardi.",
+    "validation": "Errore di validazione. Controlla i dati inseriti."
+  },
+  "validation": {
+    "required": "Questo campo è obbligatorio",
+    "email": "Inserisci un indirizzo email valido",
+    "phone": "Inserisci un numero di telefono valido",
+    "minLength": "Il campo deve contenere almeno {min} caratteri",
+    "maxLength": "Il campo non può contenere più di {max} caratteri",
+    "pattern": "Il formato inserito non è valido"
+  },
+  "landing": {
+    "header": {
+      "navFeatures": "Funzionalità",
+      "navPricing": "Prezzi",
+      "navLogin": "Accedi",
+      "ctaStart": "Inizia Ora",
+      "selectLanguage": "Seleziona lingua"
+    },
+    "hero": {
+      "title": "Il Tuo Assistente Esecutivo",
+      "titleHighlight": "Intelligente",
+      "subtitle": "Gestisci contatti, note e attività con l'intelligenza artificiale. Trasforma la tua produttività con strumenti professionali.",
+      "ctaPrimary": "Inizia Gratis",
+      "ctaSecondary": "Scopri di Più"
+    },
+    "features": {
+      "title": "Funzionalità Potenti",
+      "subtitle": "Tutto ciò di cui hai bisogno per gestire i tuoi contatti e aumentare la tua produttività",
+      "items": [
+        {
+          "title": "Gestione Contatti",
+          "description": "Organizza e gestisci tutti i tuoi contatti professionali in un unico posto"
+        },
+        {
+          "title": "Note Intelligenti",
+          "description": "Crea e organizza note con categorizzazione automatica e ricerca avanzata"
+        },
+        {
+          "title": "Sistema di Crediti",
+          "description": "Controllo flessibile dell'utilizzo con sistema di crediti e report dettagliati"
+        },
+        {
+          "title": "Sicurezza Avanzata",
+          "description": "I tuoi dati protetti con crittografia e autenticazione sicura"
+        },
+        {
+          "title": "Prestazioni Ottimizzate",
+          "description": "Interfaccia veloce e reattiva per la massima produttività"
+        },
+        {
+          "title": "Supporto Dedicato",
+          "description": "Team pronto ad aiutarti a sfruttare al meglio la piattaforma"
+        }
+      ]
+    },
+    "pricing": {
+      "title": "Piani e Prezzi",
+      "subtitle": "Scegli il piano ideale per le tue esigenze",
+      "plans": [
+        {
+          "name": "Base",
+          "price": "€29/mese",
+          "features": [
+            "Fino a 100 contatti",
+            "500 note",
+            "1.000 crediti/mese",
+            "Supporto via email",
+            "Aggiornamenti regolari"
+          ]
+        },
+        {
+          "name": "Professionale",
+          "price": "€79/mese",
+          "highlighted": true,
+          "features": [
+            "Contatti illimitati",
+            "Note illimitate",
+            "5.000 crediti/mese",
+            "Supporto prioritario",
+            "Funzionalità avanzate",
+            "Accesso API"
+          ]
+        },
+        {
+          "name": "Aziendale",
+          "price": "Su richiesta",
+          "features": [
+            "Tutto del Professionale",
+            "Crediti illimitati",
+            "Supporto 24/7",
+            "Formazione personalizzata",
+            "Gestione team",
+            "SLA garantito"
+          ]
+        }
+      ],
+      "popular": "Popolare",
+      "selectPlan": "Seleziona Piano",
+      "errorLoadingPlans": "Impossibile caricare i piani dal server. Visualizzazione delle informazioni predefinite."
+    },
+    "footer": {
+      "description": "Trasforma la tua produttività con strumenti professionali per la gestione di contatti e note.",
+      "product": "Prodotto",
+      "support": "Supporto",
+      "navFeatures": "Funzionalità",
+      "navPricing": "Prezzi",
+      "navLogin": "Accedi",
+      "documentation": "Documentazione",
+      "contact": "Contatto",
+      "faq": "FAQ",
+      "copyright": "© {year} AssistenteExecutivo. Tutti i diritti riservati.",
+      "terms": "Termini",
+      "privacy": "Privacy"
+    }
+  }
+}
+

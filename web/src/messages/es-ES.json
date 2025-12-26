@@ -1,0 +1,290 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "search": "Buscar",
+    "searching": "Buscando...",
+    "clear": "Limpiar",
+    "add": "Añadir",
+    "remove": "Quitar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "tryAgain": "Intentar de nuevo",
+    "error": "Error",
+    "unknown": "Desconocido",
+    "required": "Requerido"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "loginDescription": "El inicio de sesión se realiza mediante Keycloak (redirección por el backend BFF).",
+    "loginWithGoogle": "Iniciar sesión con Google (si está configurado)",
+    "forgotPassword": "Olvidé mi contraseña",
+    "goToProtectedPage": "Ir a página protegida",
+    "session": "Sesión (BFF)",
+    "checkSession": "Consultar /auth/session",
+    "sessionDescription": "Haga clic en \"Consultar /auth/session\" para obtener el token CSRF y el estado de autenticación.",
+    "sessionError": "Error al consultar sesión."
+  },
+  "contacts": {
+    "title": "Contactos",
+    "newContact": "Nuevo Contacto",
+    "editContact": "Editar Contacto",
+    "contactDetails": "Detalles del Contacto",
+    "contactNotFound": "Contacto no encontrado",
+    "errorLoadingContact": "Error al carregar contato",
+    "backToContacts": "Volver a la lista de contactos",
+    "contactFound": "contacto encontrado",
+    "contactsFound": "contactos encontrados",
+    "noContacts": "Ningún contacto registrado aún.",
+    "noContactsWithFilters": "Ningún contacto encontrado con los filtros aplicados.",
+    "createFirstContact": "Crear primer contacto",
+    "searchPlaceholder": "Buscar por nombre, email, teléfono, empresa...",
+    "loadingContacts": "Cargando contactos...",
+    "errorLoadingContacts": "Error al carregar contatos",
+    "showing": "Mostrando",
+    "to": "hasta",
+    "of": "de",
+    "results": "resultados",
+    "uploadCard": "Subir Tarjeta de Visita",
+    "audioNotes": "Notas de Audio"
+  },
+  "contactForm": {
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "emails": "Correos electrónicos",
+    "phones": "Teléfonos",
+    "company": "Empresa",
+    "jobTitle": "Cargo",
+    "address": "Dirección",
+    "street": "Calle",
+    "city": "Ciudad",
+    "state": "Estado",
+    "zipCode": "Código postal",
+    "country": "País",
+    "addEmail": "Añadir correo electrónico",
+    "addPhone": "Añadir teléfono",
+    "firstNameRequired": "El nombre es obligatorio",
+    "invalidEmail": "Correo electrónico inválido",
+    "invalidPhone": "Teléfono inválido",
+    "errorSaving": "Error al guardar contacto",
+    "emailPlaceholder": "email@ejemplo.com",
+    "phonePlaceholder": "(11) 99999-9999"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Bienvenido al Asistente Ejecutivo",
+    "welcomeDescription": "Gestione sus contactos, notas y créditos de forma eficiente",
+    "loading": "Cargando dashboard...",
+    "error": "Error al cargar datos del dashboard",
+    "creditBalance": "Saldo de Créditos",
+    "transactionsPerformed": "transacciones realizadas",
+    "totalContacts": "Total de Contactos",
+    "contacts": "Contactos",
+    "contactsDescription": "Gestione todos sus contactos profesionales en un solo lugar",
+    "credits": "Créditos",
+    "creditsDescription": "Visualice su saldo e historial de transacciones",
+    "uploadMedia": "Subir Medios",
+    "uploadMediaDescription": "Suba tarjetas de visita y otros archivos",
+    "balance": "Saldo",
+    "contact": "contacto",
+    "contactsPlural": "contactos",
+    "registered": "registrado",
+    "registeredPlural": "registrados",
+    "recentActivities": "Últimas Actividades",
+    "transactionTypes": {
+      "grant": "Concedido",
+      "purchase": "Comprado",
+      "consume": "Consumido",
+      "refund": "Reembolsado",
+      "expire": "Expirado",
+      "reserve": "Reservado"
+    }
+  },
+  "notes": {
+    "title": "Notas",
+    "newNote": "Nueva Nota",
+    "editNote": "Editar Nota",
+    "deleteNote": "Eliminar Nota",
+    "noteTypes": {
+      "general": "General",
+      "meeting": "Reunión",
+      "call": "Llamada",
+      "email": "Correo electrónico",
+      "task": "Tarea",
+      "reminder": "Recordatorio"
+    },
+    "extractedTasks": "Tareas Extraídas",
+    "dueDate": "Fecha límite",
+    "priority": "Prioridad",
+    "jobId": "ID del Trabajo",
+    "requestedAt": "Solicitado en",
+    "completedAt": "Completado en"
+  },
+  "audioCapture": {
+    "title": "Captura de Audio",
+    "uploading": "Subiendo...",
+    "processing": "Procesando...",
+    "completed": "Completado",
+    "failed": "Fallido",
+    "status": "Estado",
+    "uploadFile": "Subir archivo",
+    "selectFile": "Seleccionar archivo",
+    "noFileSelected": "No se ha seleccionado ningún archivo"
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "showing": "Mostrando",
+    "to": "hasta",
+    "of": "de",
+    "results": "resultados"
+  },
+  "relationships": {
+    "title": "Nuevo Relacionamiento",
+    "addRelationship": "Añadir Relacionamiento",
+    "targetContact": "Contacto de Destino",
+    "selectTargetContact": "Seleccione el contacto relacionado",
+    "type": "Tipo de Relacionamiento",
+    "selectType": "Seleccione el tipo",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Describa el relacionamiento (opcional)",
+    "strength": "Fuerza del Relacionamiento",
+    "strengthDescription": "De 0 a 100%",
+    "isConfirmed": "Relacionamiento Confirmado",
+    "create": "Crear Relacionamiento",
+    "creating": "Creando...",
+    "errorCreating": "Error al crear relacionamiento",
+    "successCreating": "Relacionamiento creado con éxito",
+    "cannotRelateToSelf": "No se puede crear relacionamiento consigo mismo",
+    "duplicateRelationship": "Ya existe un relacionamiento con este contacto",
+    "types": {
+      "colleague": "Colega",
+      "friend": "Amigo",
+      "family": "Familia",
+      "client": "Cliente",
+      "supplier": "Proveedor",
+      "partner": "Socio",
+      "other": "Otro"
+    }
+  },
+  "errors": {
+    "generic": "Ha ocurrido un error",
+    "networkError": "Error de red",
+    "unauthorized": "No autorizado",
+    "forbidden": "Acceso prohibido",
+    "notFound": "No encontrado",
+    "serverError": "Error del servidor",
+    "unknownError": "Error desconocido"
+  },
+  "landing": {
+    "header": {
+      "navFeatures": "Características",
+      "navPricing": "Precios",
+      "navLogin": "Iniciar sesión",
+      "ctaStart": "Comenzar Ahora",
+      "selectLanguage": "Seleccionar idioma"
+    },
+    "hero": {
+      "title": "Su Asistente Ejecutivo",
+      "titleHighlight": "Inteligente",
+      "subtitle": "Gestione contactos, notas y tareas con inteligencia artificial. Transforme su productividad con herramientas profesionales.",
+      "ctaPrimary": "Comenzar Gratis",
+      "ctaSecondary": "Saber Más"
+    },
+    "features": {
+      "title": "Características Poderosas",
+      "subtitle": "Todo lo que necesita para gestionar sus contactos y aumentar su productividad",
+      "items": [
+        {
+          "title": "Gestión de Contactos",
+          "description": "Organice y gestione todos sus contactos profesionales en un solo lugar"
+        },
+        {
+          "title": "Notas Inteligentes",
+          "description": "Cree y organice notas con categorización automática y búsqueda avanzada"
+        },
+        {
+          "title": "Sistema de Créditos",
+          "description": "Control flexible de uso con sistema de créditos e informes detallados"
+        },
+        {
+          "title": "Seguridad Avanzada",
+          "description": "Sus datos protegidos con cifrado y autenticación segura"
+        },
+        {
+          "title": "Rendimiento Optimizado",
+          "description": "Interfaz rápida y responsiva para máxima productividad"
+        },
+        {
+          "title": "Soporte Dedicado",
+          "description": "Equipo listo para ayudarle a aprovechar al máximo la plataforma"
+        }
+      ]
+    },
+    "pricing": {
+      "title": "Planes y Precios",
+      "subtitle": "Elija el plan ideal para sus necesidades",
+      "plans": [
+        {
+          "name": "Básico",
+          "price": "€29/mes",
+          "features": [
+            "Hasta 100 contactos",
+            "500 notas",
+            "1.000 créditos/mes",
+            "Soporte por email",
+            "Actualizaciones regulares"
+          ]
+        },
+        {
+          "name": "Profesional",
+          "price": "€79/mes",
+          "highlighted": true,
+          "features": [
+            "Contactos ilimitados",
+            "Notas ilimitadas",
+            "5.000 créditos/mes",
+            "Soporte prioritario",
+            "Características avanzadas",
+            "Acceso API"
+          ]
+        },
+        {
+          "name": "Empresarial",
+          "price": "Consultar",
+          "features": [
+            "Todo del Profesional",
+            "Créditos ilimitados",
+            "Soporte 24/7",
+            "Capacitación personalizada",
+            "Gestión de equipo",
+            "SLA garantizado"
+          ]
+        }
+      ],
+      "popular": "Popular",
+      "selectPlan": "Seleccionar Plan",
+      "errorLoadingPlans": "No se pudieron cargar los planes del servidor. Mostrando información predeterminada."
+    },
+    "footer": {
+      "description": "Transforme su productividad con herramientas profesionales de gestión de contactos y notas.",
+      "product": "Producto",
+      "support": "Soporte",
+      "navFeatures": "Características",
+      "navPricing": "Precios",
+      "navLogin": "Iniciar sesión",
+      "documentation": "Documentación",
+      "contact": "Contacto",
+      "faq": "FAQ",
+      "copyright": "© {year} AssistenteExecutivo. Todos los derechos reservados.",
+      "terms": "Términos",
+      "privacy": "Privacidad"
+    }
+  }
+}
+

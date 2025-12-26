@@ -1,0 +1,319 @@
+{
+  "common": {
+    "loading": "A carregar...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Pesquisar",
+    "back": "Voltar",
+    "next": "Seguinte",
+    "previous": "Anterior",
+    "submit": "Submeter",
+    "reset": "Repor",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "tryAgain": "Tentar novamente",
+    "unknown": "Desconhecido"
+  },
+  "dashboard": {
+    "title": "Painel de Controlo",
+    "welcome": "Bem-vindo ao Assistente Executivo",
+    "welcomeDescription": "Gerencie os seus contactos, notas e créditos de forma eficiente",
+    "loading": "A carregar painel...",
+    "error": "Erro ao carregar dados do painel",
+    "creditBalance": "Saldo de Créditos",
+    "transactionsPerformed": "transações realizadas",
+    "totalContacts": "Total de Contactos",
+    "contacts": "Contactos",
+    "contactsDescription": "Gerencie todos os seus contactos profissionais num só lugar",
+    "credits": "Créditos",
+    "creditsDescription": "Visualize o seu saldo e histórico de transações",
+    "uploadMedia": "Carregar Média",
+    "uploadMediaDescription": "Faça o carregamento de cartões de visita e outros ficheiros",
+    "balance": "Saldo",
+    "contact": "contacto",
+    "contactsPlural": "contactos",
+    "registered": "registado",
+    "registeredPlural": "registados",
+    "recentActivities": "Últimas Actividades",
+    "transactionTypes": {
+      "grant": "Concedido",
+      "purchase": "Comprado",
+      "consume": "Consumido",
+      "refund": "Reembolsado",
+      "expire": "Expirado",
+      "reserve": "Reservado"
+    }
+  },
+  "contacts": {
+    "title": "Contactos",
+    "list": {
+      "title": "Lista de Contactos",
+      "noContacts": "Nenhum contacto encontrado",
+      "searchPlaceholder": "Pesquisar contactos...",
+      "createNew": "Criar Novo Contacto",
+      "loading": "A carregar contactos...",
+      "error": "Erro ao carregar contactos"
+    },
+    "form": {
+      "firstName": "Nome",
+      "firstNameRequired": "Nome é obrigatório",
+      "lastName": "Apelido",
+      "emails": "E-mails",
+      "addEmail": "Adicionar E-mail",
+      "removeEmail": "Remover E-mail",
+      "invalidEmail": "E-mail inválido",
+      "phones": "Telefones",
+      "addPhone": "Adicionar Telefone",
+      "removePhone": "Remover Telefone",
+      "invalidPhone": "Telefone inválido",
+      "jobTitle": "Cargo",
+      "company": "Empresa",
+      "address": {
+        "title": "Endereço",
+        "street": "Rua",
+        "city": "Cidade",
+        "state": "Distrito",
+        "zipCode": "Código Postal",
+        "country": "País"
+      },
+      "saveError": "Erro ao guardar contacto",
+      "required": "*"
+    },
+    "details": {
+      "title": "Detalhes do Contacto",
+      "edit": "Editar Contacto",
+      "notes": {
+        "title": "Notas",
+        "noNotes": "Nenhuma nota registada.",
+        "viewStructured": "Ver dados estruturados",
+        "types": {
+          "audio": "Áudio",
+          "text": "Texto"
+        }
+      },
+      "relationships": {
+        "title": "Relacionamentos"
+      }
+    },
+    "new": {
+      "title": "Novo Contacto"
+    },
+    "edit": {
+      "title": "Editar Contacto"
+    },
+    "uploadCard": {
+      "title": "Carregamento de Cartão de Visita",
+      "description": "Faça o carregamento de uma imagem do cartão de visita para extrair automaticamente as informações usando OCR.",
+      "selectFile": "Selecionar Ficheiro",
+      "upload": "Carregar",
+      "processing": "A processar...",
+      "success": "Cartão processado com sucesso!",
+      "error": "Erro ao processar o cartão",
+      "preview": "Pré-visualização",
+      "extractedData": "Dados Extraídos",
+      "createContact": "Criar Contacto",
+      "reset": "Repor"
+    }
+  },
+  "notes": {
+    "title": "Notas",
+    "audio": {
+      "title": "Notas de Áudio",
+      "upload": "Carregar Áudio",
+      "recording": "Gravação",
+      "processing": "A processar áudio...",
+      "transcription": "Transcrição",
+      "summary": "Resumo",
+      "status": {
+        "pending": "Pendente",
+        "processing": "A processar",
+        "completed": "Concluído",
+        "failed": "Falhou"
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Iniciar Sessão",
+      "email": "E-mail",
+      "password": "Palavra-passe",
+      "submit": "Iniciar Sessão",
+      "forgotPassword": "Esqueceu-se da palavra-passe?",
+      "error": "Erro ao iniciar sessão"
+    },
+    "logout": {
+      "title": "Terminar Sessão",
+      "confirm": "Tem a certeza que deseja terminar sessão?"
+    },
+    "forgotPassword": {
+      "title": "Recuperar Palavra-passe",
+      "email": "E-mail",
+      "submit": "Enviar",
+      "success": "E-mail de recuperação enviado",
+      "error": "Erro ao enviar e-mail de recuperação"
+    },
+    "resetPassword": {
+      "title": "Repor Palavra-passe",
+      "password": "Nova Palavra-passe",
+      "confirmPassword": "Confirmar Palavra-passe",
+      "submit": "Repor",
+      "success": "Palavra-passe reposta com sucesso",
+      "error": "Erro ao repor palavra-passe"
+    }
+  },
+  "relationships": {
+    "title": "Novo Relacionamento",
+    "addRelationship": "Adicionar Relacionamento",
+    "targetContact": "Contacto de Destino",
+    "selectTargetContact": "Selecione o contacto relacionado",
+    "type": "Tipo de Relacionamento",
+    "selectType": "Selecione o tipo",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Descreva o relacionamento (opcional)",
+    "strength": "Força do Relacionamento",
+    "strengthDescription": "De 0 a 100%",
+    "isConfirmed": "Relacionamento Confirmado",
+    "create": "Criar Relacionamento",
+    "creating": "A criar...",
+    "errorCreating": "Erro ao criar relacionamento",
+    "successCreating": "Relacionamento criado com sucesso",
+    "cannotRelateToSelf": "Não é possível criar relacionamento consigo mesmo",
+    "duplicateRelationship": "Já existe um relacionamento com este contacto",
+    "types": {
+      "colleague": "Colega",
+      "friend": "Amigo",
+      "family": "Família",
+      "client": "Cliente",
+      "supplier": "Fornecedor",
+      "partner": "Parceiro",
+      "other": "Outro"
+    }
+  },
+  "errors": {
+    "generic": "Ocorreu um erro. Por favor, tente novamente.",
+    "network": "Erro de ligação. Verifique a sua ligação à Internet.",
+    "unauthorized": "Não autorizado. Por favor, inicie sessão.",
+    "forbidden": "Acesso negado.",
+    "notFound": "Recurso não encontrado.",
+    "validation": "Erro de validação. Verifique os campos do formulário."
+  },
+  "validation": {
+    "required": "Este campo é obrigatório",
+    "email": "E-mail inválido",
+    "phone": "Telefone inválido",
+    "minLength": "Deve ter pelo menos {min} caracteres",
+    "maxLength": "Deve ter no máximo {max} caracteres"
+  },
+  "landing": {
+    "header": {
+      "navFeatures": "Funcionalidades",
+      "navPricing": "Preços",
+      "navLogin": "Iniciar sessão",
+      "navRegister": "Registar",
+      "ctaStart": "Começar Agora",
+      "selectLanguage": "Selecionar idioma"
+    },
+    "hero": {
+      "title": "O Seu Assistente Executivo",
+      "titleHighlight": "Inteligente",
+      "subtitle": "Gerencie contactos, notas e tarefas com inteligência artificial. Transforme a sua produtividade com ferramentas profissionais.",
+      "ctaPrimary": "Começar Gratuitamente",
+      "ctaSecondary": "Saber Mais"
+    },
+    "features": {
+      "title": "Funcionalidades Poderosas",
+      "subtitle": "Tudo o que precisa para gerir os seus contactos e aumentar a sua produtividade",
+      "items": [
+        {
+          "title": "Gestão de Contactos",
+          "description": "Organize e gerencie todos os seus contactos profissionais num só lugar"
+        },
+        {
+          "title": "Notas Inteligentes",
+          "description": "Crie e organize notas com categorização automática e pesquisa avançada"
+        },
+        {
+          "title": "Sistema de Créditos",
+          "description": "Controlo flexível de utilização com sistema de créditos e relatórios detalhados"
+        },
+        {
+          "title": "Segurança Avançada",
+          "description": "Os seus dados protegidos com encriptação e autenticação segura"
+        },
+        {
+          "title": "Desempenho Otimizado",
+          "description": "Interface rápida e responsiva para máxima produtividade"
+        },
+        {
+          "title": "Suporte Dedicado",
+          "description": "Equipa pronta para o ajudar a aproveitar ao máximo a plataforma"
+        }
+      ]
+    },
+    "pricing": {
+      "title": "Planos e Preços",
+      "subtitle": "Escolha o plano ideal para as suas necessidades",
+      "plans": [
+        {
+          "name": "Básico",
+          "price": "€29/mês",
+          "features": [
+            "Até 100 contactos",
+            "500 notas",
+            "1.000 créditos/mês",
+            "Suporte por email",
+            "Atualizações regulares"
+          ]
+        },
+        {
+          "name": "Profissional",
+          "price": "€79/mês",
+          "highlighted": true,
+          "features": [
+            "Contactos ilimitados",
+            "Notas ilimitadas",
+            "5.000 créditos/mês",
+            "Suporte prioritário",
+            "Funcionalidades avançadas",
+            "Acesso API"
+          ]
+        },
+        {
+          "name": "Empresarial",
+          "price": "Sob consulta",
+          "features": [
+            "Tudo do Profissional",
+            "Créditos ilimitados",
+            "Suporte 24/7",
+            "Formação personalizada",
+            "Gestão de equipa",
+            "SLA garantido"
+          ]
+        }
+      ],
+      "popular": "Popular",
+      "selectPlan": "Selecionar Plano",
+      "errorLoadingPlans": "Não foi possível carregar os planos do servidor. A exibir informações padrão."
+    },
+    "footer": {
+      "description": "Transforme a sua produtividade com ferramentas profissionais de gestão de contactos e notas.",
+      "product": "Produto",
+      "support": "Suporte",
+      "navFeatures": "Funcionalidades",
+      "navPricing": "Preços",
+      "navLogin": "Iniciar sessão",
+      "documentation": "Documentação",
+      "contact": "Contacto",
+      "faq": "FAQ",
+      "copyright": "© {year} AssistenteExecutivo. Todos os direitos reservados.",
+      "terms": "Termos",
+      "privacy": "Privacidade"
+    }
+  }
+}
+

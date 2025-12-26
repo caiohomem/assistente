@@ -1,0 +1,309 @@
+{
+  "landing": {
+    "header": {
+      "navFeatures": "Recursos",
+      "navPricing": "Preços",
+      "navLogin": "Entrar",
+      "navRegister": "Registrar",
+      "ctaStart": "Começar Agora",
+      "selectLanguage": "Selecionar idioma"
+    },
+    "hero": {
+      "title": "Seu Assistente Executivo",
+      "titleHighlight": "Inteligente",
+      "subtitle": "Gerencie contatos, anotações e tarefas com inteligência artificial. Transforme sua produtividade com ferramentas profissionais.",
+      "ctaPrimary": "Começar Gratuitamente",
+      "ctaSecondary": "Saiba Mais"
+    },
+    "features": {
+      "title": "Recursos Poderosos",
+      "subtitle": "Tudo que você precisa para gerenciar seus contatos e aumentar sua produtividade",
+      "items": [
+        {
+          "title": "Gestão de Contatos",
+          "description": "Organize e gerencie todos os seus contatos profissionais em um só lugar"
+        },
+        {
+          "title": "Anotações Inteligentes",
+          "description": "Crie e organize anotações com categorização automática e busca avançada"
+        },
+        {
+          "title": "Sistema de Créditos",
+          "description": "Controle flexível de uso com sistema de créditos e relatórios detalhados"
+        },
+        {
+          "title": "Segurança Avançada",
+          "description": "Seus dados protegidos com criptografia e autenticação segura"
+        },
+        {
+          "title": "Performance Otimizada",
+          "description": "Interface rápida e responsiva para máxima produtividade"
+        },
+        {
+          "title": "Suporte Dedicado",
+          "description": "Equipe pronta para ajudar você a aproveitar ao máximo a plataforma"
+        }
+      ]
+    },
+    "pricing": {
+      "title": "Planos e Preços",
+      "subtitle": "Escolha o plano ideal para suas necessidades",
+      "plans": [
+        {
+          "name": "Básico",
+          "price": "R$ 29/mês",
+          "features": [
+            "Até 100 contatos",
+            "500 anotações",
+            "1.000 créditos/mês",
+            "Suporte por email",
+            "Atualizações regulares"
+          ]
+        },
+        {
+          "name": "Profissional",
+          "price": "R$ 79/mês",
+          "highlighted": true,
+          "features": [
+            "Contatos ilimitados",
+            "Anotações ilimitadas",
+            "5.000 créditos/mês",
+            "Suporte prioritário",
+            "Recursos avançados",
+            "API access"
+          ]
+        },
+        {
+          "name": "Empresarial",
+          "price": "Sob consulta",
+          "features": [
+            "Tudo do Profissional",
+            "Créditos ilimitados",
+            "Suporte 24/7",
+            "Treinamento personalizado",
+            "Gerenciamento de equipe",
+            "SLA garantido"
+          ]
+        }
+      ],
+      "credits": [
+        {
+          "name": "Pacote Básico",
+          "amount": 1000,
+          "price": "R$ 29",
+          "description": "1.000 créditos para uso mensal"
+        },
+        {
+          "name": "Pacote Profissional",
+          "amount": 5000,
+          "price": "R$ 79",
+          "description": "5.000 créditos para uso mensal"
+        },
+        {
+          "name": "Pacote Empresarial",
+          "amount": -1,
+          "price": "Sob consulta",
+          "description": "Créditos ilimitados"
+        }
+      ],
+      "popular": "Popular",
+      "selectPlan": "Selecionar Plano",
+      "errorLoadingPlans": "Não foi possível carregar os planos do servidor. Exibindo informações padrão."
+    },
+    "footer": {
+      "description": "Transforme sua produtividade com ferramentas profissionais de gestão de contatos e anotações.",
+      "product": "Produto",
+      "support": "Suporte",
+      "navFeatures": "Recursos",
+      "navPricing": "Preços",
+      "navLogin": "Entrar",
+      "documentation": "Documentação",
+      "contact": "Contato",
+      "faq": "FAQ",
+      "copyright": "© {year} AssistenteExecutivo. Todos os direitos reservados.",
+      "terms": "Termos",
+      "privacy": "Privacidade"
+    }
+  },
+  "common": {
+    "login": "Entrar",
+    "signup": "Cadastrar-se",
+    "language": "Idioma",
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "search": "Buscar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "confirm": "Confirmar",
+    "close": "Fechar",
+    "yes": "Sim",
+    "no": "Não",
+    "actions": "Ações",
+    "access": "Acessar",
+    "page": "Página",
+    "of": "de",
+    "firstPage": "Primeira página",
+    "lastPage": "Última página",
+    "nextPage": "Próxima página",
+    "previousPage": "Página anterior",
+    "saving": "Salvando...",
+    "required": "Obrigatório",
+    "optional": "Opcional",
+    "error": "Erro",
+    "success": "Sucesso",
+    "tryAgain": "Tentar novamente"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Bem-vindo ao Assistente Executivo",
+    "welcomeDescription": "Gerencie seus contatos, notas e créditos de forma eficiente",
+    "loading": "Carregando dashboard...",
+    "error": "Erro ao carregar dados do dashboard",
+    "creditBalance": "Saldo de Créditos",
+    "transactionsPerformed": "transações realizadas",
+    "totalContacts": "Total de Contatos",
+    "contacts": "Contatos",
+    "contactsDescription": "Gerencie todos os seus contatos profissionais em um só lugar",
+    "credits": "Créditos",
+    "creditsDescription": "Visualize seu saldo e histórico de transações",
+    "uploadMedia": "Upload de Mídia",
+    "uploadMediaDescription": "Faça upload de cartões de visita e outros arquivos",
+    "balance": "Saldo",
+    "contact": "contato",
+    "contactsPlural": "contatos",
+    "agentSettings": "Configurações do Agente",
+    "agentSettingsDescription": "Configure o prompt de contexto do agente de IA",
+    "registered": "cadastrado",
+    "registeredPlural": "cadastrados",
+    "recentActivities": "Últimas Atividades",
+    "transactionTypes": {
+      "grant": "Concedido",
+      "purchase": "Comprado",
+      "consume": "Consumido",
+      "refund": "Reembolsado",
+      "expire": "Expirado",
+      "reserve": "Reservado"
+    }
+  },
+  "agentConfiguration": {
+    "title": "Configurações do Agente",
+    "description": "Edite o prompt de contexto que é enviado à IA. O texto bruto extraído dos cartões de visita será adicionado no final.",
+    "loading": "Carregando configuração...",
+    "errorLoading": "Erro ao carregar configuração",
+    "errorSaving": "Erro ao salvar configuração",
+    "contextPromptLabel": "Prompt de Contexto",
+    "contextPromptHint": "Este prompt define como a IA deve analisar e extrair informações dos cartões de visita. O texto bruto extraído será automaticamente adicionado no final.",
+    "contextPromptPlaceholder": "Digite o prompt de contexto aqui...",
+    "promptRequired": "O prompt de contexto é obrigatório",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saveSuccess": "Configuração salva com sucesso!",
+    "lastUpdated": "Última atualização"
+  },
+  "relationships": {
+    "title": "Novo Relacionamento",
+    "addRelationship": "Adicionar Relacionamento",
+    "targetContact": "Contato de Destino",
+    "selectTargetContact": "Selecione o contato relacionado",
+    "type": "Tipo de Relacionamento",
+    "selectType": "Selecione o tipo",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Descreva o relacionamento (opcional)",
+    "strength": "Força do Relacionamento",
+    "strengthDescription": "De 0 a 100%",
+    "isConfirmed": "Relacionamento Confirmado",
+    "create": "Criar Relacionamento",
+    "creating": "Criando...",
+    "errorCreating": "Erro ao criar relacionamento",
+    "successCreating": "Relacionamento criado com sucesso",
+    "cannotRelateToSelf": "Não é possível criar relacionamento consigo mesmo",
+    "duplicateRelationship": "Já existe um relacionamento com este contato",
+    "types": {
+      "colleague": "Colega",
+      "friend": "Amigo",
+      "family": "Família",
+      "client": "Cliente",
+      "supplier": "Fornecedor",
+      "partner": "Parceiro",
+      "other": "Outro"
+    }
+  },
+  "notes": {
+    "title": "Nova Nota",
+    "addNote": "Adicionar Nota",
+    "content": "Conteúdo",
+    "contentPlaceholder": "Digite o conteúdo da nota...",
+    "contentRequired": "O conteúdo da nota é obrigatório",
+    "structuredData": "Dados Estruturados (JSON)",
+    "structuredDataPlaceholder": "Dados estruturados em JSON (opcional)",
+    "invalidJson": "JSON inválido",
+    "create": "Criar Nota",
+    "creating": "Criando...",
+    "errorCreating": "Erro ao criar nota",
+    "successCreating": "Nota criada com sucesso",
+    "type": {
+      "text": "Texto",
+      "audio": "Áudio",
+      "unknown": "Desconhecido"
+    }
+  },
+  "emailTemplates": {
+    "title": "Templates de Email",
+    "listTitle": "Templates de Email",
+    "newTemplate": "Novo Template",
+    "editTemplate": "Editar Template",
+    "templateDetails": "Detalhes do Template",
+    "name": "Nome",
+    "namePlaceholder": "Nome do template",
+    "nameRequired": "Nome é obrigatório",
+    "type": "Tipo",
+    "selectType": "Selecione o tipo",
+    "subject": "Assunto",
+    "subjectPlaceholder": "Assunto do email",
+    "subjectRequired": "Assunto é obrigatório",
+    "htmlBody": "Corpo HTML",
+    "htmlBodyPlaceholder": "Corpo HTML do email",
+    "htmlBodyRequired": "Corpo HTML é obrigatório",
+    "isActive": "Ativo",
+    "placeholders": "Placeholders Detectados",
+    "noPlaceholders": "Nenhum placeholder encontrado",
+    "preview": "Preview",
+    "createdAt": "Criado em",
+    "updatedAt": "Atualizado em",
+    "create": "Criar Template",
+    "creating": "Criando...",
+    "update": "Atualizar Template",
+    "updating": "Atualizando...",
+    "activate": "Ativar",
+    "deactivate": "Desativar",
+    "errorLoading": "Erro ao carregar templates",
+    "errorCreating": "Erro ao criar template",
+    "errorUpdating": "Erro ao atualizar template",
+    "successCreating": "Template criado com sucesso",
+    "successUpdating": "Template atualizado com sucesso",
+    "noTemplates": "Nenhum template cadastrado",
+    "types": {
+      "userCreated": "Usuário Criado",
+      "passwordReset": "Redefinição de Senha",
+      "welcome": "Bem-vindo"
+    },
+    "filters": {
+      "all": "Todos",
+      "active": "Ativos",
+      "inactive": "Inativos"
+    }
+  },
+  "contacts": {
+    "deleteContact": "Excluir Contato",
+    "confirmDelete": "Tem certeza que deseja excluir este contato? Esta ação não pode ser desfeita.",
+    "contactDeleted": "Contato excluído com sucesso",
+    "errorDeleting": "Erro ao excluir contato",
+    "deleting": "Excluindo..."
+  }
+}
+
