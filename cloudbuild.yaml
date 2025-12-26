@@ -42,8 +42,8 @@ steps:
         
         # Detectar mudanças usando git
         # Tentar diferentes estratégias para encontrar o commit anterior
-        # Usar variável local para evitar conflito com substituições do Cloud Build
-        local prev_commit=""
+        # Usar variável em minúsculas para evitar conflito com substituições do Cloud Build
+        prev_commit=""
         
         # Estratégia 1: Tentar HEAD~1 (commit anterior)
         if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
@@ -64,7 +64,7 @@ steps:
           exit 0
         fi
         
-        local current_commit="HEAD"
+        current_commit="HEAD"
         echo "Comparando commits: ${prev_commit}..${current_commit}"
         
         # Verificar mudanças no diretório web/
