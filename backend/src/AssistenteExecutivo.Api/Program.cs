@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.SqlServer;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
@@ -27,38 +28,17 @@ var configuration = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .Build();
 
-// Obter connection string para o sink do SQL Server
+// Obter connection string
 var connectionString = configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=localhost;Database=AssistenteExecutivo;Trusted_Connection=True;TrustServerCertificate=True;";
+    ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' não configurada");
 
-// Configurar colunas customizadas para o SQL Server
-var columnOptions = new MSSqlServerSinkOptions
-{
-    TableName = "Logs",
-    AutoCreateSqlTable = false, // Assumimos que a tabela já foi criada pelo script SQL
-    SchemaName = "dbo"
-};
+// Detectar se é PostgreSQL ou SQL Server
+var isPostgreSQL = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+                   connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                   (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) && 
+                    !connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase));
 
-var columnOptionsObj = new ColumnOptions();
-columnOptionsObj.Store.Add(StandardColumn.LogEvent);
-columnOptionsObj.Store.Remove(StandardColumn.Properties);
-columnOptionsObj.Store.Remove(StandardColumn.MessageTemplate);
-
-// Adicionar colunas customizadas
-// Nota: Tamanhos limitados para permitir criação de índices (NVARCHAR(MAX) não pode ser indexado)
-columnOptionsObj.AdditionalColumns = new[]
-{
-    new SqlColumn("SourceContext", System.Data.SqlDbType.NVarChar, dataLength: 512),
-    new SqlColumn("RequestPath", System.Data.SqlDbType.NVarChar, dataLength: 512),
-    new SqlColumn("RequestMethod", System.Data.SqlDbType.NVarChar, dataLength: 10),
-    new SqlColumn("StatusCode", System.Data.SqlDbType.Int, allowNull: true),
-    new SqlColumn("Elapsed", System.Data.SqlDbType.Float, allowNull: true),
-    new SqlColumn("UserName", System.Data.SqlDbType.NVarChar, dataLength: 256),
-    new SqlColumn("MachineName", System.Data.SqlDbType.NVarChar, dataLength: 256),
-    new SqlColumn("Environment", System.Data.SqlDbType.NVarChar, dataLength: 50)
-};
-
-Log.Logger = new LoggerConfiguration()
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -68,13 +48,56 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithEnvironmentName()
     .Enrich.WithProperty("Environment", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production")
     .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-    .WriteTo.MSSqlServer(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
+
+// Configurar sink de banco de dados baseado no tipo
+if (isPostgreSQL)
+{
+    // PostgreSQL - por enquanto usando apenas console
+    // Nota: Para salvar logs no PostgreSQL, você pode:
+    // 1. Usar um provider customizado
+    // 2. Usar Serilog.Sinks.PostgreSQL (requer configuração adicional)
+    // 3. Usar Serilog.Sinks.File e processar depois
+    // Por enquanto, logs vão apenas para console quando usar PostgreSQL
+    // A tabela Logs foi criada caso queira implementar um provider customizado
+}
+else
+{
+    // SQL Server - usar sink do SQL Server
+    var columnOptions = new MSSqlServerSinkOptions
+    {
+        TableName = "Logs",
+        AutoCreateSqlTable = false, // Assumimos que a tabela já foi criada pelo script SQL
+        SchemaName = "dbo"
+    };
+
+    var columnOptionsObj = new ColumnOptions();
+    columnOptionsObj.Store.Add(StandardColumn.LogEvent);
+    columnOptionsObj.Store.Remove(StandardColumn.Properties);
+    columnOptionsObj.Store.Remove(StandardColumn.MessageTemplate);
+
+    // Adicionar colunas customizadas
+    // Nota: Tamanhos limitados para permitir criação de índices (NVARCHAR(MAX) não pode ser indexado)
+    columnOptionsObj.AdditionalColumns = new[]
+    {
+        new SqlColumn("SourceContext", System.Data.SqlDbType.NVarChar, dataLength: 512),
+        new SqlColumn("RequestPath", System.Data.SqlDbType.NVarChar, dataLength: 512),
+        new SqlColumn("RequestMethod", System.Data.SqlDbType.NVarChar, dataLength: 10),
+        new SqlColumn("StatusCode", System.Data.SqlDbType.Int, allowNull: true),
+        new SqlColumn("Elapsed", System.Data.SqlDbType.Float, allowNull: true),
+        new SqlColumn("UserName", System.Data.SqlDbType.NVarChar, dataLength: 256),
+        new SqlColumn("MachineName", System.Data.SqlDbType.NVarChar, dataLength: 256),
+        new SqlColumn("Environment", System.Data.SqlDbType.NVarChar, dataLength: 50)
+    };
+
+    loggerConfig.WriteTo.MSSqlServer(
         connectionString: connectionString,
         sinkOptions: columnOptions,
         columnOptions: columnOptionsObj,
-        restrictedToMinimumLevel: LogEventLevel.Warning) // Apenas Warning, Error e Fatal vão para o banco
-    .CreateLogger();
+        restrictedToMinimumLevel: LogEventLevel.Warning); // Apenas Warning, Error e Fatal vão para o banco
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 try
 {
@@ -232,18 +255,34 @@ try
     });
     builder.Services.AddAuthorization();
 
-    // Session (para BFF) - Usando SQL Server para persistir sessões entre reinicializações
+    // Session (para BFF) - Usando banco de dados para persistir sessões entre reinicializações
     var sessionConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' não configurada");
     
-    builder.Services.AddDistributedSqlServerCache(options =>
+    // Detectar se é PostgreSQL ou SQL Server
+    var isPostgreSQLSession = sessionConnectionString.Contains("Host=") || 
+                              (sessionConnectionString.Contains("Server=") && sessionConnectionString.Contains("Database=") && !sessionConnectionString.Contains("Trusted_Connection"));
+    
+    if (isPostgreSQLSession)
     {
-        options.ConnectionString = sessionConnectionString;
-        options.SchemaName = "dbo";
-        options.TableName = "SessionCache";
-        // Expiração padrão de 20 minutos (as sessões individuais têm timeout de 30 minutos)
-        options.DefaultSlidingExpiration = TimeSpan.FromMinutes(20);
-    });
+        // PostgreSQL - usar Redis ou Memory Cache como fallback
+        // Nota: .NET não tem suporte nativo para PostgreSQL distributed cache
+        // Usando Memory Cache como fallback (sessões serão perdidas ao reiniciar)
+        // Para produção, considere usar Redis ou implementar um provider customizado
+        builder.Services.AddDistributedMemoryCache();
+    }
+    else
+    {
+        // SQL Server
+        builder.Services.AddDistributedSqlServerCache(options =>
+        {
+            options.ConnectionString = sessionConnectionString;
+            options.SchemaName = "dbo";
+            options.TableName = "SessionCache";
+            // Expiração padrão de 20 minutos (as sessões individuais têm timeout de 30 minutos)
+            options.DefaultSlidingExpiration = TimeSpan.FromMinutes(20);
+        });
+    }
     
     builder.Services.AddSession(options =>
     {

@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "web: docker up (dev)",
+      "type": "shell",
+      "command": "docker compose -f docker/docker-compose.web.yml --profile dev up --build",
+      "problemMatcher": []
+    },
+    {
+      "label": "web: docker down",
+      "type": "shell",
+      "command": "docker compose -f docker/docker-compose.web.yml down",
+      "problemMatcher": []
+    },
+    {
+      "label": "web: docker up (prod)",
+      "type": "shell",
+      "command": "docker compose -f docker/docker-compose.web.yml --profile prod up --build",
+      "problemMatcher": []
+    }
+  ]
+}

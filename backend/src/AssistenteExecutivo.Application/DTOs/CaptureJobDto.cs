@@ -31,6 +31,7 @@ public class CardScanResultDto
     public string? Company { get; set; }
     public string? JobTitle { get; set; }
     public Dictionary<string, decimal>? ConfidenceScores { get; set; }
+    public string? AiRawResponse { get; set; }
 }
 
 public class AudioTranscriptDto

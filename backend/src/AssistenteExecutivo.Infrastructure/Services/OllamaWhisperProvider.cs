@@ -131,7 +131,7 @@ public class OllamaWhisperProvider : ISpeechToTextProvider
         using var content = new MultipartFormDataContent();
         var audioContent = new ByteArrayContent(audioBytes);
         audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
-        content.Add(audioContent, "audio", "audio.wav");
+        content.Add(audioContent, "file", "audio.wav");
 
         var language = "pt"; // Português
         var apiUrl = _apiUrl ?? client.BaseAddress?.ToString() ?? throw new InvalidOperationException("API URL não configurada");
@@ -147,44 +147,39 @@ public class OllamaWhisperProvider : ISpeechToTextProvider
         var result = await response.Content.ReadFromJsonAsync<WhisperApiResponse>(
             cancellationToken: cancellationToken);
 
-        if (result == null || string.IsNullOrWhiteSpace(result.Text))
+        if (result == null)
+        {
+            throw new InvalidOperationException("Resposta inválida da API de transcrição");
+        }
+
+        // Verificar se há erro na resposta
+        if (!string.IsNullOrWhiteSpace(result.Error))
+        {
+            throw new InvalidOperationException($"Erro na API de transcrição: {result.Error}");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Text))
         {
             throw new InvalidOperationException("Resposta vazia da API de transcrição");
         }
 
         var transcriptText = result.Text.Trim();
         
-        _logger.LogInformation("Transcrição concluída via API. Tamanho do texto: {Length} caracteres", transcriptText.Length);
+        _logger.LogInformation("Transcrição concluída via API. Tamanho do texto: {Length} caracteres, Idioma: {Language}, Duração: {Duration}s", 
+            transcriptText.Length, result.Language, result.Duration);
 
-        // Se a API retornar segmentos com timestamps, usar; senão, criar transcript simples
-        var segments = new List<TranscriptSegment>();
-        if (result.Segments != null && result.Segments.Count > 0)
-        {
-            foreach (var seg in result.Segments)
-            {
-                segments.Add(new TranscriptSegment(
-                    text: seg.Text ?? string.Empty,
-                    startTime: TimeSpan.FromSeconds(seg.Start ?? 0),
-                    endTime: TimeSpan.FromSeconds(seg.End ?? 0),
-                    confidence: (decimal)(seg.Confidence ?? 0.9)));
-            }
-        }
-
-        return new Transcript(transcriptText, segments);
+        // FastAPI retorna apenas text, language e duration (sem segments)
+        // Criar transcript simples sem segmentos
+        return new Transcript(transcriptText);
     }
 
     private class WhisperApiResponse
     {
         public string Text { get; set; } = string.Empty;
-        public List<WhisperSegment>? Segments { get; set; }
-    }
-
-    private class WhisperSegment
-    {
-        public string? Text { get; set; }
-        public double? Start { get; set; }
-        public double? End { get; set; }
-        public double? Confidence { get; set; }
+        public string Language { get; set; } = string.Empty;
+        public double Duration { get; set; }
+        // FastAPI pode retornar error em caso de falha
+        public string? Error { get; set; }
     }
 }
 

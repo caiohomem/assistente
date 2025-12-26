@@ -101,6 +101,11 @@ public class CaptureJobConfiguration : IEntityTypeConfiguration<CaptureJob>
                 .HasMaxLength(200)
                 .IsRequired(false);
 
+            ocrExtract.Property(o => o.AiRawResponse)
+                .HasColumnName("CardScanResult_AiRawResponse")
+                .HasColumnType("nvarchar(max)")
+                .IsRequired(false);
+
             // ConfidenceScores como JSON
             ocrExtract.Property(o => o.ConfidenceScores)
                 .HasColumnName("CardScanResult_ConfidenceScores")

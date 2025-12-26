@@ -66,6 +66,9 @@ public class ContactConfiguration : IEntityTypeConfiguration<Contact>
             address.Property(a => a.Country)
                 .HasColumnName("AddressCountry")
                 .HasMaxLength(100);
+            
+            // Marcar como sempre criado para evitar problemas com optional dependent
+            address.ToTable("Contacts");
         });
 
         // Owned Collection: Emails

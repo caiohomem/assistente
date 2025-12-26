@@ -108,6 +108,7 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
             captureJob.Fail("SPEECH_TO_TEXT_ERROR", ex.Message, _clock);
             // Refund reserved credits on failure
             wallet.Refund(creditAmount, refundIdempotencyKey, $"Refund for failed audio processing: {ex.Message}", _clock);
+            await _creditWalletRepository.UpdateAsync(wallet, cancellationToken);
             // Save changes before throwing
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             throw;
@@ -124,6 +125,7 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
             captureJob.Fail("LLM_PROCESSING_ERROR", ex.Message, _clock);
             // Refund reserved credits on failure
             wallet.Refund(creditAmount, refundIdempotencyKey, $"Refund for failed LLM processing: {ex.Message}", _clock);
+            await _creditWalletRepository.UpdateAsync(wallet, cancellationToken);
             // Save changes before throwing
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             throw;

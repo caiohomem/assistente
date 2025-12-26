@@ -518,18 +518,55 @@ public class KeycloakService : IKeycloakService
                 { "refresh_token", refreshToken }
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{_keycloakBaseUrl}/realms/{realmId}/protocol/openid-connect/token")
+            if (!string.IsNullOrWhiteSpace(_clientSecret))
             {
-                Content = new FormUrlEncodedContent(tokenRequest)
-            };
+                tokenRequest["client_secret"] = _clientSecret;
+            }
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            var tokenBaseUrl = ResolveKeycloakBaseUrlForToken(refreshToken).TrimEnd('/');
+
+            async Task<HttpResponseMessage> SendAsync(string baseUrl)
+            {
+                var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{baseUrl.TrimEnd('/')}/realms/{realmId}/protocol/openid-connect/token")
+                {
+                    Content = new FormUrlEncodedContent(tokenRequest)
+                };
+
+                return await _httpClient.SendAsync(request, cancellationToken);
+            }
+
+            var response = await SendAsync(tokenBaseUrl);
             
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Erro ao renovar token. Status: {Status}, Response: {Response}", response.StatusCode, errorContent);
-                response.EnsureSuccessStatusCode();
+
+                var internalBaseUrl = _keycloakBaseUrl.TrimEnd('/');
+                if (!string.Equals(tokenBaseUrl, internalBaseUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Falha ao renovar token usando {TokenBaseUrl}. Tentando fallback para {InternalBaseUrl}.",
+                        tokenBaseUrl,
+                        internalBaseUrl);
+
+                    response = await SendAsync(internalBaseUrl);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var fallbackError = await response.Content.ReadAsStringAsync(cancellationToken);
+                        _logger.LogError(
+                            "Falha no fallback de renovação de token. Status: {Status}, Response: {Response}",
+                            response.StatusCode,
+                            fallbackError);
+                        response.EnsureSuccessStatusCode();
+                    }
+                }
+                else
+                {
+                    response.EnsureSuccessStatusCode();
+                }
             }
 
             var tokenResponse = await response.Content.ReadFromJsonAsync<KeycloakTokenResponse>(cancellationToken: cancellationToken);
@@ -696,7 +733,7 @@ public class KeycloakService : IKeycloakService
             if (string.IsNullOrWhiteSpace(accessToken))
                 throw new ArgumentException("Access token vazio ao chamar userinfo", nameof(accessToken));
 
-            var userInfoBaseUrl = ResolveKeycloakBaseUrlForAccessToken(accessToken);
+            var userInfoBaseUrl = ResolveKeycloakBaseUrlForToken(accessToken);
             var request = new HttpRequestMessage(HttpMethod.Get, $"{userInfoBaseUrl}/realms/{realmId}/protocol/openid-connect/userinfo");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -764,9 +801,9 @@ public class KeycloakService : IKeycloakService
         return !string.IsNullOrWhiteSpace(publicBaseUrl) ? publicBaseUrl : _keycloakBaseUrl.TrimEnd('/');
     }
 
-    private string ResolveKeycloakBaseUrlForAccessToken(string accessToken)
+    private string ResolveKeycloakBaseUrlForToken(string token)
     {
-        if (TryGetIssuerBaseUrlFromJwt(accessToken, out var issuerBaseUrl))
+        if (TryGetIssuerBaseUrlFromJwt(token, out var issuerBaseUrl))
             return issuerBaseUrl;
 
         var publicBaseUrl = _configuration["Keycloak:PublicBaseUrl"]?.TrimEnd('/');
@@ -836,12 +873,38 @@ public class KeycloakService : IKeycloakService
                 { "refresh_token", refreshToken }
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{_keycloakBaseUrl}/realms/{realmId}/protocol/openid-connect/logout")
+            if (!string.IsNullOrWhiteSpace(_clientSecret))
             {
-                Content = new FormUrlEncodedContent(logoutRequest)
-            };
+                logoutRequest["client_secret"] = _clientSecret;
+            }
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            var logoutBaseUrl = ResolveKeycloakBaseUrlForToken(refreshToken).TrimEnd('/');
+
+            async Task<HttpResponseMessage> SendAsync(string baseUrl)
+            {
+                var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    $"{baseUrl.TrimEnd('/')}/realms/{realmId}/protocol/openid-connect/logout")
+                {
+                    Content = new FormUrlEncodedContent(logoutRequest)
+                };
+
+                return await _httpClient.SendAsync(request, cancellationToken);
+            }
+
+            var response = await SendAsync(logoutBaseUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                var internalBaseUrl = _keycloakBaseUrl.TrimEnd('/');
+                if (!string.Equals(logoutBaseUrl, internalBaseUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Falha ao invalidar sessão usando {LogoutBaseUrl}. Tentando fallback para {InternalBaseUrl}.",
+                        logoutBaseUrl,
+                        internalBaseUrl);
+                    response = await SendAsync(internalBaseUrl);
+                }
+            }
             
             if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace AssistenteExecutivo.Infrastructure;
 
@@ -21,18 +22,102 @@ public static class DependencyInjection
     {
         // Database
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=localhost;Database=AssistenteExecutivo;Trusted_Connection=True;TrustServerCertificate=True;";
+            ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' não configurada");
+
+        // Log da connection string (sem senha) para debug
+        var connectionStringForLog = connectionString.Contains("Password=", StringComparison.OrdinalIgnoreCase)
+            ? connectionString.Substring(0, connectionString.IndexOf("Password=", StringComparison.OrdinalIgnoreCase)) + "Password=***"
+            : connectionString.Substring(0, Math.Min(100, connectionString.Length));
+        System.Diagnostics.Debug.WriteLine($"[DB] Connection String: {connectionStringForLog}");
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            options.UseSqlServer(connectionString, sqlOptions =>
+            // Detectar se é PostgreSQL ou SQL Server pela connection string
+            var isPostgreSQL = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+                               connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                               (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) && 
+                                !connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase));
+            
+            // Se for URL do PostgreSQL, converter para formato de parâmetros
+            string finalConnectionString = connectionString;
+            if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+                connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
             {
-                // Habilitar retry logic para falhas transitórias
-                sqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(5),
-                    errorNumbersToAdd: null);
-            });
+                // Converter URL para formato de parâmetros
+                try
+                {
+                    var uri = new Uri(connectionString);
+                    var builder = new Npgsql.NpgsqlConnectionStringBuilder
+                    {
+                        Host = uri.Host,
+                        Port = uri.Port != -1 ? uri.Port : 5432,
+                        Database = uri.AbsolutePath.TrimStart('/'),
+                        Username = uri.UserInfo.Split(':')[0],
+                        Password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "",
+                        SslMode = Npgsql.SslMode.Require
+                    };
+                    
+                    // Adicionar parâmetros da query string
+                    if (!string.IsNullOrEmpty(uri.Query))
+                    {
+                        var query = uri.Query.TrimStart('?');
+                        var pairs = query.Split('&');
+                        foreach (var pair in pairs)
+                        {
+                            var parts = pair.Split('=');
+                            if (parts.Length == 2)
+                            {
+                                var key = parts[0].ToLowerInvariant();
+                                var value = parts[1];
+                                
+                                if (key == "sslmode")
+                                {
+                                    if (Enum.TryParse<Npgsql.SslMode>(value, true, out var mode))
+                                        builder.SslMode = mode;
+                                }
+                            }
+                        }
+                    }
+                    
+                    finalConnectionString = builder.ConnectionString;
+                    System.Diagnostics.Debug.WriteLine($"[DB] Converted URL to parameter format");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DB] Error converting URL: {ex.Message}");
+                    throw new InvalidOperationException("Erro ao converter connection string de URL para formato de parâmetros. Use o formato: Host=...;Database=...;Username=...;Password=...;SSL Mode=Require;", ex);
+                }
+            }
+            
+            if (isPostgreSQL)
+            {
+                // PostgreSQL (Neon)
+                // Usar connection string convertida (já está no formato de parâmetros se era URL)
+                options.UseNpgsql(finalConnectionString, npgsqlOptions =>
+                {
+                    // Habilitar retry logic para falhas transitórias
+                    // Aumentado para conexões com Neon que podem ter latência maior
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorCodesToAdd: null);
+                    
+                    // Timeout de comando aumentado para operações que podem demorar
+                    npgsqlOptions.CommandTimeout(60);
+                });
+            }
+            else
+            {
+                // SQL Server (fallback para compatibilidade)
+                options.UseSqlServer(connectionString, sqlOptions =>
+                {
+                    // Habilitar retry logic para falhas transitórias
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorNumbersToAdd: null);
+                });
+            }
             
             // Desabilitar detecção de concorrência otimista automática
             // (usaremos apenas quando explicitamente configurado com RowVersion/Timestamp)
@@ -54,6 +139,7 @@ public static class DependencyInjection
         services.AddScoped<ICaptureJobRepository, CaptureJobRepository>();
         services.AddScoped<ICreditWalletRepository, CreditWalletRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
+        services.AddScoped<IAgentConfigurationRepository, AgentConfigurationRepository>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -190,6 +276,9 @@ public static class DependencyInjection
                 services.AddScoped<ILLMProvider, StubLLMProvider>();
                 break;
         }
+        
+        // OCR Field Refinement Service - Usa Qwen para melhorar associação de campos
+        services.AddScoped<IOcrFieldRefinementService, QwenOcrRefinementService>();
         services.AddScoped<IFileStore, StubFileStore>();
         services.AddSingleton<IIdGenerator, GuidIdGenerator>();
 

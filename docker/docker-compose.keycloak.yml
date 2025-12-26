@@ -47,6 +47,20 @@ services:
       - keycloak-network
     restart: unless-stopped
 
+  ocr-api:
+    build:
+      context: ../fastapi
+      dockerfile: Dockerfile
+    container_name: ocr-api
+    ports:
+      - "8000:8000"
+    networks:
+      - keycloak-network
+    restart: unless-stopped
+    # Variáveis de ambiente opcionais
+    environment:
+      - PYTHONUNBUFFERED=1
+
 volumes:
   keycloak_data:
     driver: local

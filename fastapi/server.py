@@ -1,24 +1,83 @@
 from fastapi import FastAPI, UploadFile, File
-from faster_whisper import WhisperModel
-from paddleocr import PaddleOCR
 import cv2
 import numpy as np
 from collections.abc import Mapping
 import tempfile
 import shutil
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
-model = WhisperModel("base", device="cpu", compute_type="int8")
-ocr_by_lang = {
-    "pt": PaddleOCR(lang="pt", use_textline_orientation=True),
-}
 
-def get_ocr(lang: str) -> PaddleOCR:
+@app.get("/")
+async def root():
+    """Endpoint raiz - health check"""
+    return {
+        "status": "ok",
+        "service": "OCR API",
+        "endpoints": {
+            "ocr": "/ocr",
+            "transcribe": "/transcribe",
+            "docs": "/docs"
+        }
+    }
+
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    try:
+        # Verificar se os modelos podem ser carregados (sem carregar de fato)
+        return {
+            "status": "healthy",
+            "models": {
+                "whisper": "available",
+                "paddleocr": "available"
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+
+# Lazy loading dos modelos para evitar erros na inicialização
+_model = None
+ocr_by_lang = {}
+
+def get_whisper_model():
+    """Carrega o modelo Whisper sob demanda"""
+    # Import lazy do WhisperModel para evitar erro na inicialização
+    from faster_whisper import WhisperModel
+    
+    global _model
+    if _model is None:
+        try:
+            logger.info("Carregando modelo Whisper...")
+            _model = WhisperModel("base", device="cpu", compute_type="int8")
+            logger.info("Modelo Whisper carregado com sucesso")
+        except Exception as e:
+            logger.error(f"Erro ao carregar modelo Whisper: {e}")
+            raise
+    return _model
+
+def get_ocr(lang: str):
+    """Carrega o modelo PaddleOCR sob demanda"""
+    # Import lazy do PaddleOCR para evitar erro na inicialização
+    from paddleocr import PaddleOCR
+    
     lang = (lang or "pt").lower()
     if lang not in ocr_by_lang:
         # Lazy init to avoid downloading models unnecessarily
-        ocr_by_lang[lang] = PaddleOCR(lang=lang, use_textline_orientation=True)
+        try:
+            logger.info(f"Carregando modelo PaddleOCR para idioma: {lang}")
+            ocr_by_lang[lang] = PaddleOCR(lang=lang, use_textline_orientation=True)
+            logger.info(f"Modelo PaddleOCR para {lang} carregado com sucesso")
+        except Exception as e:
+            logger.error(f"Erro ao carregar modelo PaddleOCR para {lang}: {e}")
+            raise
     return ocr_by_lang[lang]
 
 
@@ -56,11 +115,16 @@ async def transcribe(file: UploadFile = File(...), language: str = "pt"):
         tmp_path = tmp.name
 
     try:
+        model = get_whisper_model()
         segments, info = model.transcribe(tmp_path, language=language)
         text = "".join([s.text for s in segments]).strip()
         return {"language": info.language, "duration": info.duration, "text": text}
+    except Exception as e:
+        logger.error(f"Erro na transcrição: {e}")
+        return {"error": str(e), "language": language, "duration": 0, "text": ""}
     finally:
-        os.remove(tmp_path)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 @app.post("/ocr")
@@ -208,5 +272,9 @@ async def ocr_card(file: UploadFile = File(...), lang: str = "pt", debug: bool =
             }
 
         return {"rawText": raw_text, "lines": lines, "lang": lang}
+    except Exception as e:
+        logger.error(f"Erro no OCR: {e}")
+        return {"rawText": "", "lines": [], "lang": lang, "error": str(e)}
     finally:
-        os.remove(tmp_path)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)

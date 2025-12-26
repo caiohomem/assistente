@@ -27,6 +27,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<CreditTransaction> CreditTransactions { get; set; }
     public DbSet<Plan> Plans { get; set; }
     public DbSet<CreditPackage> CreditPackages { get; set; }
+    public DbSet<AgentConfiguration> AgentConfigurations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

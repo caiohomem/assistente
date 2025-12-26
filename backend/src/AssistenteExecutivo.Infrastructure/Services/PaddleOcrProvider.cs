@@ -14,15 +14,18 @@ public sealed class PaddleOcrProvider : IOcrProvider
 
     private readonly PaddleOcrApiClient _client;
     private readonly ILogger<PaddleOcrProvider> _logger;
+    private readonly IOcrFieldRefinementService? _refinementService;
     private readonly string _lang;
 
     public PaddleOcrProvider(
         PaddleOcrApiClient client,
         IConfiguration configuration,
-        ILogger<PaddleOcrProvider> logger)
+        ILogger<PaddleOcrProvider> logger,
+        IOcrFieldRefinementService? refinementService = null)
     {
         _client = client;
         _logger = logger;
+        _refinementService = refinementService;
         _lang = configuration["Ocr:PaddleOcr:Lang"] ?? "pt";
     }
 
@@ -71,7 +74,7 @@ public sealed class PaddleOcrProvider : IOcrProvider
             { "jobTitle", jobTitle != null ? 0.75m : 0m }
         };
 
-        return new OcrExtract(
+        var extract = new OcrExtract(
             rawText: rawText,
             name: name,
             email: email,
@@ -79,6 +82,64 @@ public sealed class PaddleOcrProvider : IOcrProvider
             company: company,
             jobTitle: jobTitle,
             confidenceScores: confidenceScores);
+
+        // Refinamento com Qwen: usar se campos estiverem incompletos ou com baixa confiança
+        //if (_refinementService != null && ShouldRefineExtract(extract))
+        //{
+            _logger.LogInformation("Aplicando refinamento de campos com Qwen");
+            try
+            {
+                extract = await _refinementService.RefineFieldsAsync(
+                    extract.RawText ?? string.Empty,
+                    extract,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erro ao refinar campos com Qwen, usando extração original");
+                // Continuar com extract original se refinamento falhar
+            }
+        //}
+
+        return extract;
+    }
+
+    private static bool ShouldRefineExtract(OcrExtract extract)
+    {
+        // Refinar se:
+        // 1. RawText existe mas está vazio ou muito curto
+        if (string.IsNullOrWhiteSpace(extract.RawText) || extract.RawText.Length < 10)
+        {
+            return false; // Não há texto suficiente para refinar
+        }
+
+        // 2. Menos de 3 campos foram preenchidos
+        var filledFields = 0;
+        if (!string.IsNullOrWhiteSpace(extract.Name)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.Email)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.Phone)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.Company)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.JobTitle)) filledFields++;
+
+        if (filledFields < 3)
+        {
+            return true; // Poucos campos preenchidos, vale a pena refinar
+        }
+
+        // 3. Algum campo importante está faltando (email ou telefone)
+        if (string.IsNullOrWhiteSpace(extract.Email) && string.IsNullOrWhiteSpace(extract.Phone))
+        {
+            return true; // Falta informação de contato essencial
+        }
+
+        // 4. Confiança média baixa (< 0.7)
+        var avgConfidence = extract.ConfidenceScores.Values.DefaultIfEmpty(0m).Average();
+        if (avgConfidence < 0.7m)
+        {
+            return true; // Confiança baixa, vale refinar
+        }
+
+        return false; // Extração parece boa, não precisa refinar
     }
 
     private static string? ExtractEmail(string rawText)

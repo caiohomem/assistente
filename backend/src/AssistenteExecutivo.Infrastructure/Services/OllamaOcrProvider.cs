@@ -19,6 +19,7 @@ public class OllamaOcrProvider : IOcrProvider
 
     private readonly OllamaClient _ollamaClient;
     private readonly ILogger<OllamaOcrProvider> _logger;
+    private readonly IOcrFieldRefinementService? _refinementService;
     private readonly string _model;
     private readonly double _temperature;
     private readonly int _maxTokens;
@@ -26,10 +27,12 @@ public class OllamaOcrProvider : IOcrProvider
     public OllamaOcrProvider(
         OllamaClient ollamaClient,
         IConfiguration configuration,
-        ILogger<OllamaOcrProvider> logger)
+        ILogger<OllamaOcrProvider> logger,
+        IOcrFieldRefinementService? refinementService = null)
     {
         _ollamaClient = ollamaClient;
         _logger = logger;
+        _refinementService = refinementService;
         _model = configuration["Ollama:Ocr:Model"] ?? "llava";
         _temperature = double.Parse(configuration["Ollama:Ocr:Temperature"] ?? "0.1");
         _maxTokens = int.Parse(configuration["Ollama:Ocr:MaxTokens"] ?? "500");
@@ -93,6 +96,24 @@ public class OllamaOcrProvider : IOcrProvider
                         company: extract.Company,
                         jobTitle: extract.JobTitle,
                         confidenceScores: updatedScores);
+                }
+            }
+
+            // Refinamento com Qwen: usar se campos estiverem incompletos ou com baixa confiança
+            if (_refinementService != null && ShouldRefineExtract(extract))
+            {
+                _logger.LogInformation("Aplicando refinamento de campos com Qwen");
+                try
+                {
+                    extract = await _refinementService.RefineFieldsAsync(
+                        extract.RawText ?? string.Empty,
+                        extract,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Erro ao refinar campos com Qwen, usando extração original");
+                    // Continuar com extract original se refinamento falhar
                 }
             }
 
@@ -656,5 +677,43 @@ REGRAS:
         }
 
         return null;
+    }
+
+    private static bool ShouldRefineExtract(OcrExtract extract)
+    {
+        // Refinar se:
+        // 1. RawText existe mas está vazio ou muito curto
+        if (string.IsNullOrWhiteSpace(extract.RawText) || extract.RawText.Length < 10)
+        {
+            return false; // Não há texto suficiente para refinar
+        }
+
+        // 2. Menos de 3 campos foram preenchidos
+        var filledFields = 0;
+        if (!string.IsNullOrWhiteSpace(extract.Name)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.Email)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.Phone)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.Company)) filledFields++;
+        if (!string.IsNullOrWhiteSpace(extract.JobTitle)) filledFields++;
+
+        if (filledFields < 3)
+        {
+            return true; // Poucos campos preenchidos, vale a pena refinar
+        }
+
+        // 3. Algum campo importante está faltando (email ou telefone)
+        if (string.IsNullOrWhiteSpace(extract.Email) && string.IsNullOrWhiteSpace(extract.Phone))
+        {
+            return true; // Falta informação de contato essencial
+        }
+
+        // 4. Confiança média baixa (< 0.7)
+        var avgConfidence = extract.ConfidenceScores.Values.DefaultIfEmpty(0m).Average();
+        if (avgConfidence < 0.7m)
+        {
+            return true; // Confiança baixa, vale refinar
+        }
+
+        return false; // Extração parece boa, não precisa refinar
     }
 }

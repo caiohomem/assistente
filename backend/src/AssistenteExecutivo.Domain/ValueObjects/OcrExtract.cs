@@ -9,6 +9,7 @@ public sealed class OcrExtract : ValueObject
     public string? Company { get; }
     public string? JobTitle { get; }
     public Dictionary<string, decimal> ConfidenceScores { get; }
+    public string? AiRawResponse { get; }
 
     public OcrExtract(
         string? rawText = null,
@@ -17,7 +18,8 @@ public sealed class OcrExtract : ValueObject
         string? phone = null,
         string? company = null,
         string? jobTitle = null,
-        Dictionary<string, decimal>? confidenceScores = null)
+        Dictionary<string, decimal>? confidenceScores = null,
+        string? aiRawResponse = null)
     {
         RawText = rawText?.Trim();
         Name = name?.Trim();
@@ -26,6 +28,7 @@ public sealed class OcrExtract : ValueObject
         Company = company?.Trim();
         JobTitle = jobTitle?.Trim();
         ConfidenceScores = confidenceScores ?? new Dictionary<string, decimal>();
+        AiRawResponse = aiRawResponse?.Trim();
     }
 
     public bool HasMinimumData => !string.IsNullOrWhiteSpace(Email) || !string.IsNullOrWhiteSpace(Phone);

@@ -33,7 +33,8 @@ public static class CaptureJobMapper
                 Phone = job.CardScanResult.Phone,
                 Company = job.CardScanResult.Company,
                 JobTitle = job.CardScanResult.JobTitle,
-                ConfidenceScores = job.CardScanResult.ConfidenceScores
+                ConfidenceScores = job.CardScanResult.ConfidenceScores,
+                AiRawResponse = job.CardScanResult.AiRawResponse
             };
         }
 

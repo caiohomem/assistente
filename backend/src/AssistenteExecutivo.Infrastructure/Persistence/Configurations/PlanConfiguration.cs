@@ -1,6 +1,7 @@
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AssistenteExecutivo.Infrastructure.Persistence.Configurations;
@@ -62,7 +63,11 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
                 v => v == null || v.Count == 0 ? string.Empty : string.Join(";", v),
                 v => string.IsNullOrWhiteSpace(v) 
                     ? new List<string>() 
-                    : v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList())
+                    : v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                new ValueComparer<List<string>>(
+                    (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()))
             .HasMaxLength(2000);
 
         builder.Property(p => p.IsActive)

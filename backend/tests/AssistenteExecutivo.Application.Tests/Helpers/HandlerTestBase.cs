@@ -64,6 +64,8 @@ public abstract class HandlerTestBase : IDisposable
         // Mock IPublisher for domain events (no-op in tests)
         services.AddScoped<IPublisher, MockPublisher>();
 
+        ConfigureServices(services);
+
         // Register all handlers from Application assembly
         RegisterHandlers(services, typeof(AssistenteExecutivo.Application.Commands.Auth.RegisterUserCommand).Assembly);
 
@@ -72,6 +74,10 @@ public abstract class HandlerTestBase : IDisposable
         using var scope = ServiceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         dbContext.Database.EnsureCreated();
+    }
+
+    protected virtual void ConfigureServices(IServiceCollection services)
+    {
     }
 
     protected async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
