@@ -105,7 +105,7 @@ steps:
       - -ceu
       - |
         source /workspace/build-flags.env
-        if [[ "${BUILD_WEB}" == "true" ]]; then
+        if [[ "$${BUILD_WEB}" == "true" ]]; then
           echo "Iniciando build da web..."
           docker build \
             -f web/Dockerfile \
@@ -134,7 +134,7 @@ steps:
       - -ceu
       - |
         source /workspace/build-flags.env
-        if [[ "${BUILD_WEB}" == "true" ]]; then
+        if [[ "$${BUILD_WEB}" == "true" ]]; then
           echo "Fazendo push da imagem da web..."
           docker push gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA
         else
@@ -149,7 +149,7 @@ steps:
       - -ceu
       - |
         source /workspace/build-flags.env
-        if [[ "${BUILD_WEB}" == "true" ]]; then
+        if [[ "$${BUILD_WEB}" == "true" ]]; then
           echo "Fazendo deploy da web..."
           gcloud run deploy ${_CLOUD_RUN_SERVICE_WEB} \
             --image gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA \
@@ -171,7 +171,7 @@ steps:
       - -ceu
       - |
         source /workspace/build-flags.env
-        if [[ "${BUILD_API}" == "true" ]]; then
+        if [[ "$${BUILD_API}" == "true" ]]; then
           echo "Iniciando build da API..."
           docker build \
             -f backend/Dockerfile \
@@ -199,7 +199,7 @@ steps:
       - -ceu
       - |
         source /workspace/build-flags.env
-        if [[ "${BUILD_API}" == "true" ]]; then
+        if [[ "$${BUILD_API}" == "true" ]]; then
           echo "Fazendo push da imagem da API..."
           docker push gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA
         else
@@ -214,7 +214,7 @@ steps:
       - -ceu
       - |
         source /workspace/build-flags.env
-        if [[ "${BUILD_API}" == "true" ]]; then
+        if [[ "$${BUILD_API}" == "true" ]]; then
           echo "Fazendo deploy da API..."
           # NOTA: Configure as variáveis de ambiente da API aqui ou via Secret Manager
           # IMPORTANTE: A aplicação precisa de ConnectionStrings__DefaultConnection e Keycloak configurados
