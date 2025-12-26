@@ -42,32 +42,33 @@ steps:
         
         # Detectar mudanças usando git
         # Tentar diferentes estratégias para encontrar o commit anterior
-        PREV_COMMIT=""
+        # Usar variável local para evitar conflito com substituições do Cloud Build
+        local prev_commit=""
         
         # Estratégia 1: Tentar HEAD~1 (commit anterior)
         if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-          PREV_COMMIT="HEAD~1"
+          prev_commit="HEAD~1"
         # Estratégia 2: Tentar usar a branch base (se disponível)
         elif [[ -n "${BRANCH_NAME}" ]] && git rev-parse --verify origin/${BRANCH_NAME} >/dev/null 2>&1; then
-          PREV_COMMIT="origin/${BRANCH_NAME}"
+          prev_commit="origin/${BRANCH_NAME}"
         # Estratégia 3: Tentar usar a tag mais recente
         elif git describe --tags --abbrev=0 >/dev/null 2>&1; then
-          PREV_COMMIT=$(git describe --tags --abbrev=0)
+          prev_commit=$(git describe --tags --abbrev=0)
         fi
         
         # Se não conseguir encontrar commit anterior, fazer build de tudo
-        if [[ -z "${PREV_COMMIT}" ]]; then
+        if [[ -z "${prev_commit}" ]]; then
           echo "Não foi possível determinar commit anterior - fazendo build de tudo"
           echo "BUILD_WEB=true" >> /workspace/build-flags.env
           echo "BUILD_API=true" >> /workspace/build-flags.env
           exit 0
         fi
         
-        CURRENT_COMMIT="HEAD"
-        echo "Comparando commits: ${PREV_COMMIT}..${CURRENT_COMMIT}"
+        local current_commit="HEAD"
+        echo "Comparando commits: ${prev_commit}..${current_commit}"
         
         # Verificar mudanças no diretório web/
-        if git diff --name-only ${PREV_COMMIT}..${CURRENT_COMMIT} | grep -q "^web/"; then
+        if git diff --name-only ${prev_commit}..${current_commit} | grep -q "^web/"; then
           echo "✓ Mudanças detectadas em web/"
           echo "BUILD_WEB=true" >> /workspace/build-flags.env
         else
@@ -76,7 +77,7 @@ steps:
         fi
         
         # Verificar mudanças no diretório backend/
-        if git diff --name-only ${PREV_COMMIT}..${CURRENT_COMMIT} | grep -q "^backend/"; then
+        if git diff --name-only ${prev_commit}..${current_commit} | grep -q "^backend/"; then
           echo "✓ Mudanças detectadas em backend/"
           echo "BUILD_API=true" >> /workspace/build-flags.env
         else
@@ -85,7 +86,7 @@ steps:
         fi
         
         # Se mudanças em arquivos compartilhados (cloudbuild.yaml, etc), fazer build de tudo
-        if git diff --name-only ${PREV_COMMIT}..${CURRENT_COMMIT} | grep -qE "^(cloudbuild\.yaml|\.github/|\.gitlab-ci\.yml)"; then
+        if git diff --name-only ${prev_commit}..${current_commit} | grep -qE "^(cloudbuild\.yaml|\.github/|\.gitlab-ci\.yml)"; then
           echo "⚠ Mudanças em arquivos de configuração - fazendo build de tudo"
           echo "BUILD_WEB=true" >> /workspace/build-flags.env
           echo "BUILD_API=true" >> /workspace/build-flags.env
