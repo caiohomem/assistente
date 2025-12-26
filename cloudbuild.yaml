@@ -4,13 +4,27 @@ options:
 substitutions:
   # Defina no Trigger (recommended) com a URL pública do backend/BFF em produção.
   # Exemplo: https://assistente-api-xxxxx-uc.a.run.app
-  _NEXT_PUBLIC_API_BASE_URL: "http://localhost:5239"
+  _NEXT_PUBLIC_API_BASE_URL: ""
   # Defina no Trigger com o serviço/região do Cloud Run.
   _CLOUD_RUN_SERVICE_WEB: "assistente-web"
   _CLOUD_RUN_SERVICE_API: "assistente-api"
   _CLOUD_RUN_REGION: "us-central1"
 
 steps:
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [[ -z "${_NEXT_PUBLIC_API_BASE_URL}" ]]; then
+          echo "ERROR: defina substitution _NEXT_PUBLIC_API_BASE_URL (URL pública da API/BFF)."
+          exit 1
+        fi
+        if [[ "${_NEXT_PUBLIC_API_BASE_URL}" =~ ^https?://(localhost|127\\.0\\.0\\.1) ]]; then
+          echo "ERROR: _NEXT_PUBLIC_API_BASE_URL não pode ser localhost/127.0.0.1 em produção."
+          exit 1
+        fi
+
   - name: gcr.io/cloud-builders/docker
     args:
       [

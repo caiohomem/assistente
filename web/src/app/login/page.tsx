@@ -30,50 +30,7 @@ export default function LoginPage() {
 
     async function checkAuth() {
       try {
-        // #region agent log
-        try {
-          const logData = {
-            location: 'login/page.tsx:checkAuth',
-            message: 'Before getBffSession (client)',
-            data: { returnUrl, hasAuthError: !!authError, hasCookies: document.cookie.length > 0 },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          };
-          await fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(logData),
-          }).catch(() => {});
-        } catch {}
-        // #endregion
-
         const session = await getBffSession();
-
-        // #region agent log
-        try {
-          const logData = {
-            location: 'login/page.tsx:checkAuth',
-            message: 'After getBffSession (client)',
-            data: {
-              authenticated: session.authenticated,
-              hasUser: !!session.user,
-              userEmail: session.user?.email,
-              hasCsrfToken: !!session.csrfToken,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'E',
-          };
-          await fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(logData),
-          }).catch(() => {});
-        } catch {}
-        // #endregion
 
         if (!isMounted) return;
 

@@ -48,16 +48,6 @@ export async function getBffSession(params?: {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
     
     try {
-      // #region agent log
-      const isClient = typeof window !== "undefined";
-      const cookiesAvailable = isClient ? document.cookie : (params?.cookieHeader || "");
-      try {
-        if (isClient) {
-          fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'bff.ts:51', message: 'Before fetch session', data: { url, hasCookieHeader: !!params?.cookieHeader, cookiesAvailable: cookiesAvailable?.substring(0, 200), cookieCount: cookiesAvailable?.split(';').length || 0 }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => {});
-        }
-      } catch {}
-      // #endregion
-
       const res = await fetch(url, {
         method: "GET",
         cache: "no-store",
@@ -67,14 +57,6 @@ export async function getBffSession(params?: {
       });
       
       clearTimeout(timeoutId);
-
-      // #region agent log
-      try {
-        if (isClient) {
-          fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'bff.ts:61', message: 'After fetch session', data: { status: res.status, statusText: res.statusText, ok: res.ok, hasSetCookie: !!res.headers.get('set-cookie'), url }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => {});
-        }
-      } catch {}
-      // #endregion
 
       if (!res.ok) {
         // Log detalhado para debug
@@ -104,14 +86,6 @@ export async function getBffSession(params?: {
       }
 
       const session = (await res.json()) as BffSession;
-      
-      // #region agent log
-      try {
-        if (isClient) {
-          fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'bff.ts:88', message: 'Session response received', data: { authenticated: session.authenticated, hasUser: !!session.user, userEmail: session.user?.email, hasCsrfToken: !!session.csrfToken }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => {});
-        }
-      } catch {}
-      // #endregion
       
       // Log para debug no cliente
       if (typeof window !== "undefined") {
@@ -412,5 +386,4 @@ export async function bffDelete(
     throw new Error(message);
   }
 }
-
 

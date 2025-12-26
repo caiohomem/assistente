@@ -6,9 +6,6 @@ export function ThemeSelector() {
   const { theme, resolvedTheme, mounted, setTheme } = useTheme()
 
   const toggleTheme = () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeSelector.tsx:8',message:'toggleTheme called',data:{currentTheme:theme,resolvedTheme,mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     let newTheme: 'light' | 'dark' | 'system'
     if (theme === 'light') {
       newTheme = 'dark'
@@ -18,9 +15,6 @@ export function ThemeSelector() {
       newTheme = 'light'
     }
     
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ThemeSelector.tsx:18',message:'About to call setTheme',data:{newTheme,currentTheme:theme},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     setTheme(newTheme)
   }
 
@@ -108,4 +102,3 @@ export function ThemeSelector() {
     </div>
   )
 }
-

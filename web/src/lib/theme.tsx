@@ -166,9 +166,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, mounted])
 
   const setTheme = useCallback((newTheme: Theme) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'theme.tsx:168',message:'setTheme called',data:{newTheme,currentTheme:theme},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     // Atualizar estado primeiro
     setThemeState(newTheme)
     
@@ -176,10 +173,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       const root = window.document.documentElement
       
-      // #region agent log
-      const hasDarkBefore = root.classList.contains('dark')
-      fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'theme.tsx:178',message:'Before applying theme',data:{newTheme,hasDarkBefore,rootClasses:Array.from(root.classList)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       
       // Remover classe 'dark' IMEDIATAMENTE se o novo tema for 'light'
       // Isso garante que não haja delay visual
@@ -188,19 +181,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
       
       const effectiveTheme = applyThemeToDOM(newTheme)
-      // #region agent log
-      const hasDarkAfter = root.classList.contains('dark')
-      fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'theme.tsx:186',message:'After applying theme',data:{newTheme,effectiveTheme,hasDarkAfter,rootClasses:Array.from(root.classList),localStorageTheme:localStorage.getItem('theme')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       setResolvedTheme(effectiveTheme)
       localStorage.setItem('theme', newTheme)
       
       // Verificação final: garantir que está correto
       if (effectiveTheme === 'light' && root.classList.contains('dark')) {
         root.classList.remove('dark')
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/c003d7a1-2df5-4d85-8124-323cc6c30d9d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'theme.tsx:194',message:'Force removed dark class',data:{effectiveTheme,hasDarkAfterForce:root.classList.contains('dark')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
       }
     }
   }, [theme])
@@ -220,4 +206,3 @@ export function useTheme() {
   }
   return context
 }
-
