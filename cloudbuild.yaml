@@ -5,6 +5,9 @@ substitutions:
   # Defina no Trigger (recommended) com a URL pública do backend/BFF em produção.
   # Exemplo: https://assistente-api-xxxxx-uc.a.run.app
   _NEXT_PUBLIC_API_BASE_URL: "http://localhost:5239"
+  # Defina no Trigger com o serviço/região do Cloud Run.
+  _CLOUD_RUN_SERVICE: "assistente-web"
+  _CLOUD_RUN_REGION: "us-central1"
 
 steps:
   - name: gcr.io/cloud-builders/docker
@@ -20,6 +23,26 @@ steps:
         "-t",
         "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA",
         "web",
+      ]
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "deploy",
+        "${_CLOUD_RUN_SERVICE}",
+        "--image",
+        "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA",
+        "--region",
+        "${_CLOUD_RUN_REGION}",
+        "--platform",
+        "managed",
+        "--allow-unauthenticated",
+        "--port",
+        "8080",
+        "--set-env-vars",
+        "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}",
       ]
 
 images:
