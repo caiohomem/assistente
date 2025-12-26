@@ -324,16 +324,30 @@ try
     {
         options.AddDefaultPolicy(policy =>
         {
-            var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
-            var frontendPublicBaseUrl = builder.Configuration["Frontend:PublicBaseUrl"];
-            
-            var origins = new List<string> { frontendBaseUrl };
-            if (!string.IsNullOrWhiteSpace(frontendPublicBaseUrl) && frontendPublicBaseUrl != frontendBaseUrl)
+            var configuredOrigins = builder.Configuration
+                .GetSection("Frontend:CorsOrigins")
+                .Get<string[]>()?
+                .Where(o => !string.IsNullOrWhiteSpace(o))
+                .Select(o => o!.Trim().TrimEnd('/'))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            // Back-compat: if Frontend:CorsOrigins não existir, usa BaseUrl/PublicBaseUrl.
+            if (configuredOrigins == null || configuredOrigins.Length == 0)
             {
-                origins.Add(frontendPublicBaseUrl);
+                var frontendBaseUrl = (builder.Configuration["Frontend:BaseUrl"] ?? "http://localhost:3000").Trim().TrimEnd('/');
+                var frontendPublicBaseUrl = builder.Configuration["Frontend:PublicBaseUrl"]?.Trim().TrimEnd('/');
+
+                var origins = new List<string> { frontendBaseUrl };
+                if (!string.IsNullOrWhiteSpace(frontendPublicBaseUrl) && !string.Equals(frontendPublicBaseUrl, frontendBaseUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    origins.Add(frontendPublicBaseUrl);
+                }
+
+                configuredOrigins = origins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             }
-            
-            policy.WithOrigins(origins.ToArray())
+
+            policy.WithOrigins(configuredOrigins)
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();

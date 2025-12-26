@@ -6,7 +6,8 @@ substitutions:
   # Exemplo: https://assistente-api-xxxxx-uc.a.run.app
   _NEXT_PUBLIC_API_BASE_URL: "http://localhost:5239"
   # Defina no Trigger com o serviço/região do Cloud Run.
-  _CLOUD_RUN_SERVICE: "assistente-web"
+  _CLOUD_RUN_SERVICE_WEB: "assistente-web"
+  _CLOUD_RUN_SERVICE_API: "assistente-api"
   _CLOUD_RUN_REGION: "us-central1"
 
 steps:
@@ -21,13 +22,13 @@ steps:
         "--build-arg",
         "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}",
         "-t",
-        "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA",
+        "gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA",
         "web",
       ]
 
   # O push precisa acontecer ANTES do deploy (o bloco `images:` só faz push ao final do build).
   - name: gcr.io/cloud-builders/docker
-    args: ["push", "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA"]
+    args: ["push", "gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA"]
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: gcloud
@@ -35,19 +36,55 @@ steps:
       [
         "run",
         "deploy",
-        "${_CLOUD_RUN_SERVICE}",
+        "${_CLOUD_RUN_SERVICE_WEB}",
         "--image",
-        "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA",
+        "gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA",
         "--region",
         "${_CLOUD_RUN_REGION}",
         "--platform",
         "managed",
-        "--allow-unauthenticated",
         "--port",
         "8080",
         "--set-env-vars",
         "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}",
       ]
 
+  # Build da API
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "build",
+        "-f",
+        "backend/Dockerfile",
+        "--target",
+        "runner",
+        "-t",
+        "gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA",
+        "backend",
+      ]
+
+  # Push da imagem da API
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA"]
+
+  # Deploy da API
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "deploy",
+        "${_CLOUD_RUN_SERVICE_API}",
+        "--image",
+        "gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA",
+        "--region",
+        "${_CLOUD_RUN_REGION}",
+        "--platform",
+        "managed",
+        "--port",
+        "8080",
+      ]
+
 images:
-  - 'gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA'
