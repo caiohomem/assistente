@@ -4,6 +4,38 @@ import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 import type { Note, CreateTextNoteRequest, UpdateNoteRequest } from "../types/note";
 
 /**
+ * Lista notas de um contato (client-side).
+ */
+export async function listNotesByContactClient(contactId: string): Promise<Note[]> {
+  const session = await getBffSession();
+  if (!session.authenticated) {
+    throw new Error("NAœo autenticado");
+  }
+
+  const apiBase = getApiBaseUrl();
+  const res = await fetch(`${apiBase}/api/contacts/${contactId}/notes`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const contentType = res.headers.get("content-type") ?? "";
+    const maybeJson = contentType.includes("application/json");
+    const data = maybeJson ? await res.json() : undefined;
+    const message =
+      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
+      `Request failed: ${res.status}`;
+    throw new Error(message);
+  }
+
+  return await res.json();
+}
+
+/**
  * Cria uma nota de texto (client-side).
  */
 export async function createTextNoteClient(
@@ -12,7 +44,7 @@ export async function createTextNoteClient(
 ): Promise<Note> {
   const session = await getBffSession();
   if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
+    throw new Error("NAœo autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -48,7 +80,7 @@ export async function updateNoteClient(
 ): Promise<Note> {
   const session = await getBffSession();
   if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
+    throw new Error("NAœo autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -81,7 +113,7 @@ export async function updateNoteClient(
 export async function deleteNoteClient(noteId: string): Promise<void> {
   const session = await getBffSession();
   if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
+    throw new Error("NAœo autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -103,5 +135,4 @@ export async function deleteNoteClient(noteId: string): Promise<void> {
     throw new Error(message);
   }
 }
-
 

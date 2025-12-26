@@ -61,6 +61,8 @@ export function ContactDetailsClient({
   notes,
 }: ContactDetailsClientProps) {
   const router = useRouter();
+  const [contactState, setContactState] = useState(contact);
+  const [notesState, setNotesState] = useState(notes);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +70,14 @@ export function ContactDetailsClient({
   const [deletingRelationshipId, setDeletingRelationshipId] = useState<string | null>(null);
   const [confirmDeleteNote, setConfirmDeleteNote] = useState<string | null>(null);
   const [confirmDeleteRelationship, setConfirmDeleteRelationship] = useState<string | null>(null);
+
+  useEffect(() => {
+    setContactState(contact);
+  }, [contact]);
+
+  useEffect(() => {
+    setNotesState(notes);
+  }, [notes]);
 
   async function handleDelete() {
     setIsDeleting(true);
@@ -91,7 +101,7 @@ export function ContactDetailsClient({
 
     try {
       await deleteNoteClient(noteId);
-      router.refresh();
+      setNotesState((prev) => prev.filter((n) => n.noteId !== noteId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao excluir nota");
     } finally {
@@ -106,7 +116,10 @@ export function ContactDetailsClient({
 
     try {
       await deleteRelationshipClient(relationshipId);
-      router.refresh();
+      setContactState((prev) => ({
+        ...prev,
+        relationships: (prev.relationships || []).filter((r) => r.relationshipId !== relationshipId),
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao excluir relacionamento");
     } finally {
@@ -199,36 +212,36 @@ export function ContactDetailsClient({
               Nome Completo
             </label>
             <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-              {contact.fullName}
+              {contactState.fullName}
             </p>
           </div>
-          {contact.jobTitle && (
+          {contactState.jobTitle && (
             <div>
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Cargo
               </label>
               <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                {contact.jobTitle}
+                {contactState.jobTitle}
               </p>
             </div>
           )}
-          {contact.company && (
+          {contactState.company && (
             <div>
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Empresa
               </label>
               <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                {contact.company}
+                {contactState.company}
               </p>
             </div>
           )}
-          {contact.emails.length > 0 && (
+          {contactState.emails.length > 0 && (
             <div>
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 E-mails
               </label>
               <ul className="mt-1 space-y-1">
-                {contact.emails.map((email, index) => (
+                {contactState.emails.map((email, index) => (
                   <li key={index} className="text-sm">
                     <a
                       href={`mailto:${email}`}
@@ -241,13 +254,13 @@ export function ContactDetailsClient({
               </ul>
             </div>
           )}
-          {contact.phones.length > 0 && (
+          {contactState.phones.length > 0 && (
             <div>
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Telefones
               </label>
               <ul className="mt-1 space-y-1">
-                {contact.phones.map((phone, index) => (
+                {contactState.phones.map((phone, index) => (
                   <li key={index} className="text-sm">
                     <a
                       href={`tel:${phone}`}
@@ -260,23 +273,23 @@ export function ContactDetailsClient({
               </ul>
             </div>
           )}
-          {contact.address && (
+          {contactState.address && (
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Endereço
               </label>
               <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                {formatAddress(contact.address)}
+                {formatAddress(contactState.address)}
               </p>
             </div>
           )}
-          {contact.tags.length > 0 && (
+          {contactState.tags.length > 0 && (
             <div className="md:col-span-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Tags
               </label>
               <div className="mt-1 flex flex-wrap gap-2">
-                {contact.tags.map((tag, index) => (
+                {contactState.tags.map((tag, index) => (
                   <span
                     key={index}
                     className="rounded-full bg-zinc-100 dark:bg-zinc-700 px-3 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300"
@@ -292,7 +305,7 @@ export function ContactDetailsClient({
               Criado em
             </label>
             <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-              {formatDate(contact.createdAt)}
+              {formatDate(contactState.createdAt)}
             </p>
           </div>
           <div>
@@ -300,7 +313,7 @@ export function ContactDetailsClient({
               Atualizado em
             </label>
             <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-              {formatDate(contact.updatedAt)}
+              {formatDate(contactState.updatedAt)}
             </p>
           </div>
         </div>
@@ -319,13 +332,13 @@ export function ContactDetailsClient({
             Adicionar Relacionamento
           </Link>
         </div>
-        {contact.relationships.length === 0 ? (
+        {contactState.relationships.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Nenhum relacionamento cadastrado.
           </p>
         ) : (
           <div className="space-y-3">
-            {contact.relationships.map((relationship: Relationship) => (
+            {contactState.relationships.map((relationship: Relationship) => (
               <div
                 key={relationship.relationshipId}
                 className="rounded-md border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700 p-4"
@@ -401,7 +414,7 @@ export function ContactDetailsClient({
           </p>
         ) : (
           <div className="space-y-4">
-            {notes.map((note) => (
+            {notesState.map((note) => (
               <div
                 key={note.noteId}
                 className="rounded-md border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700 p-4"
@@ -631,4 +644,3 @@ function AudioPlayer({ noteId }: { noteId: string }) {
     </div>
   );
 }
-
