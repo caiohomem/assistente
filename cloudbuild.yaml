@@ -215,11 +215,20 @@ steps:
         source /workspace/build-flags.env
         if [[ "${BUILD_API}" == "true" ]]; then
           echo "Fazendo deploy da API..."
+          # NOTA: Configure as variáveis de ambiente da API aqui ou via Secret Manager
+          # IMPORTANTE: A aplicação precisa de ConnectionStrings__DefaultConnection e Keycloak configurados
+          # Configure essas variáveis ANTES do deploy ou a aplicação falhará ao iniciar
           gcloud run deploy ${_CLOUD_RUN_SERVICE_API} \
             --image gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA \
             --region ${_CLOUD_RUN_REGION} \
             --platform managed \
             --port 8080 \
+            --timeout 300 \
+            --cpu 1 \
+            --memory 512Mi \
+            --min-instances 0 \
+            --max-instances 10 \
+            --allow-unauthenticated \
             --quiet
         else
           echo "Pulando deploy da API (sem mudanças)"

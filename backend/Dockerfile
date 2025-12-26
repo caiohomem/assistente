@@ -23,9 +23,11 @@ RUN dotnet publish "AssistenteExecutivo.Api.csproj" -c Release -o /app/publish /
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runner
 WORKDIR /app
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+# Cloud Run define a variável PORT automaticamente
+# Usar PORT se disponível, senão usar 8080 como padrão
+ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
 ENV ASPNETCORE_ENVIRONMENT=Production
+EXPOSE 8080
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "AssistenteExecutivo.Api.dll"]
 
