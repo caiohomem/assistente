@@ -25,6 +25,10 @@ steps:
         "web",
       ]
 
+  # O push precisa acontecer ANTES do deploy (o bloco `images:` só faz push ao final do build).
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA"]
+
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: gcloud
     args:
