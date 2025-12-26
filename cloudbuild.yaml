@@ -9,13 +9,20 @@ substitutions:
   _CLOUD_RUN_SERVICE_WEB: "assistente-web"
   _CLOUD_RUN_SERVICE_API: "assistente-api"
   _CLOUD_RUN_REGION: "us-central1"
+  # Flag para forçar build de tudo (deixe vazio para detecção automática)
+  _FORCE_BUILD_ALL: ""
 
 steps:
+  # Detectar mudanças e validar configurações
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: detect-changes
     entrypoint: bash
     args:
       - -ceu
       - |
+        set -e
+        
+        # Validações
         if [[ -z "${_NEXT_PUBLIC_API_BASE_URL}" ]]; then
           echo "ERROR: defina substitution _NEXT_PUBLIC_API_BASE_URL (URL pública da API/BFF)."
           exit 1
@@ -24,80 +31,199 @@ steps:
           echo "ERROR: _NEXT_PUBLIC_API_BASE_URL não pode ser localhost/127.0.0.1 em produção."
           exit 1
         fi
+        
+        # Se _FORCE_BUILD_ALL estiver definido, fazer build de tudo
+        if [[ -n "${_FORCE_BUILD_ALL}" ]]; then
+          echo "Build forçado de todos os serviços"
+          echo "BUILD_WEB=true" >> /workspace/build-flags.env
+          echo "BUILD_API=true" >> /workspace/build-flags.env
+          exit 0
+        fi
+        
+        # Detectar mudanças usando git
+        # Tentar diferentes estratégias para encontrar o commit anterior
+        PREV_COMMIT=""
+        
+        # Estratégia 1: Tentar HEAD~1 (commit anterior)
+        if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+          PREV_COMMIT="HEAD~1"
+        # Estratégia 2: Tentar usar a branch base (se disponível)
+        elif [[ -n "${BRANCH_NAME}" ]] && git rev-parse --verify origin/${BRANCH_NAME} >/dev/null 2>&1; then
+          PREV_COMMIT="origin/${BRANCH_NAME}"
+        # Estratégia 3: Tentar usar a tag mais recente
+        elif git describe --tags --abbrev=0 >/dev/null 2>&1; then
+          PREV_COMMIT=$(git describe --tags --abbrev=0)
+        fi
+        
+        # Se não conseguir encontrar commit anterior, fazer build de tudo
+        if [[ -z "${PREV_COMMIT}" ]]; then
+          echo "Não foi possível determinar commit anterior - fazendo build de tudo"
+          echo "BUILD_WEB=true" >> /workspace/build-flags.env
+          echo "BUILD_API=true" >> /workspace/build-flags.env
+          exit 0
+        fi
+        
+        CURRENT_COMMIT="HEAD"
+        echo "Comparando commits: ${PREV_COMMIT}..${CURRENT_COMMIT}"
+        
+        # Verificar mudanças no diretório web/
+        if git diff --name-only ${PREV_COMMIT}..${CURRENT_COMMIT} | grep -q "^web/"; then
+          echo "✓ Mudanças detectadas em web/"
+          echo "BUILD_WEB=true" >> /workspace/build-flags.env
+        else
+          echo "○ Sem mudanças em web/"
+          echo "BUILD_WEB=false" >> /workspace/build-flags.env
+        fi
+        
+        # Verificar mudanças no diretório backend/
+        if git diff --name-only ${PREV_COMMIT}..${CURRENT_COMMIT} | grep -q "^backend/"; then
+          echo "✓ Mudanças detectadas em backend/"
+          echo "BUILD_API=true" >> /workspace/build-flags.env
+        else
+          echo "○ Sem mudanças em backend/"
+          echo "BUILD_API=false" >> /workspace/build-flags.env
+        fi
+        
+        # Se mudanças em arquivos compartilhados (cloudbuild.yaml, etc), fazer build de tudo
+        if git diff --name-only ${PREV_COMMIT}..${CURRENT_COMMIT} | grep -qE "^(cloudbuild\.yaml|\.github/|\.gitlab-ci\.yml)"; then
+          echo "⚠ Mudanças em arquivos de configuração - fazendo build de tudo"
+          echo "BUILD_WEB=true" >> /workspace/build-flags.env
+          echo "BUILD_API=true" >> /workspace/build-flags.env
+        fi
+        
+        # Mostrar flags geradas
+        echo "=== Flags de build ==="
+        cat /workspace/build-flags.env || true
 
+  # Build e Deploy da Web (condicional)
   - name: gcr.io/cloud-builders/docker
+    id: build-web
+    waitFor: ['detect-changes']
+    entrypoint: bash
     args:
-      [
-        "build",
-        "-f",
-        "web/Dockerfile",
-        "--target",
-        "runner",
-        "--build-arg",
-        "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}",
-        "-t",
-        "gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA",
-        "web",
-      ]
+      - -ceu
+      - |
+        source /workspace/build-flags.env
+        if [[ "${BUILD_WEB}" == "true" ]]; then
+          echo "Iniciando build da web..."
+          docker build \
+            -f web/Dockerfile \
+            --target runner \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL} \
+            -t gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA \
+            web
+        else
+          echo "Pulando build da web (sem mudanças)"
+          # Tentar usar a última imagem disponível
+          LAST_IMAGE=$(gcloud container images list-tags gcr.io/$PROJECT_ID/assistente-web --limit=1 --format="value(tags[0])" --sort-by=~timestamp 2>/dev/null || echo "")
+          if [[ -n "${LAST_IMAGE}" ]]; then
+            echo "Usando imagem anterior: ${LAST_IMAGE}"
+            docker pull gcr.io/$PROJECT_ID/assistente-web:${LAST_IMAGE} || true
+            docker tag gcr.io/$PROJECT_ID/assistente-web:${LAST_IMAGE} gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA || true
+          else
+            echo "Nenhuma imagem anterior encontrada - será necessário fazer build manual"
+          fi
+        fi
 
-  # O push precisa acontecer ANTES do deploy (o bloco `images:` só faz push ao final do build).
   - name: gcr.io/cloud-builders/docker
-    args: ["push", "gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA"]
+    id: push-web
+    waitFor: ['build-web']
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source /workspace/build-flags.env
+        if [[ "${BUILD_WEB}" == "true" ]]; then
+          echo "Fazendo push da imagem da web..."
+          docker push gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA
+        else
+          echo "Pulando push da web (sem mudanças)"
+        fi
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
-    entrypoint: gcloud
+    id: deploy-web
+    waitFor: ['push-web']
+    entrypoint: bash
     args:
-      [
-        "run",
-        "deploy",
-        "${_CLOUD_RUN_SERVICE_WEB}",
-        "--image",
-        "gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA",
-        "--region",
-        "${_CLOUD_RUN_REGION}",
-        "--platform",
-        "managed",
-        "--port",
-        "8080",
-        "--set-env-vars",
-        "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}",
-      ]
+      - -ceu
+      - |
+        source /workspace/build-flags.env
+        if [[ "${BUILD_WEB}" == "true" ]]; then
+          echo "Fazendo deploy da web..."
+          gcloud run deploy ${_CLOUD_RUN_SERVICE_WEB} \
+            --image gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA \
+            --region ${_CLOUD_RUN_REGION} \
+            --platform managed \
+            --port 8080 \
+            --set-env-vars NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL} \
+            --quiet
+        else
+          echo "Pulando deploy da web (sem mudanças)"
+        fi
 
-  # Build da API
+  # Build e Deploy da API (condicional)
   - name: gcr.io/cloud-builders/docker
+    id: build-api
+    waitFor: ['detect-changes']
+    entrypoint: bash
     args:
-      [
-        "build",
-        "-f",
-        "backend/Dockerfile",
-        "--target",
-        "runner",
-        "-t",
-        "gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA",
-        "backend",
-      ]
+      - -ceu
+      - |
+        source /workspace/build-flags.env
+        if [[ "${BUILD_API}" == "true" ]]; then
+          echo "Iniciando build da API..."
+          docker build \
+            -f backend/Dockerfile \
+            --target runner \
+            -t gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA \
+            backend
+        else
+          echo "Pulando build da API (sem mudanças)"
+          # Tentar usar a última imagem disponível
+          LAST_IMAGE=$(gcloud container images list-tags gcr.io/$PROJECT_ID/assistente-api --limit=1 --format="value(tags[0])" --sort-by=~timestamp 2>/dev/null || echo "")
+          if [[ -n "${LAST_IMAGE}" ]]; then
+            echo "Usando imagem anterior: ${LAST_IMAGE}"
+            docker pull gcr.io/$PROJECT_ID/assistente-api:${LAST_IMAGE} || true
+            docker tag gcr.io/$PROJECT_ID/assistente-api:${LAST_IMAGE} gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA || true
+          else
+            echo "Nenhuma imagem anterior encontrada - será necessário fazer build manual"
+          fi
+        fi
 
-  # Push da imagem da API
   - name: gcr.io/cloud-builders/docker
-    args: ["push", "gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA"]
+    id: push-api
+    waitFor: ['build-api']
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        source /workspace/build-flags.env
+        if [[ "${BUILD_API}" == "true" ]]; then
+          echo "Fazendo push da imagem da API..."
+          docker push gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA
+        else
+          echo "Pulando push da API (sem mudanças)"
+        fi
 
-  # Deploy da API
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
-    entrypoint: gcloud
+    id: deploy-api
+    waitFor: ['push-api']
+    entrypoint: bash
     args:
-      [
-        "run",
-        "deploy",
-        "${_CLOUD_RUN_SERVICE_API}",
-        "--image",
-        "gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA",
-        "--region",
-        "${_CLOUD_RUN_REGION}",
-        "--platform",
-        "managed",
-        "--port",
-        "8080",
-      ]
+      - -ceu
+      - |
+        source /workspace/build-flags.env
+        if [[ "${BUILD_API}" == "true" ]]; then
+          echo "Fazendo deploy da API..."
+          gcloud run deploy ${_CLOUD_RUN_SERVICE_API} \
+            --image gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA \
+            --region ${_CLOUD_RUN_REGION} \
+            --platform managed \
+            --port 8080 \
+            --quiet
+        else
+          echo "Pulando deploy da API (sem mudanças)"
+        fi
 
 images:
   - 'gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA'
