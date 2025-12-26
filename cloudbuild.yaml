@@ -116,11 +116,11 @@ steps:
         else
           echo "Pulando build da web (sem mudanças)"
           # Tentar usar a última imagem disponível
-          LAST_IMAGE=$(gcloud container images list-tags gcr.io/$PROJECT_ID/assistente-web --limit=1 --format="value(tags[0])" --sort-by=~timestamp 2>/dev/null || echo "")
-          if [[ -n "${LAST_IMAGE}" ]]; then
-            echo "Usando imagem anterior: ${LAST_IMAGE}"
-            docker pull gcr.io/$PROJECT_ID/assistente-web:${LAST_IMAGE} || true
-            docker tag gcr.io/$PROJECT_ID/assistente-web:${LAST_IMAGE} gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA || true
+          last_image=$(gcloud container images list-tags gcr.io/$PROJECT_ID/assistente-web --limit=1 --format="value(tags[0])" --sort-by=~timestamp 2>/dev/null || echo "")
+          if [[ -n "$${last_image}" ]]; then
+            echo "Usando imagem anterior: $${last_image}"
+            docker pull gcr.io/$PROJECT_ID/assistente-web:$${last_image} || true
+            docker tag gcr.io/$PROJECT_ID/assistente-web:$${last_image} gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA || true
           else
             echo "Nenhuma imagem anterior encontrada - será necessário fazer build manual"
           fi
@@ -181,11 +181,11 @@ steps:
         else
           echo "Pulando build da API (sem mudanças)"
           # Tentar usar a última imagem disponível
-          LAST_IMAGE=$(gcloud container images list-tags gcr.io/$PROJECT_ID/assistente-api --limit=1 --format="value(tags[0])" --sort-by=~timestamp 2>/dev/null || echo "")
-          if [[ -n "${LAST_IMAGE}" ]]; then
-            echo "Usando imagem anterior: ${LAST_IMAGE}"
-            docker pull gcr.io/$PROJECT_ID/assistente-api:${LAST_IMAGE} || true
-            docker tag gcr.io/$PROJECT_ID/assistente-api:${LAST_IMAGE} gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA || true
+          last_image=$(gcloud container images list-tags gcr.io/$PROJECT_ID/assistente-api --limit=1 --format="value(tags[0])" --sort-by=~timestamp 2>/dev/null || echo "")
+          if [[ -n "$${last_image}" ]]; then
+            echo "Usando imagem anterior: $${last_image}"
+            docker pull gcr.io/$PROJECT_ID/assistente-api:$${last_image} || true
+            docker tag gcr.io/$PROJECT_ID/assistente-api:$${last_image} gcr.io/$PROJECT_ID/assistente-api:$COMMIT_SHA || true
           else
             echo "Nenhuma imagem anterior encontrada - será necessário fazer build manual"
           fi
