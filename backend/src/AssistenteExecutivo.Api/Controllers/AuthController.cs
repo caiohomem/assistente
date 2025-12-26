@@ -77,6 +77,10 @@ public sealed class AuthController : ControllerBase
         var state = GenerateState();
         HttpContext.Session.SetString(BffSessionKeys.OAuthState, state);
         HttpContext.Session.SetString(BffSessionKeys.ReturnPath, NormalizeReturnPath(returnUrl));
+        
+        // IMPORTANTE: Commit explícito da sessão antes do redirect
+        // Isso garante que o state seja persistido antes de redirecionar para o Keycloak
+        await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
 
         string loginUrl;
 
@@ -107,6 +111,10 @@ public sealed class AuthController : ControllerBase
         HttpContext.Session.SetString(BffSessionKeys.OAuthState, state);
         HttpContext.Session.SetString(BffSessionKeys.ReturnPath, NormalizeReturnPath(returnUrl));
         HttpContext.Session.SetString(BffSessionKeys.Action, "register"); // Marcar como registro
+        
+        // IMPORTANTE: Commit explícito da sessão antes do redirect
+        // Isso garante que o state seja persistido antes de redirecionar para o Keycloak
+        await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
 
         string loginUrl;
 

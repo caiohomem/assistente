@@ -21,7 +21,7 @@
 | `Keycloak__AdminUsername` | Username do admin | `admin` |
 | `Keycloak__AdminPassword` | Password do admin | `senha-segura` |
 | `Keycloak__ClientId` | Client ID da aplicação | `assistenteexecutivo-app` |
-| `Api__PublicBaseUrl` | URL pública da API | `https://assistente-api-xxx.run.app` |
+| `Api__PublicBaseUrl` | URL pública da API (⚠️ obrigatória para OAuth) | `https://assistente-api-xxx.run.app` |
 | `Frontend__PublicBaseUrl` | URL pública do frontend | `https://assistente-web-xxx.run.app` |
 | `Frontend__CorsOrigins` | Origens permitidas (CORS) | `https://assistente-web-xxx.run.app` |
 | `ASPNETCORE_ENVIRONMENT` | Ambiente da aplicação | `Production` |

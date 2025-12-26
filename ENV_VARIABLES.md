@@ -45,11 +45,17 @@ Keycloak__Google__ClientSecret="..."                          # Google OAuth Cli
 #### URLs da Aplicação
 ```bash
 Api__BaseUrl="http://localhost:5239"                         # URL interna da API
-Api__PublicBaseUrl="https://assistente-api.seu-dominio.com"   # URL pública da API (HTTPS)
+Api__PublicBaseUrl="https://assistente-api-xxx.run.app"       # URL pública da API (HTTPS) - OBRIGATÓRIA para OAuth
 Frontend__BaseUrl="http://localhost:3000"                     # URL interna do frontend
 Frontend__PublicBaseUrl="https://assistente.seu-dominio.com"   # URL pública do frontend (HTTPS)
 Frontend__CorsOrigins="https://assistente.seu-dominio.com,https://assistente-web-xxx.run.app"
 ```
+
+**⚠️ Importante:** `Api__PublicBaseUrl` é **obrigatória** para OAuth funcionar. Ela é usada para:
+- Registrar o redirect URI válido no Keycloak (`{Api__PublicBaseUrl}/auth/oauth-callback`)
+- Construir URLs corretas para callbacks OAuth
+
+Sem essa variável, você receberá o erro: `Invalid parameter: redirect_uri`
 
 #### Ambiente
 ```bash
