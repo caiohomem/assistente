@@ -1,9 +1,26 @@
 options:
   logging: CLOUD_LOGGING_ONLY
 
+substitutions:
+  # Defina no Trigger (recommended) com a URL pública do backend/BFF em produção.
+  # Exemplo: https://assistente-api-xxxxx-uc.a.run.app
+  _NEXT_PUBLIC_API_BASE_URL: "http://localhost:5239"
+
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA', '.']
+    args:
+      [
+        "build",
+        "-f",
+        "web/Dockerfile",
+        "--target",
+        "runner",
+        "--build-arg",
+        "NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL}",
+        "-t",
+        "gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA",
+        "web",
+      ]
 
 images:
   - 'gcr.io/$PROJECT_ID/assistente:$COMMIT_SHA'
