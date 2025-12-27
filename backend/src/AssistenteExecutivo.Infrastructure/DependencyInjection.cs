@@ -2,6 +2,7 @@ using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Infrastructure.HttpClients;
 using AssistenteExecutivo.Infrastructure.Persistence;
+using AssistenteExecutivo.Infrastructure.Persistence.Repositories;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using AssistenteExecutivo.Infrastructure.Services;
 using AssistenteExecutivo.Infrastructure.Services.OpenAI;
@@ -143,6 +144,10 @@ public static class DependencyInjection
         services.AddScoped<ICreditPackageRepository, CreditPackageRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IAgentConfigurationRepository, AgentConfigurationRepository>();
+        services.AddScoped<IReminderRepository, ReminderRepository>();
+        services.AddScoped<IDraftDocumentRepository, DraftDocumentRepository>();
+        services.AddScoped<ITemplateRepository, TemplateRepository>();
+        services.AddScoped<ILetterheadRepository, LetterheadRepository>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -167,6 +172,7 @@ public static class DependencyInjection
 
         services.AddScoped<IEmailService, EmailService>();
         services.AddSingleton<IClock, SystemClock>();
+        services.AddScoped<AudioTrimmer>();
 
         // External service providers - OpenAI only
         

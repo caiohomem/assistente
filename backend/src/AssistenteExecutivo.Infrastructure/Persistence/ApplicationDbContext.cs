@@ -28,6 +28,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Plan> Plans { get; set; }
     public DbSet<CreditPackage> CreditPackages { get; set; }
     public DbSet<AgentConfiguration> AgentConfigurations { get; set; }
+    public DbSet<Reminder> Reminders { get; set; }
+    public DbSet<DraftDocument> DraftDocuments { get; set; }
+    public DbSet<Template> Templates { get; set; }
+    public DbSet<Letterhead> Letterheads { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

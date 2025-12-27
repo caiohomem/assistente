@@ -1618,22 +1618,42 @@ public class KeycloakService : IKeycloakService
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // BFF callback targets (backend)
-        var apiBaseUrl = _configuration["Api:BaseUrl"]
-            ?? throw new InvalidOperationException("Api:BaseUrl não configurado em appsettings");
-        set.Add($"{apiBaseUrl.TrimEnd('/')}/auth/oauth-callback");
+        // Prioridade 1: RedirectUris explícitas (configuração principal)
+        var redirectUris = _configuration.GetSection("Keycloak:RedirectUris").Get<string[]>();
+        if (redirectUris is { Length: > 0 })
+        {
+            foreach (var uri in redirectUris)
+            {
+                var trimmed = (uri ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                    set.Add(trimmed);
+            }
+            _logger.LogInformation("Usando RedirectUris explícitas do appsettings: {Count} URIs", set.Count);
+        }
+        else
+        {
+            // Fallback: Se RedirectUris não estiver configurado, usar lógica antiga (compatibilidade)
+            _logger.LogWarning("Keycloak:RedirectUris não configurado. Usando lógica automática (fallback).");
+            
+            // BFF callback targets (backend)
+            var apiBaseUrl = _configuration["Api:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(apiBaseUrl))
+            {
+                set.Add($"{apiBaseUrl.TrimEnd('/')}/auth/oauth-callback");
+            }
 
-        // Web app (optional)
-        var frontendBaseUrl = (_configuration["Frontend:BaseUrl"] ?? "").TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(frontendBaseUrl))
-            set.Add($"{frontendBaseUrl}/*");
+            // Web app (optional)
+            var frontendBaseUrl = (_configuration["Frontend:BaseUrl"] ?? "").TrimEnd('/');
+            if (!string.IsNullOrWhiteSpace(frontendBaseUrl))
+                set.Add($"{frontendBaseUrl}/*");
 
-        // Mobile (AppAuth)
-        set.Add(MobileRedirectUri1);
-        set.Add(MobileRedirectUri2);
-        set.Add(MobileRedirectUri3);
+            // Mobile (AppAuth)
+            set.Add(MobileRedirectUri1);
+            set.Add(MobileRedirectUri2);
+            set.Add(MobileRedirectUri3);
+        }
 
-        // Extras (useful for temporary Cloud Run URLs, tunnels, etc.)
+        // Prioridade 2: ExtraRedirectUris (adicionais, úteis para URLs temporárias, tunnels, etc.)
         var extraRedirectUris = _configuration.GetSection("Keycloak:ExtraRedirectUris").Get<string[]>();
         if (extraRedirectUris is { Length: > 0 })
         {

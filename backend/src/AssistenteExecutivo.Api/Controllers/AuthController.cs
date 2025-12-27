@@ -852,9 +852,6 @@ public sealed class AuthController : ControllerBase
             return null;
         
         var host = apiUri.Host;
-        if (host.EndsWith(".run.app", StringComparison.OrdinalIgnoreCase))
-            return null;
-
         var parts = host.Split('.');
         if (parts.Length < 2)
             return null;

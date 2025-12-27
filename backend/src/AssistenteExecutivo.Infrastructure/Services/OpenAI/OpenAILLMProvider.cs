@@ -68,11 +68,23 @@ public sealed class OpenAILLMProvider : ILLMProvider
                 };
             }
 
-            _logger.LogInformation(
-                "Processando transcrição com OpenAI. Tamanho: {Length} caracteres, Model: {Model}",
-                transcript.Length, _model);
+            // Truncar transcrições muito longas para evitar exceder limites de tokens
+            // Estimativa: ~4 caracteres por token, deixar margem para o prompt
+            const int maxTranscriptLength = 50000; // ~12.5k tokens, deixando espaço para o prompt
+            var processedTranscript = transcript;
+            if (transcript.Length > maxTranscriptLength)
+            {
+                _logger.LogWarning(
+                    "Transcrição muito longa ({Length} caracteres), truncando para {MaxLength} caracteres",
+                    transcript.Length, maxTranscriptLength);
+                processedTranscript = transcript.Substring(0, maxTranscriptLength) + "... [truncado]";
+            }
 
-            var prompt = BuildPrompt(transcript);
+            _logger.LogInformation(
+                "Processando transcrição com OpenAI. Tamanho: {Length} caracteres, Model: {Model}, MaxTokens: {MaxTokens}, Temperature: {Temperature}",
+                processedTranscript.Length, _model, _maxTokens, _temperature);
+
+            var prompt = BuildPrompt(processedTranscript);
 
             var requestBody = new
             {
@@ -87,6 +99,9 @@ public sealed class OpenAILLMProvider : ILLMProvider
             };
 
             var json = JsonSerializer.Serialize(requestBody);
+            _logger.LogDebug("Request body size: {Size} bytes, Prompt length: {PromptLength} characters", 
+                json.Length, prompt.Length);
+            
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync("chat/completions", content, cancellationToken);
@@ -94,19 +109,55 @@ public sealed class OpenAILLMProvider : ILLMProvider
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                
+                // Tentar extrair a mensagem de erro detalhada da resposta da OpenAI
+                string errorMessage = "Erro desconhecido da API OpenAI";
+                try
+                {
+                    var errorDoc = JsonDocument.Parse(errorContent);
+                    if (errorDoc.RootElement.TryGetProperty("error", out var errorProp))
+                    {
+                        if (errorProp.TryGetProperty("message", out var messageProp))
+                        {
+                            errorMessage = messageProp.GetString() ?? errorMessage;
+                        }
+                        else if (errorProp.ValueKind == JsonValueKind.String)
+                        {
+                            errorMessage = errorProp.GetString() ?? errorMessage;
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Se não conseguir fazer parse, usar o conteúdo completo
+                    errorMessage = errorContent;
+                }
+                
                 _logger.LogError(
-                    "Erro ao processar com OpenAI LLM. Status: {StatusCode}, Response: {ErrorContent}",
-                    response.StatusCode, errorContent);
+                    "Erro ao processar com OpenAI LLM. Status: {StatusCode}, Model: {Model}, PromptLength: {PromptLength}, Error: {ErrorMessage}, FullResponse: {ErrorContent}",
+                    response.StatusCode, _model, prompt.Length, errorMessage, errorContent);
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
                     throw new UnauthorizedAccessException(
                         $"Falha de autenticação com OpenAI. Verifique se a API key está correta e válida. " +
                         $"Configure a variável de ambiente OpenAI__ApiKey ou a configuração OpenAI:ApiKey no appsettings.json. " +
-                        $"Status: {response.StatusCode}, Response: {errorContent}");
+                        $"Status: {response.StatusCode}, Error: {errorMessage}");
                 }
                 
-                response.EnsureSuccessStatusCode();
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    throw new HttpRequestException(
+                        $"Requisição inválida para OpenAI API. Model: {_model}, Error: {errorMessage}. " +
+                        $"Verifique se o modelo '{_model}' suporta JSON mode e se os parâmetros estão corretos. " +
+                        $"Full response: {errorContent}",
+                        null, response.StatusCode);
+                }
+                
+                throw new HttpRequestException(
+                    $"Erro ao processar requisição para OpenAI API. Status: {response.StatusCode}, Error: {errorMessage}. " +
+                    $"Full response: {errorContent}",
+                    null, response.StatusCode);
             }
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);

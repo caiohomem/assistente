@@ -2,6 +2,7 @@ using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Application.Commands.Capture;
 using AssistenteExecutivo.Application.Queries.Capture;
+using AssistenteExecutivo.Infrastructure.Services;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -15,10 +16,12 @@ namespace AssistenteExecutivo.Api.Controllers;
 public sealed class CaptureController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly AudioTrimmer _audioTrimmer;
 
-    public CaptureController(IMediator mediator)
+    public CaptureController(IMediator mediator, AudioTrimmer audioTrimmer)
     {
         _mediator = mediator;
+        _audioTrimmer = audioTrimmer;
     }
 
     /// <summary>
@@ -102,29 +105,32 @@ public sealed class CaptureController : ControllerBase
         }
 
         // Validar tipo de arquivo (áudio)
-        var allowedMimeTypes = new[] { "audio/mpeg", "audio/mp3", "audio/wav", "audio/webm", "audio/ogg" };
+        // Formatos suportados pela API OpenAI Whisper: mp3, mp4, mpeg, mpga, m4a, wav, webm
+        var allowedMimeTypes = new[] { 
+            "audio/mpeg", "audio/mp3", "audio/mp4", "audio/mpeg", "audio/mpga", 
+            "audio/m4a", "audio/wav", "audio/webm", "audio/ogg" 
+        };
         if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
         {
-            return BadRequest(new { message = "Tipo de arquivo não suportado. Use MP3, WAV, WebM ou OGG." });
-        }
-
-        // Validar tamanho (máximo 50MB)
-        const long maxFileSize = 50 * 1024 * 1024; // 50MB
-        if (file.Length > maxFileSize)
-        {
-            return BadRequest(new { message = "Arquivo muito grande. Tamanho máximo: 50MB." });
+            return BadRequest(new { 
+                message = "Tipo de arquivo não suportado. Use MP3, MP4, WAV, WebM, M4A ou OGG." 
+            });
         }
 
         // Obter OwnerUserId
         var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
 
         // Ler bytes do arquivo
-        byte[] audioBytes;
+        byte[] originalAudioBytes;
         using (var memoryStream = new MemoryStream())
         {
             await file.CopyToAsync(memoryStream, cancellationToken);
-            audioBytes = memoryStream.ToArray();
+            originalAudioBytes = memoryStream.ToArray();
         }
+
+        // Cortar áudio automaticamente se exceder 25MB (limite da API OpenAI Whisper)
+        var (audioBytes, wasTrimmed) = _audioTrimmer.TrimToMaxSize(originalAudioBytes, file.ContentType);
+        var trimmedMessage = _audioTrimmer.GetTrimmedMessage(originalAudioBytes, wasTrimmed);
 
         // Criar command
         var command = new ProcessAudioNoteCommand
@@ -138,6 +144,10 @@ public sealed class CaptureController : ControllerBase
 
         // Executar command
         var result = await _mediator.Send(command, cancellationToken);
+
+        var successMessage = string.IsNullOrWhiteSpace(trimmedMessage)
+            ? "Nota de áudio processada com sucesso."
+            : $"Nota de áudio processada com sucesso. {trimmedMessage}";
 
         return Ok(new
         {
@@ -153,7 +163,8 @@ public sealed class CaptureController : ControllerBase
             errorCode = result.ErrorCode,
             errorMessage = result.ErrorMessage,
             responseMediaId = result.ResponseMediaId,
-            message = "Nota de áudio processada com sucesso."
+            message = successMessage,
+            wasTrimmed = wasTrimmed
         });
     }
 

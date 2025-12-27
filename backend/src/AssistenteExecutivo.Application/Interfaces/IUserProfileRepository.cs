@@ -15,3 +15,4 @@ public interface IUserProfileRepository
     Task UpdateAsync(UserProfile userProfile, CancellationToken cancellationToken = default);
 }
 
+

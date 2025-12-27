@@ -54,9 +54,27 @@ public sealed class OpenAISpeechToTextProvider : ISpeechToTextProvider
     {
         try
         {
+            // Limite da API OpenAI Whisper: 25 MB por requisição
+            // Nota: O AudioTrimmer no controller deveria ter cortado arquivos maiores antes de chegar aqui
+            const long maxFileSizeBytes = 25 * 1024 * 1024; // 25 MB
+            
+            if (audioBytes.Length > maxFileSizeBytes)
+            {
+                var fileSizeMB = audioBytes.Length / (1024.0 * 1024.0);
+                var errorMessage = $"Arquivo de áudio muito grande ({fileSizeMB:F2} MB) chegou ao provider de transcrição. " +
+                    $"O AudioTrimmer deveria ter cortado o arquivo antes. " +
+                    $"A API OpenAI Whisper aceita arquivos de até 25 MB por requisição.";
+                
+                _logger.LogError(
+                    "Arquivo de áudio excede o limite da API (não deveria chegar aqui após AudioTrimmer). Tamanho: {Size} bytes ({SizeMB:F2} MB), Limite: {MaxSize} bytes (25 MB)",
+                    audioBytes.Length, fileSizeMB, maxFileSizeBytes);
+                
+                throw new ArgumentException(errorMessage, nameof(audioBytes));
+            }
+
             _logger.LogInformation(
-                "Iniciando transcrição de áudio com OpenAI Whisper. Tamanho: {Size} bytes, MimeType: {MimeType}, Model: {Model}, Language: {Language}",
-                audioBytes.Length, mimeType, _model, _language);
+                "Iniciando transcrição de áudio com OpenAI Whisper. Tamanho: {Size} bytes ({SizeMB:F2} MB), MimeType: {MimeType}, Model: {Model}, Language: {Language}",
+                audioBytes.Length, audioBytes.Length / (1024.0 * 1024.0), mimeType, _model, _language);
 
             using var content = new MultipartFormDataContent();
             
@@ -75,19 +93,55 @@ public sealed class OpenAISpeechToTextProvider : ISpeechToTextProvider
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                
+                // Tentar extrair a mensagem de erro detalhada da resposta da OpenAI
+                string errorMessage = "Erro desconhecido da API OpenAI";
+                try
+                {
+                    var errorDoc = JsonDocument.Parse(errorContent);
+                    if (errorDoc.RootElement.TryGetProperty("error", out var errorProp))
+                    {
+                        if (errorProp.TryGetProperty("message", out var messageProp))
+                        {
+                            errorMessage = messageProp.GetString() ?? errorMessage;
+                        }
+                        else if (errorProp.ValueKind == JsonValueKind.String)
+                        {
+                            errorMessage = errorProp.GetString() ?? errorMessage;
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Se não conseguir fazer parse, usar o conteúdo completo
+                    errorMessage = errorContent;
+                }
+                
                 _logger.LogError(
-                    "Erro ao transcrever áudio com OpenAI. Status: {StatusCode}, Response: {ErrorContent}",
-                    response.StatusCode, errorContent);
+                    "Erro ao transcrever áudio com OpenAI. Status: {StatusCode}, FileSize: {FileSize} bytes ({FileSizeMB:F2} MB), Error: {ErrorMessage}, FullResponse: {ErrorContent}",
+                    response.StatusCode, audioBytes.Length, audioBytes.Length / (1024.0 * 1024.0), errorMessage, errorContent);
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
                     throw new UnauthorizedAccessException(
                         $"Falha de autenticação com OpenAI. Verifique se a API key está correta e válida. " +
                         $"Configure a variável de ambiente OpenAI__ApiKey ou a configuração OpenAI:ApiKey no appsettings.json. " +
-                        $"Status: {response.StatusCode}, Response: {errorContent}");
+                        $"Status: {response.StatusCode}, Error: {errorMessage}");
                 }
                 
-                response.EnsureSuccessStatusCode();
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    throw new HttpRequestException(
+                        $"Requisição inválida para OpenAI Whisper API. FileSize: {audioBytes.Length / (1024.0 * 1024.0):F2} MB, Error: {errorMessage}. " +
+                        $"Verifique se o arquivo está em um formato suportado (mp3, mp4, mpeg, mpga, m4a, wav, webm) e se o tamanho não excede 25 MB. " +
+                        $"Full response: {errorContent}",
+                        null, response.StatusCode);
+                }
+                
+                throw new HttpRequestException(
+                    $"Erro ao processar requisição para OpenAI Whisper API. Status: {response.StatusCode}, Error: {errorMessage}. " +
+                    $"Full response: {errorContent}",
+                    null, response.StatusCode);
             }
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);

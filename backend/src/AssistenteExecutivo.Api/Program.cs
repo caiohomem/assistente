@@ -539,8 +539,7 @@ try
         // Usar Api:PublicBaseUrl se disponível, senão usar Api:BaseUrl
         var apiPublicBaseUrl = builder.Configuration["Api:PublicBaseUrl"] ?? apiBaseUrl;
         if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl)
-            && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri)
-            && !apiUri.Host.EndsWith(".run.app", StringComparison.OrdinalIgnoreCase))
+            && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri))
         {
             // Extrair o domínio base (ex: assistente.live de api.assistente.live)
             var host = apiUri.Host;

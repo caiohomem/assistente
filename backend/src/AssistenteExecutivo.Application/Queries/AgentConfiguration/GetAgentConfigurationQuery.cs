@@ -36,3 +36,4 @@ public class GetAgentConfigurationQueryHandler : IRequestHandler<GetAgentConfigu
     }
 }
 
+
