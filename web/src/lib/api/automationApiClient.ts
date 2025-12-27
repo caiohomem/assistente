@@ -24,6 +24,26 @@ import type {
   DocumentType,
 } from "@/lib/types/automation";
 
+// Re-export types for convenience
+export type {
+  Reminder,
+  ListRemindersResult,
+  CreateReminderRequest,
+  UpdateReminderStatusRequest,
+  DraftDocument,
+  ListDraftsResult,
+  CreateDraftRequest,
+  UpdateDraftRequest,
+  Template,
+  ListTemplatesResult,
+  CreateTemplateRequest,
+  UpdateTemplateRequest,
+  Letterhead,
+  ListLetterheadsResult,
+  CreateLetterheadRequest,
+  UpdateLetterheadRequest,
+};
+
 // ============================================================================
 // REMINDERS
 // ============================================================================
