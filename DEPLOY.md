@@ -99,11 +99,26 @@ O sistema tenta encontrar o commit anterior usando estas estratégias (em ordem)
 3. **Última tag** - Tag mais recente do repositório
 4. **Fallback** - Se nenhuma estratégia funcionar, faz build de tudo
 
+## ⚠️ Importante: Variáveis NEXT_PUBLIC_*
+
+**Variáveis que começam com `NEXT_PUBLIC_*` são embutidas no código durante o build**, não em runtime.
+
+Isso significa que:
+- ✅ Alterar `_NEXT_PUBLIC_API_BASE_URL` no trigger e fazer um novo build funciona
+- ❌ Alterar `NEXT_PUBLIC_API_BASE_URL` no Cloud Run após o build **NÃO funciona**
+
+**Para alterar a URL da API:**
+1. Atualize `_NEXT_PUBLIC_API_BASE_URL` no trigger do Cloud Build
+2. Force um novo build (faça um commit ou use `_FORCE_BUILD_ALL=true`)
+
+Veja mais detalhes em [`web/VARIAVEIS_AMBIENTE_NEXTJS.md`](web/VARIAVEIS_AMBIENTE_NEXTJS.md).
+
 ## Limitações
 
 - **Primeiro deploy**: Sempre faz build de tudo (não há histórico)
 - **Mudanças em configuração**: Mudanças em `cloudbuild.yaml` sempre fazem build de tudo
 - **Dependências**: Se a API mudar e a web depender dela, você pode precisar fazer build manual da web também
+- **Variáveis NEXT_PUBLIC_***: Requerem rebuild para alterar (não podem ser alteradas em runtime)
 
 ## Troubleshooting
 

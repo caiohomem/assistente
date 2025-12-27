@@ -316,20 +316,22 @@ try
         options.Cookie.Name = "ae.sid";
         
         // Configurar Domain para funcionar entre subdomínios
-        if (!string.IsNullOrWhiteSpace(apiBaseUrl)
-            && Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri)
+        // Usar Api:PublicBaseUrl se disponível, senão usar Api:BaseUrl
+        var apiPublicBaseUrl = builder.Configuration["Api:PublicBaseUrl"] ?? apiBaseUrl;
+        if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl)
+            && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri)
             && !apiUri.Host.EndsWith(".run.app", StringComparison.OrdinalIgnoreCase))
         {
-            // Extrair o domínio base (ex: callback-local-cchagas.xyz)
+            // Extrair o domínio base (ex: assistente.live de api.assistente.live)
             var host = apiUri.Host;
-            // Se for um subdomínio (ex: assistente-api.callback-local-cchagas.xyz), usar o domínio base
+            // Se for um subdomínio (ex: api.assistente.live), usar o domínio base
             var parts = host.Split('.');
             if (parts.Length >= 2)
             {
-                // Pegar os últimos 2 ou 3 segmentos (ex: callback-local-cchagas.xyz ou exemplo.com.br)
+                // Pegar os últimos 2 ou 3 segmentos (ex: assistente.live ou exemplo.com.br)
                 var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3 
                     ? string.Join(".", parts.Skip(parts.Length - 3)) // Para .com.br, .co.uk, etc
-                    : string.Join(".", parts.Skip(parts.Length - 2)); // Para .com, .xyz, etc
+                    : string.Join(".", parts.Skip(parts.Length - 2)); // Para .com, .live, etc
                 
                 // Configurar Domain com ponto inicial para funcionar em todos os subdomínios
                 options.Cookie.Domain = $".{domainBase}";
@@ -342,13 +344,30 @@ try
     {
         options.AddDefaultPolicy(policy =>
         {
-            var configuredOrigins = builder.Configuration
+            string[]? configuredOrigins = null;
+            
+            // Tentar ler como array primeiro (appsettings.json)
+            var originsArray = builder.Configuration
                 .GetSection("Frontend:CorsOrigins")
-                .Get<string[]>()?
-                .Where(o => !string.IsNullOrWhiteSpace(o))
-                .Select(o => o!.Trim().TrimEnd('/'))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+                .Get<string[]>();
+            
+            if (originsArray != null && originsArray.Length > 0)
+            {
+                configuredOrigins = originsArray;
+            }
+            else
+            {
+                // Tentar ler como string separada por vírgula (variáveis de ambiente)
+                var originsString = builder.Configuration["Frontend:CorsOrigins"];
+                if (!string.IsNullOrWhiteSpace(originsString))
+                {
+                    configuredOrigins = originsString
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(o => o.Trim())
+                        .Where(o => !string.IsNullOrWhiteSpace(o))
+                        .ToArray();
+                }
+            }
 
             // Back-compat: if Frontend:CorsOrigins não existir, usa BaseUrl.
             if (configuredOrigins == null || configuredOrigins.Length == 0)
@@ -358,7 +377,13 @@ try
                 configuredOrigins = new[] { frontendBaseUrl.Trim().TrimEnd('/') };
             }
 
-            policy.WithOrigins(configuredOrigins)
+            // Limpar e normalizar URLs
+            var finalOrigins = configuredOrigins
+                .Select(o => o.Trim().TrimEnd('/'))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            policy.WithOrigins(finalOrigins)
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();

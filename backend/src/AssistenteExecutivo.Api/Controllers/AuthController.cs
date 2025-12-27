@@ -164,11 +164,23 @@ public sealed class AuthController : ControllerBase
             return Redirect(BuildFrontendRedirectUrl());
         }
 
+        // Debug: Verificar cookies e sessão
+        var cookieHeader = Request.Headers["Cookie"].ToString();
+        var hasSessionCookie = Request.Cookies.ContainsKey("ae.sid");
+        var sessionId = HttpContext.Session?.Id ?? "null";
+        var setCookieHeaders = Response.Headers["Set-Cookie"].ToString();
+        
+        _logger.LogInformation(
+            "OAuthCallback - SessionId: {SessionId}, HasSessionCookie: {HasSessionCookie}, CookieHeaderLength: {CookieHeaderLength}, SetCookieHeadersLength: {SetCookieHeadersLength}",
+            sessionId, hasSessionCookie, cookieHeader?.Length ?? 0, setCookieHeaders?.Length ?? 0);
+        
         var expectedState = HttpContext.Session.GetString(BffSessionKeys.OAuthState);
         if (string.IsNullOrWhiteSpace(expectedState) || !FixedTimeEquals(expectedState, state))
         {
-            _logger.LogWarning("State inválido ou não encontrado. Expected: {ExpectedState}, Received: {ReceivedState}", 
-                expectedState ?? "null", state ?? "null");
+            _logger.LogWarning(
+                "State inválido ou não encontrado. Expected: {ExpectedState}, Received: {ReceivedState}, SessionId: {SessionId}, HasSessionCookie: {HasSessionCookie}, CookieHeader: {CookieHeader}",
+                expectedState ?? "null", state ?? "null", sessionId, hasSessionCookie, 
+                cookieHeader?.Substring(0, Math.Min(200, cookieHeader?.Length ?? 0)) ?? "empty");
             return BadRequest(new { error = "invalid_state", message = "State inválido." });
         }
 

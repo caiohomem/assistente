@@ -151,12 +151,14 @@ steps:
         source /workspace/build-flags.env
         if [[ "$${BUILD_WEB}" == "true" ]]; then
           echo "Fazendo deploy da web..."
+          # NOTA: NEXT_PUBLIC_API_BASE_URL não precisa ser definida aqui porque
+          # variáveis NEXT_PUBLIC_* são embutidas no código durante o build.
+          # A variável já foi passada como --build-arg no step build-web.
           gcloud run deploy ${_CLOUD_RUN_SERVICE_WEB} \
             --image gcr.io/$PROJECT_ID/assistente-web:$COMMIT_SHA \
             --region ${_CLOUD_RUN_REGION} \
             --platform managed \
             --port 8080 \
-            --set-env-vars NEXT_PUBLIC_API_BASE_URL=${_NEXT_PUBLIC_API_BASE_URL} \
             --quiet
         else
           echo "Pulando deploy da web (sem mudanças)"
