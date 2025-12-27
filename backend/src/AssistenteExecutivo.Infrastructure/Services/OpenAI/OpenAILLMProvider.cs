@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -25,11 +26,18 @@ public sealed class OpenAILLMProvider : ILLMProvider
     {
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient();
-        _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+        
+        var baseUrl = configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
+        _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
         
         _apiKey = configuration["OpenAI:ApiKey"] 
-            ?? throw new InvalidOperationException("OpenAI:ApiKey não configurado");
+            ?? throw new InvalidOperationException("OpenAI:ApiKey não configurado. Configure a variável de ambiente OpenAI__ApiKey ou a configuração OpenAI:ApiKey no appsettings.json");
+        
+        if (string.IsNullOrWhiteSpace(_apiKey) || _apiKey.Length < 20)
+        {
+            throw new InvalidOperationException($"OpenAI:ApiKey inválido. A chave deve ter pelo menos 20 caracteres. Valor atual: {(string.IsNullOrWhiteSpace(_apiKey) ? "(vazio)" : $"{_apiKey.Substring(0, Math.Min(10, _apiKey.Length))}...")}");
+        }
         
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
         
@@ -82,7 +90,24 @@ public sealed class OpenAILLMProvider : ILLMProvider
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync("chat/completions", content, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Erro ao processar com OpenAI LLM. Status: {StatusCode}, Response: {ErrorContent}",
+                    response.StatusCode, errorContent);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException(
+                        $"Falha de autenticação com OpenAI. Verifique se a API key está correta e válida. " +
+                        $"Configure a variável de ambiente OpenAI__ApiKey ou a configuração OpenAI:ApiKey no appsettings.json. " +
+                        $"Status: {response.StatusCode}, Response: {errorContent}");
+                }
+                
+                response.EnsureSuccessStatusCode();
+            }
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
             var jsonDoc = JsonDocument.Parse(responseJson);

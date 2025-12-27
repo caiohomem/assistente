@@ -196,3 +196,5 @@ Após implementar, teste com:
 7. Remover ou manter `StubOcrProvider` para desenvolvimento
 
 
+
+

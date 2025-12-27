@@ -23,7 +23,9 @@ public sealed class OpenAITextToSpeechProvider : ITextToSpeechProvider
     {
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient();
-        _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+        
+        var baseUrl = configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
+        _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
         
         _apiKey = configuration["OpenAI:ApiKey"] 

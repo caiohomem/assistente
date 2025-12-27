@@ -11,11 +11,15 @@ const nextConfig: NextConfig = {
   // pode-se usar a opção 'rewrites' aqui.
   
   // Permitir requisições cross-origin de hosts públicos (tunnel) para recursos /_next/*
-  // Necessário quando o frontend é acessado via tunnel (ex: assistente.callback-local-cchagas.xyz)
+  // Necessário quando o frontend é acessado via tunnel (ex: assistente-web-local.callback-local-cchagas.xyz)
   allowedDevOrigins: [
-    'https://assistente.callback-local-cchagas.xyz',
+    'https://assistente-web-local.callback-local-cchagas.xyz',
+    'https://assistente-web.callback-local-cchagas.xyz',
     'http://localhost:3000', // Manter localhost para desenvolvimento local
   ],
+  
+  // Configurações para reduzir refresh automático em desenvolvimento
+  reactStrictMode: true,
 };
 
 export default withNextIntl(nextConfig);

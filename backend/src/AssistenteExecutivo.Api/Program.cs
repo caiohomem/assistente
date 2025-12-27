@@ -155,13 +155,8 @@ try
         _ => { })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        // Use PublicBaseUrl for token validation (mobile clients use public URL)
-        // Fallback to BaseUrl if PublicBaseUrl not set
-        var publicBaseUrl = builder.Configuration["Keycloak:PublicBaseUrl"];
-        var keycloakBaseUrl = !string.IsNullOrWhiteSpace(publicBaseUrl) 
-            ? publicBaseUrl 
-            : builder.Configuration["Keycloak:BaseUrl"] 
-                ?? throw new InvalidOperationException("Keycloak:PublicBaseUrl ou Keycloak:BaseUrl deve estar configurado em appsettings");
+        var keycloakBaseUrl = builder.Configuration["Keycloak:BaseUrl"] 
+            ?? throw new InvalidOperationException("Keycloak:BaseUrl deve estar configurado em appsettings");
         keycloakBaseUrl = keycloakBaseUrl.TrimEnd('/');
         var realm = builder.Configuration["Keycloak:Realm"] ?? "assistenteexecutivo";
         var authority = $"{keycloakBaseUrl}/realms/{realm}";
@@ -311,19 +306,18 @@ try
         options.IdleTimeout = TimeSpan.FromMinutes(30);
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
-        // Usar SameSite=None com Secure para funcionar em redirects cross-subdomain
-        // Isso permite que o cookie seja enviado quando o redirect vai de assistente-api para assistente
-        options.Cookie.SameSite = SameSiteMode.None;
-        // Sempre usar Secure quando SameSite=None (requisito do navegador)
-        // Se estiver usando HTTPS (via PublicBaseUrl), sempre Secure
-        var apiPublicBaseUrl = builder.Configuration["Api:PublicBaseUrl"];
-        var isHttps = !string.IsNullOrWhiteSpace(apiPublicBaseUrl) && apiPublicBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+        // NOTE: `SameSite=None` cookies must also be `Secure`. On HTTP localhost, the browser will drop the cookie,
+        // which breaks the BFF session and can cause an auth redirect loop.
+        var apiBaseUrl = builder.Configuration["Api:BaseUrl"];
+        var isHttps =
+            (!string.IsNullOrWhiteSpace(apiBaseUrl) && apiBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+        options.Cookie.SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax;
         options.Cookie.SecurePolicy = isHttps ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
         options.Cookie.Name = "ae.sid";
         
-        // Configurar Domain para funcionar entre subdomínios quando usando PublicBaseUrl
-        if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl)
-            && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri)
+        // Configurar Domain para funcionar entre subdomínios
+        if (!string.IsNullOrWhiteSpace(apiBaseUrl)
+            && Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri)
             && !apiUri.Host.EndsWith(".run.app", StringComparison.OrdinalIgnoreCase))
         {
             // Extrair o domínio base (ex: callback-local-cchagas.xyz)
@@ -338,8 +332,7 @@ try
                     : string.Join(".", parts.Skip(parts.Length - 2)); // Para .com, .xyz, etc
                 
                 // Configurar Domain com ponto inicial para funcionar em todos os subdomínios
-                // NOTE: Do not set Cookie.Domain. Host-only cookies avoid issues on *.run.app and
-                // when Api:PublicBaseUrl doesn't match the current host.
+                options.Cookie.Domain = $".{domainBase}";
             }
         }
     });
@@ -357,19 +350,12 @@ try
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            // Back-compat: if Frontend:CorsOrigins não existir, usa BaseUrl/PublicBaseUrl.
+            // Back-compat: if Frontend:CorsOrigins não existir, usa BaseUrl.
             if (configuredOrigins == null || configuredOrigins.Length == 0)
             {
-                var frontendBaseUrl = (builder.Configuration["Frontend:BaseUrl"] ?? "http://localhost:3000").Trim().TrimEnd('/');
-                var frontendPublicBaseUrl = builder.Configuration["Frontend:PublicBaseUrl"]?.Trim().TrimEnd('/');
-
-                var origins = new List<string> { frontendBaseUrl };
-                if (!string.IsNullOrWhiteSpace(frontendPublicBaseUrl) && !string.Equals(frontendPublicBaseUrl, frontendBaseUrl, StringComparison.OrdinalIgnoreCase))
-                {
-                    origins.Add(frontendPublicBaseUrl);
-                }
-
-                configuredOrigins = origins.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"]
+                    ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
+                configuredOrigins = new[] { frontendBaseUrl.Trim().TrimEnd('/') };
             }
 
             policy.WithOrigins(configuredOrigins)

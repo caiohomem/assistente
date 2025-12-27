@@ -159,3 +159,5 @@ Ou use wildcards se apropriado (menos seguro).
 - [Keycloak Client Settings](https://www.keycloak.org/docs/latest/server_admin/#_clients)
 - [OAuth 2.0 Redirect URI](https://tools.ietf.org/html/rfc6749#section-3.1.2)
 
+
+

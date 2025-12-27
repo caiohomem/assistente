@@ -450,13 +450,17 @@ public sealed class AuthController : ControllerBase
         }
 
         // Auto-refresh access token if close to expiration.
+        // Aumentado para 3 minutos (180 segundos) para reduzir refresh automático frequente
+        // que pode causar perda de dados em formulários
         var expiresAtUnix = BffSessionStore.GetExpiresAtUnix(HttpContext.Session);
         var refreshToken = HttpContext.Session.GetString(BffSessionKeys.RefreshToken);
 
         if (expiresAtUnix is not null && !string.IsNullOrWhiteSpace(refreshToken))
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (expiresAtUnix.Value - now <= 60)
+            // Verificar se o token expira em menos de 3 minutos (180 segundos)
+            // Isso reduz a frequência de refresh automático e evita perda de dados em formulários
+            if (expiresAtUnix.Value - now <= 180)
             {
                 try
                 {
@@ -603,10 +607,8 @@ public sealed class AuthController : ControllerBase
 
     private string BuildResetPasswordUrl(string email, string token)
     {
-        // Prefer PublicBaseUrl for external access, fallback to BaseUrl for local development
-        var frontendBaseUrl = _configuration["Frontend:PublicBaseUrl"] 
-            ?? _configuration["Frontend:BaseUrl"] 
-            ?? "http://localhost:3000";
+        var frontendBaseUrl = _configuration["Frontend:BaseUrl"] 
+            ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
         var basePath = $"{frontendBaseUrl.TrimEnd('/')}/reset-senha";
         var qs = $"email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
         return $"{basePath}?{qs}";
@@ -670,9 +672,8 @@ public sealed class AuthController : ControllerBase
     private string BuildFrontendRedirectUrl(string? appendQuery = null)
     {
         var baseUrl = (HttpContext.Session.GetString(BffSessionKeys.FrontendBaseUrl)
-            ?? _configuration["Frontend:PublicBaseUrl"]
             ?? _configuration["Frontend:BaseUrl"]
-            ?? "http://localhost:3000").TrimEnd('/');
+            ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings")).TrimEnd('/');
         var returnPath = HttpContext.Session.GetString(BffSessionKeys.ReturnPath) ?? "/";
 
         var url = $"{baseUrl}{NormalizeReturnPath(returnPath)}";
@@ -685,14 +686,20 @@ public sealed class AuthController : ControllerBase
 
     private void SetCsrfCookie(string token)
     {
+        // NOTE: `SameSite=None` cookies must also be `Secure`. On HTTP localhost, the browser will drop the cookie.
+        var apiBaseUrl = _configuration["Api:BaseUrl"];
+        var useSecureCookies =
+            Request.IsHttps ||
+            (!string.IsNullOrWhiteSpace(apiBaseUrl) && apiBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+
         var cookieOptions = new CookieOptions
         {
             HttpOnly = false,
             IsEssential = true,
             // Usar SameSite=None com Secure para funcionar em redirects cross-subdomain
-            SameSite = SameSiteMode.None,
+            SameSite = useSecureCookies ? SameSiteMode.None : SameSiteMode.Lax,
             // Sempre usar Secure quando SameSite=None (requisito do navegador)
-            Secure = true // Sempre true quando usando HTTPS (via PublicBaseUrl)
+            Secure = useSecureCookies
         };
         
         // Configurar Domain para funcionar entre subdomínios
@@ -759,9 +766,8 @@ public sealed class AuthController : ControllerBase
     private string BuildFrontendLogoutRedirectUrl(string? returnUrl)
     {
         var fromHeaders = TryGetBaseUrlFromHeaders("Origin") ?? TryGetBaseUrlFromHeaders("Referer");
-        var fallback = _configuration["Frontend:PublicBaseUrl"]
-            ?? _configuration["Frontend:BaseUrl"]
-            ?? "http://localhost:3000";
+        var fallback = _configuration["Frontend:BaseUrl"]
+            ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
 
         var baseUrl = (fromHeaders ?? fallback).TrimEnd('/');
         var path = string.IsNullOrWhiteSpace(returnUrl) ? "/login" : returnUrl;
@@ -783,8 +789,8 @@ public sealed class AuthController : ControllerBase
     
     private string? GetCookieDomain()
     {
-        var apiPublicBaseUrl = _configuration["Api:PublicBaseUrl"];
-        if (string.IsNullOrWhiteSpace(apiPublicBaseUrl) || !Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri))
+        var apiBaseUrl = _configuration["Api:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(apiBaseUrl) || !Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri))
             return null;
         
         var host = apiUri.Host;
@@ -827,9 +833,8 @@ public sealed class AuthController : ControllerBase
     private void StoreFrontendBaseUrlForRedirect()
     {
         var fromHeaders = TryGetBaseUrlFromHeaders("Origin") ?? TryGetBaseUrlFromHeaders("Referer");
-        var fallback = _configuration["Frontend:PublicBaseUrl"]
-            ?? _configuration["Frontend:BaseUrl"]
-            ?? "http://localhost:3000";
+        var fallback = _configuration["Frontend:BaseUrl"]
+            ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
 
         var baseUrl = (fromHeaders ?? fallback).TrimEnd('/');
         HttpContext.Session.SetString(BffSessionKeys.FrontendBaseUrl, baseUrl);
@@ -850,9 +855,8 @@ public sealed class AuthController : ControllerBase
     private string BuildFrontendLoginUrlWithError(string authError)
     {
         var baseUrl = (HttpContext.Session.GetString(BffSessionKeys.FrontendBaseUrl)
-            ?? _configuration["Frontend:PublicBaseUrl"]
             ?? _configuration["Frontend:BaseUrl"]
-            ?? "http://localhost:3000").TrimEnd('/');
+            ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings")).TrimEnd('/');
 
         var returnPath = HttpContext.Session.GetString(BffSessionKeys.ReturnPath) ?? "/dashboard";
         var qs = $"authError={Uri.EscapeDataString(authError)}&returnUrl={Uri.EscapeDataString(NormalizeReturnPath(returnPath))}";
@@ -861,14 +865,7 @@ public sealed class AuthController : ControllerBase
 
     private string GetEffectiveKeycloakBaseUrl()
     {
-        var baseUrl = GetKeycloakBaseUrl();
-        var publicBaseUrl = _configuration["Keycloak:PublicBaseUrl"]?.TrimEnd('/');
-
-        // Se o request veio de localhost, evitar forA§ar o host externo.
-        if (IsLocalhostRequest())
-            return baseUrl;
-
-        return !string.IsNullOrWhiteSpace(publicBaseUrl) ? publicBaseUrl : baseUrl;
+        return GetKeycloakBaseUrl();
     }
 
     private bool IsLocalhostRequest()

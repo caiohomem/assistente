@@ -68,3 +68,5 @@
 4. Testar em ambiente de desenvolvimento
 5. Deploy gradual em produção
 
+
+

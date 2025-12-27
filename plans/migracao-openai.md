@@ -356,3 +356,5 @@ switch (llmProvider)
 - [ ] Documentar custos esperados
 - [ ] Criar guia de troubleshooting
 
+
+

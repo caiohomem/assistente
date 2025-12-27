@@ -27,3 +27,5 @@ dotnet ef database update --project backend/src/AssistenteExecutivo.Infrastructu
 Ou simplesmente execute a aplicação - ela aplicará as migrations automaticamente.
 
 
+
+

@@ -188,3 +188,5 @@ Antes de fazer deploy, verifique:
 
 Para mais informações, consulte [ENV_VARIABLES.md](./ENV_VARIABLES.md)
 
+
+

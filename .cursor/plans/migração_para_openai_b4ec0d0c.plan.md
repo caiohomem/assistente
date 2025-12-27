@@ -63,7 +63,7 @@ todos:
       - create-openai-tts-provider
 ---
 
-#Migração para OpenAI - OCR, Speech-to-Text, LLM e Text-to-Speech
+ #Migração para OpenAI - OCR, Speech-to-Text, LLM e Text-to-Speech
 
 ## Objetivo
 
@@ -157,10 +157,10 @@ Substituir os providers atuais (PaddleOCR, Whisper via Ollama/FastAPI, Qwen) por
 - **Arquivo**: `backend/src/AssistenteExecutivo.Domain/Interfaces/ITextToSpeechProvider.cs`
 - **Método**: `Task<byte[]> SynthesizeAsync(string text, string voice, string format, CancellationToken cancellationToken)`
 - **Parâmetros**:
-  - `text`: Texto a ser convertido em áudio (ex: resumo gerado pelo LLM)
-  - `voice`: Voz a ser usada (alloy, echo, fable, onyx, nova, shimmer)
-  - `format`: Formato do áudio (mp3, opus, aac, flac)
-  - `cancellationToken`: Token de cancelamento
+- `text`: Texto a ser convertido em áudio (ex: resumo gerado pelo LLM)
+- `voice`: Voz a ser usada (alloy, echo, fable, onyx, nova, shimmer)
+- `format`: Formato do áudio (mp3, opus, aac, flac)
+- `cancellationToken`: Token de cancelamento
 
 ### 4. Integração no Handler
 
@@ -168,18 +168,18 @@ Substituir os providers atuais (PaddleOCR, Whisper via Ollama/FastAPI, Qwen) por
 
 - **Arquivo**: `backend/src/AssistenteExecutivo.Application/Handlers/Capture/ProcessAudioNoteCommandHandler.cs`
 - **Modificações**:
-  - Injetar `ITextToSpeechProvider` no construtor
-  - Após processar com LLM, gerar áudio de resposta usando o resumo
-  - Criar novo `MediaAsset` para o áudio gerado (tipo `MediaKind.Audio`)
-  - Associar o áudio gerado à nota ou retornar no resultado
-  - Adicionar ao `ProcessAudioNoteCommandResult` campo opcional `ResponseAudioId` ou `ResponseAudioUrl`
+- Injetar `ITextToSpeechProvider` no construtor
+- Após processar com LLM, gerar áudio de resposta usando o resumo
+- Criar novo `MediaAsset` para o áudio gerado (tipo `MediaKind.Audio`)
+- Associar o áudio gerado à nota ou retornar no resultado
+- Adicionar ao `ProcessAudioNoteCommandResult` campo opcional `ResponseAudioId` ou `ResponseAudioUrl`
 
 #### 4.2. ProcessAudioNoteCommandResult
 
 - **Arquivo**: `backend/src/AssistenteExecutivo.Application/Commands/Capture/ProcessAudioNoteCommand.cs`
 - **Modificações**:
-  - Adicionar campo `ResponseMediaId?: Guid` para referenciar o áudio gerado
-  - Adicionar campo `ResponseAudioUrl?: string` para URL de acesso ao áudio (opcional)
+- Adicionar campo `ResponseMediaId?: Guid` para referenciar o áudio gerado
+- Adicionar campo `ResponseAudioUrl?: string` para URL de acesso ao áudio (opcional)
 
 ### 5. Cliente HTTP
 
@@ -220,6 +220,8 @@ Adicionar seção `OpenAI`:
   }
 }
 ```
+
+
 
 #### 6.2. Variáveis de Ambiente
 
@@ -316,9 +318,9 @@ Adicionar novo switch para `TextToSpeech:Provider`:
 4. **NOVO**: Sistema gera áudio de resposta usando TTS com o resumo
 5. Sistema retorna resultado incluindo:
 
-   - Transcrição original
-   - Resumo e tarefas
-   - **NOVO**: Áudio de resposta (opcional, se TTS estiver habilitado)
+- Transcrição original
+- Resumo e tarefas
+- **NOVO**: Áudio de resposta (opcional, se TTS estiver habilitado)
 
 ## Arquivos a Modificar/Criar
 
@@ -354,7 +356,3 @@ Adicionar novo switch para `TextToSpeech:Provider`:
 - Testar com imagens reais de cartões
 - Testar com áudios reais
 - Validar qualidade das extrações
-
-### Testes de Performance
-
-- Medir latência das chamadas

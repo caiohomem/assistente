@@ -52,14 +52,11 @@ public sealed class MeController : ControllerBase
         var authHeader = Request.Headers.Authorization.FirstOrDefault();
         var token = authHeader?.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
 
-        var publicBaseUrl = _config["Keycloak:PublicBaseUrl"];
         var baseUrl = _config["Keycloak:BaseUrl"];
         var realm = _config["Keycloak:Realm"] ?? "assistenteexecutivo";
-        var expectedIssuer = !string.IsNullOrWhiteSpace(publicBaseUrl) 
-            ? $"{publicBaseUrl.TrimEnd('/')}/realms/{realm}"
-            : !string.IsNullOrWhiteSpace(baseUrl)
-                ? $"{baseUrl.TrimEnd('/')}/realms/{realm}"
-                : throw new InvalidOperationException("Keycloak:PublicBaseUrl ou Keycloak:BaseUrl deve estar configurado em appsettings");
+        var expectedIssuer = !string.IsNullOrWhiteSpace(baseUrl)
+            ? $"{baseUrl.TrimEnd('/')}/realms/{realm}"
+            : throw new InvalidOperationException("Keycloak:BaseUrl deve estar configurado em appsettings");
 
         string? tokenIssuer = null;
         string? tokenAudience = null;
@@ -79,7 +76,6 @@ public sealed class MeController : ControllerBase
         {
             config = new
             {
-                keycloak_PublicBaseUrl = publicBaseUrl,
                 keycloak_BaseUrl = baseUrl,
                 keycloak_Realm = realm,
                 expectedIssuer

@@ -139,7 +139,8 @@ public class GlobalExceptionHandlingMiddleware
         else
         {
             // Para requisições web, redirecionar para login
-            var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+            var frontendBaseUrl = _configuration["Frontend:BaseUrl"]
+                ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
             var loginUrl = $"{frontendBaseUrl.TrimEnd('/')}/login?returnUrl={Uri.EscapeDataString(requestPath)}";
             
             context.Response.Redirect(loginUrl);

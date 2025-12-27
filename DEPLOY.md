@@ -134,3 +134,5 @@ Possíveis melhorias que podem ser implementadas:
 - [ ] Build paralelo quando ambos precisam ser construídos
 - [ ] Notificações quando builds são pulados
 
+
+

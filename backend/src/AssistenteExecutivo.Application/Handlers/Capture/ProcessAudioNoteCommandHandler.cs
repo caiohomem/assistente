@@ -67,10 +67,6 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
 
     public async Task<ProcessAudioNoteCommandResult> Handle(ProcessAudioNoteCommand request, CancellationToken cancellationToken)
     {
-        // #region agent log
-        try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,B,C,D,E", location = "ProcessAudioNoteCommandHandler.cs:56", message = "Handler started", data = new { contactId = request.ContactId.ToString(), ownerUserId = request.OwnerUserId.ToString() }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-        // #endregion
-
         // Validate contact exists
         var contact = await _contactRepository.GetByIdAsync(request.ContactId, request.OwnerUserId, cancellationToken);
         if (contact == null)
@@ -234,28 +230,12 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         await _noteRepository.AddAsync(note, cancellationToken);
 
         // 9. Consume credits
-        // #region agent log
-        try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,E", location = "ProcessAudioNoteCommandHandler.cs:168", message = "Before Consume", data = new { walletOwnerUserId = wallet.OwnerUserId.ToString(), transactionCount = wallet.Transactions.Count }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-        // #endregion
-        
         wallet.Consume(creditAmount, consumeIdempotencyKey, $"Audio note processing completed for contact {request.ContactId}", _clock);
-        
-        // #region agent log
-        try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,E", location = "ProcessAudioNoteCommandHandler.cs:173", message = "After Consume", data = new { walletOwnerUserId = wallet.OwnerUserId.ToString(), transactionCount = wallet.Transactions.Count, lastTransactionId = wallet.Transactions.LastOrDefault()?.TransactionId.ToString() }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-        // #endregion
         
         await _creditWalletRepository.UpdateAsync(wallet, cancellationToken);
 
         // 10. Save all changes to database
-        // #region agent log
-        try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,B,C,D,E", location = "ProcessAudioNoteCommandHandler.cs:180", message = "Before SaveChangesAsync", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-        // #endregion
-        
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        
-        // #region agent log
-        try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,B,C,D,E", location = "ProcessAudioNoteCommandHandler.cs:185", message = "SaveChangesAsync succeeded", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
-        // #endregion
 
         // 11. Map job to DTO for response
         var jobDto = CaptureJobMapper.MapToDto(captureJob);

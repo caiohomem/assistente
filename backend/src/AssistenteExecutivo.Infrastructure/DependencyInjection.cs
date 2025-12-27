@@ -174,6 +174,7 @@ public static class DependencyInjection
             var config = sp.GetRequiredService<IConfiguration>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var logger = sp.GetRequiredService<ILogger<OpenAISpeechToTextProvider>>();
+            logger.LogInformation("Usando OpenAI Speech-to-Text Provider (Whisper)");
             return new OpenAISpeechToTextProvider(config, httpClientFactory, logger);
         });
         
@@ -183,6 +184,7 @@ public static class DependencyInjection
             var config = sp.GetRequiredService<IConfiguration>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var logger = sp.GetRequiredService<ILogger<OpenAIOcrProvider>>();
+            logger.LogInformation("Usando OpenAI OCR Provider");
             return new OpenAIOcrProvider(config, httpClientFactory, logger);
         });
         
@@ -192,6 +194,7 @@ public static class DependencyInjection
             var config = sp.GetRequiredService<IConfiguration>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var logger = sp.GetRequiredService<ILogger<OpenAILLMProvider>>();
+            logger.LogInformation("Usando OpenAI LLM Provider");
             return new OpenAILLMProvider(config, httpClientFactory, logger);
         });
         

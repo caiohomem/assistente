@@ -195,3 +195,5 @@ if (string.IsNullOrWhiteSpace(expectedState) || !FixedTimeEquals(expectedState, 
 
 **⚠️ ATENÇÃO:** Isso remove a proteção CSRF. Use apenas para debug e remova antes de ir para produção!
 
+
+

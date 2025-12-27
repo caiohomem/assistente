@@ -185,17 +185,12 @@ public class KeycloakService : IKeycloakService
             var realmConfig = JsonSerializer.Deserialize<JsonElement>(realmJson);
             
             // Frontend URL do realm:
-            // - Em DEV (Keycloak local), manter vazio para nA£o forA§ar redirects para o hostname externo.
-            // - AtrA¡s de proxy HTTPS, o Keycloak consegue gerar URLs https corretamente desde que X-Forwarded-* esteja ok.
-            var publicBaseUrl = _configuration["Keycloak:PublicBaseUrl"]?.TrimEnd('/');
-            var frontendUrl = !string.IsNullOrWhiteSpace(publicBaseUrl)
-                ? publicBaseUrl
-                : _keycloakBaseUrl.TrimEnd('/');
+            // - Em DEV (Keycloak local), manter vazio para não forçar redirects para o hostname externo.
+            // - Atrás de proxy HTTPS, o Keycloak consegue gerar URLs https corretamente desde que X-Forwarded-* esteja ok.
+            var frontendUrl = _keycloakBaseUrl.TrimEnd('/');
 
-            // Se o Keycloak estA¡ local (localhost) MAS existe PublicBaseUrl configurado,
-            // nA£o limpar o frontendUrl; ele A© usado para calcular redirect URI do broker (Google/Microsoft/etc).
-            if (string.IsNullOrWhiteSpace(publicBaseUrl)
-                && Uri.TryCreate(_keycloakBaseUrl, UriKind.Absolute, out var baseUri)
+            // Se o Keycloak está local (localhost), limpar o frontendUrl
+            if (Uri.TryCreate(_keycloakBaseUrl, UriKind.Absolute, out var baseUri)
                 && (string.Equals(baseUri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(baseUri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(baseUri.Host, "::1", StringComparison.OrdinalIgnoreCase)))
@@ -805,8 +800,6 @@ public class KeycloakService : IKeycloakService
 
     private string ResolveKeycloakBaseUrlForRedirectUri(string redirectUri)
     {
-        var publicBaseUrl = _configuration["Keycloak:PublicBaseUrl"]?.TrimEnd('/');
-
         if (Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri))
         {
             if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
@@ -817,7 +810,7 @@ public class KeycloakService : IKeycloakService
             }
         }
 
-        return !string.IsNullOrWhiteSpace(publicBaseUrl) ? publicBaseUrl : _keycloakBaseUrl.TrimEnd('/');
+        return _keycloakBaseUrl.TrimEnd('/');
     }
 
     private string ResolveKeycloakBaseUrlForToken(string token)
@@ -825,8 +818,7 @@ public class KeycloakService : IKeycloakService
         if (TryGetIssuerBaseUrlFromJwt(token, out var issuerBaseUrl))
             return issuerBaseUrl;
 
-        var publicBaseUrl = _configuration["Keycloak:PublicBaseUrl"]?.TrimEnd('/');
-        return !string.IsNullOrWhiteSpace(publicBaseUrl) ? publicBaseUrl : _keycloakBaseUrl.TrimEnd('/');
+        return _keycloakBaseUrl.TrimEnd('/');
     }
 
     private static bool TryGetIssuerBaseUrlFromJwt(string jwt, out string issuerBaseUrl)
@@ -1156,10 +1148,8 @@ public class KeycloakService : IKeycloakService
 
     private void LogRedirectUriInfo(string realmId)
     {
-        // Sempre usar PublicBaseUrl se disponível, senão usar BaseUrl
         // O redirect URI do Google Identity Provider é calculado pelo Keycloak baseado no frontendUrl do realm
-        var publicBaseUrl = _configuration["Keycloak:PublicBaseUrl"]?.TrimEnd('/');
-        var baseUrl = !string.IsNullOrWhiteSpace(publicBaseUrl) ? publicBaseUrl : _keycloakBaseUrl.TrimEnd('/');
+        var baseUrl = _keycloakBaseUrl.TrimEnd('/');
         
         // Garantir HTTPS
         if (baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
@@ -1623,22 +1613,12 @@ public class KeycloakService : IKeycloakService
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // BFF callback targets (backend) - prefer PublicBaseUrl for external access
-        var apiPublicBaseUrl = (_configuration["Api:PublicBaseUrl"] ?? "").TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl))
-        {
-            set.Add($"{apiPublicBaseUrl}/auth/oauth-callback");
-        }
-        
-        var apiBaseUrl = (_configuration["Api:BaseUrl"] ?? "http://localhost:5239").TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(apiBaseUrl))
-            set.Add($"{apiBaseUrl}/auth/oauth-callback");
+        // BFF callback targets (backend)
+        var apiBaseUrl = _configuration["Api:BaseUrl"]
+            ?? throw new InvalidOperationException("Api:BaseUrl não configurado em appsettings");
+        set.Add($"{apiBaseUrl.TrimEnd('/')}/auth/oauth-callback");
 
-        // Web app (optional) - prefer PublicBaseUrl
-        var frontendPublicBaseUrl = (_configuration["Frontend:PublicBaseUrl"] ?? "").TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(frontendPublicBaseUrl))
-            set.Add($"{frontendPublicBaseUrl}/*");
-            
+        // Web app (optional)
         var frontendBaseUrl = (_configuration["Frontend:BaseUrl"] ?? "").TrimEnd('/');
         if (!string.IsNullOrWhiteSpace(frontendBaseUrl))
             set.Add($"{frontendBaseUrl}/*");
@@ -1667,11 +1647,6 @@ public class KeycloakService : IKeycloakService
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Prefer PublicBaseUrl for external access
-        var frontendPublicBaseUrl = (_configuration["Frontend:PublicBaseUrl"] ?? "").TrimEnd('/');
-        if (!string.IsNullOrWhiteSpace(frontendPublicBaseUrl))
-            set.Add(frontendPublicBaseUrl);
-            
         var frontendBaseUrl = (_configuration["Frontend:BaseUrl"] ?? "").TrimEnd('/');
         if (!string.IsNullOrWhiteSpace(frontendBaseUrl))
             set.Add(frontendBaseUrl);
