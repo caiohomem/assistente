@@ -594,25 +594,28 @@ function AudioPlayer({ noteId }: { noteId: string }) {
             analyser.connect(audioContext.destination);
             analyserRef.current = analyser;
           } catch (err: any) {
-            // If createMediaElementSource fails (e.g., already connected), 
-            // try to use existing connections or skip visualization
-            if (err.name === 'InvalidStateError' || err.message?.includes('already connected')) {
-              console.warn('Audio element already connected, skipping visualization setup');
-            } else {
-              throw err;
-            }
+            // If createMediaElementSource fails (e.g., not supported on Android, already connected), 
+            // skip visualization but don't block audio playback
+            console.warn('Audio visualization not available:', err.message || err.name);
+            analyserRef.current = null; // Clear analyser so visualization is skipped
           }
         }
         
         audioContextRef.current = audioContext;
-      } catch (err) {
-        console.error('Error setting up audio context:', err);
+      } catch (err: any) {
+        console.warn('Error setting up audio context for visualization:', err.message || err);
         // Don't block audio playback if visualization fails
+        audioContextRef.current = null;
+        analyserRef.current = null;
       }
     };
 
+    // Only setup AudioContext if audio has a source
+    // But don't wait for it - audio playback should work independently
     if (audio.src) {
-      setupAudioContext();
+      setupAudioContext().catch(err => {
+        console.warn('Failed to setup audio context:', err);
+      });
     }
 
     return () => {
@@ -723,24 +726,35 @@ function AudioPlayer({ noteId }: { noteId: string }) {
     try {
       const url = await loadAudio();
       if (audioRef.current && url) {
-        // Resume AudioContext before playing (required on Android)
+        // Try to resume AudioContext if it exists (for visualization)
+        // But don't block playback if it fails
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          try {
-            await audioContextRef.current.resume();
-          } catch (err) {
+          audioContextRef.current.resume().catch(err => {
             console.warn('Failed to resume AudioContext:', err);
-            // Continue anyway, audio playback might still work
-          }
+          });
         }
         
         audioRef.current.src = url;
         audioRef.current.playbackRate = playbackRate;
-        await audioRef.current.play();
+        
+        // Play audio - this should work independently of AudioContext
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
+        
         setIsPlaying(true);
       }
     } catch (err: any) {
       console.error('Error playing audio:', err);
-      setError(err.message || "Erro ao reproduzir áudio");
+      // Provide more specific error messages
+      let errorMessage = "Erro ao reproduzir áudio";
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
+        errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+      }
+      setError(errorMessage);
       setIsPlaying(false);
     }
   }
@@ -1059,25 +1073,28 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
             analyser.connect(audioContext.destination);
             analyserRef.current = analyser;
           } catch (err: any) {
-            // If createMediaElementSource fails (e.g., already connected), 
-            // try to use existing connections or skip visualization
-            if (err.name === 'InvalidStateError' || err.message?.includes('already connected')) {
-              console.warn('Audio element already connected, skipping visualization setup');
-            } else {
-              throw err;
-            }
+            // If createMediaElementSource fails (e.g., not supported on Android, already connected), 
+            // skip visualization but don't block audio playback
+            console.warn('Audio visualization not available:', err.message || err.name);
+            analyserRef.current = null; // Clear analyser so visualization is skipped
           }
         }
         
         audioContextRef.current = audioContext;
-      } catch (err) {
-        console.error('Error setting up audio context:', err);
+      } catch (err: any) {
+        console.warn('Error setting up audio context for visualization:', err.message || err);
         // Don't block audio playback if visualization fails
+        audioContextRef.current = null;
+        analyserRef.current = null;
       }
     };
 
+    // Only setup AudioContext if audio has a source
+    // But don't wait for it - audio playback should work independently
     if (audio.src) {
-      setupAudioContext();
+      setupAudioContext().catch(err => {
+        console.warn('Failed to setup audio context:', err);
+      });
     }
 
     return () => {
@@ -1266,26 +1283,37 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
     // If we have a pre-generated audio, use it
     if (parsedData?.responseMediaId) {
       try {
-        // Resume AudioContext before playing (required on Android)
+        // Try to resume AudioContext if it exists (for visualization)
+        // But don't block playback if it fails
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          try {
-            await audioContextRef.current.resume();
-          } catch (err) {
+          audioContextRef.current.resume().catch(err => {
             console.warn('Failed to resume AudioContext:', err);
-            // Continue anyway, audio playback might still work
-          }
+          });
         }
         
         const url = await loadAudioFromMediaId(parsedData.responseMediaId);
         if (audioRef.current && url) {
           audioRef.current.src = url;
           audioRef.current.playbackRate = playbackRate;
-          await audioRef.current.play();
+          
+          // Play audio - this should work independently of AudioContext
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+          }
+          
           setIsPlaying(true);
         }
       } catch (err: any) {
         console.error('Error playing audio:', err);
-        setError(err.message || "Erro ao reproduzir áudio");
+        // Provide more specific error messages
+        let errorMessage = "Erro ao reproduzir áudio";
+        if (err.message) {
+          errorMessage = err.message;
+        } else if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
+          errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+        }
+        setError(errorMessage);
         setIsPlaying(false);
       }
     } else {
