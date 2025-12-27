@@ -373,24 +373,24 @@ public sealed class AuthController : ControllerBase
         // #region agent log
         var isAuthAfterCommit = BffSessionStore.IsAuthenticated(HttpContext.Session);
         var sessionIdAfterCommit = HttpContext.Session.Id;
-        var cookieHeader = Request.Headers["Cookie"].ToString();
-        var setCookieHeaders = Response.Headers["Set-Cookie"].ToString();
-        var hasAeSidInSetCookie = setCookieHeaders.Contains("ae.sid", StringComparison.OrdinalIgnoreCase);
+        var cookieHeaderAfterCommit = Request.Headers["Cookie"].ToString();
+        var setCookieHeadersAfterCommit = Response.Headers["Set-Cookie"].ToString();
+        var hasAeSidInSetCookie = setCookieHeadersAfterCommit.Contains("ae.sid", StringComparison.OrdinalIgnoreCase);
         var hasAeSidInRequestCookie = Request.Cookies.ContainsKey("ae.sid");
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_B", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:298", message = "After CommitAsync", data = new { sessionId = sessionIdAfterCommit, isAuthenticated = isAuthAfterCommit, hasSetCookieHeader = !string.IsNullOrEmpty(setCookieHeaders), hasAeSidInSetCookie = hasAeSidInSetCookie, hasAeSidInRequestCookie = hasAeSidInRequestCookie, setCookieHeaderLength = setCookieHeaders?.Length ?? 0, setCookieHeader = setCookieHeaders?.Substring(0, Math.Min(500, setCookieHeaders?.Length ?? 0)), cookieHeaderLength = cookieHeader?.Length ?? 0, requestHost = Request.Host.ToString(), requestScheme = Request.Scheme }, sessionId = "debug-session", runId = "run1", hypothesisId = "B" }) + "\n"); } catch { }
+        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_B", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:298", message = "After CommitAsync", data = new { sessionId = sessionIdAfterCommit, isAuthenticated = isAuthAfterCommit, hasSetCookieHeader = !string.IsNullOrEmpty(setCookieHeadersAfterCommit), hasAeSidInSetCookie = hasAeSidInSetCookie, hasAeSidInRequestCookie = hasAeSidInRequestCookie, setCookieHeaderLength = setCookieHeadersAfterCommit?.Length ?? 0, setCookieHeader = setCookieHeadersAfterCommit?.Substring(0, Math.Min(500, setCookieHeadersAfterCommit?.Length ?? 0)), cookieHeaderLength = cookieHeaderAfterCommit?.Length ?? 0, requestHost = Request.Host.ToString(), requestScheme = Request.Scheme }, sessionId = "debug-session", runId = "run1", hypothesisId = "B" }) + "\n"); } catch { }
         // #endregion
 
         var redirectUrl = BuildFrontendRedirectUrl();
         
         // Verificar se a sessão foi realmente salva antes de redirecionar
         var sessionCheck = BffSessionStore.IsAuthenticated(HttpContext.Session);
-        var sessionId = HttpContext.Session.Id;
+        var sessionIdFinal = HttpContext.Session.Id;
         
         // provisionResult sempre será definido (tanto no bloco if quanto no else)
         var userId = provisionResult?.UserId ?? existingUserId ?? Guid.Empty;
         _logger.LogInformation(
             "Sessão autenticada salva. UserId={UserId}, Email={Email}, Sub={Sub}, SessionId={SessionId}, IsAuthenticated={IsAuthenticated}. Redirecionando para: {RedirectUrl}",
-            userId, userInfo.Email, userInfo.Sub, sessionId, sessionCheck, redirectUrl);
+            userId, userInfo.Email, userInfo.Sub, sessionIdFinal, sessionCheck, redirectUrl);
 
         // #region agent log
         try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_A", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:316", message = "Before redirect", data = new { sessionId = sessionId, isAuthenticated = sessionCheck, redirectUrl = redirectUrl, userId = userId, email = userInfo.Email }, sessionId = "debug-session", runId = "run1", hypothesisId = "A" }) + "\n"); } catch { }
