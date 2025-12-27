@@ -136,6 +136,29 @@ public sealed class AutomationController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deleta um lembrete.
+    /// </summary>
+    [HttpDelete("reminders/{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteReminder(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+
+        var command = new DeleteReminderCommand
+        {
+            ReminderId = id,
+            OwnerUserId = ownerUserId
+        };
+
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
     #endregion
 
     #region Drafts
@@ -304,6 +327,29 @@ public sealed class AutomationController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deleta um draft.
+    /// </summary>
+    [HttpDelete("drafts/{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteDraft(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+
+        var command = new DeleteDraftCommand
+        {
+            DraftId = id,
+            OwnerUserId = ownerUserId
+        };
+
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
     #endregion
 
     #region Templates
@@ -417,6 +463,29 @@ public sealed class AutomationController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Deleta um template.
+    /// </summary>
+    [HttpDelete("templates/{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteTemplate(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+
+        var command = new DeleteTemplateCommand
+        {
+            TemplateId = id,
+            OwnerUserId = ownerUserId
+        };
+
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
     #endregion
 
     #region Letterheads
@@ -519,6 +588,29 @@ public sealed class AutomationController : ControllerBase
             Name = request.Name,
             DesignData = request.DesignData,
             IsActive = request.IsActive
+        };
+
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Deleta um papel timbrado.
+    /// </summary>
+    [HttpDelete("letterheads/{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> DeleteLetterhead(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+
+        var command = new DeleteLetterheadCommand
+        {
+            LetterheadId = id,
+            OwnerUserId = ownerUserId
         };
 
         await _mediator.Send(command, cancellationToken);

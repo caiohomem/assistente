@@ -159,7 +159,7 @@ public class CaptureJobConfiguration : IEntityTypeConfiguration<CaptureJob>
             task.Property(t => t.Description)
                 .HasColumnName("Description")
                 .IsRequired()
-                .HasMaxLength(500);
+                .HasColumnType("nvarchar(max)"); // NVARCHAR(MAX) no SQL Server (ilimitado até 2GB) - EF Core converte automaticamente para TEXT no PostgreSQL (ilimitado até 1GB)
 
             task.Property(t => t.DueDate)
                 .HasColumnName("DueDate")

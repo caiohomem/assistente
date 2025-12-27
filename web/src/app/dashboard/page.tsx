@@ -295,6 +295,94 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </Link>
+
+            {/* Lembretes */}
+            <Link
+              href="/automacao/lembretes"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="flex items-center mb-4">
+                <div className="text-4xl mr-4">⏰</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  Lembretes
+                </h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Gerencie seus lembretes e agendamentos
+              </p>
+              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                {tCommon('access')}
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+
+            {/* Rascunhos */}
+            <Link
+              href="/automacao/rascunhos"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="flex items-center mb-4">
+                <div className="text-4xl mr-4">📝</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  Rascunhos
+                </h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Crie e gerencie rascunhos de documentos
+              </p>
+              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                {tCommon('access')}
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+
+            {/* Templates */}
+            <Link
+              href="/automacao/templates"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="flex items-center mb-4">
+                <div className="text-4xl mr-4">📄</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  Templates
+                </h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Gerencie seus templates reutilizáveis
+              </p>
+              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                {tCommon('access')}
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+
+            {/* Papéis Timbrados */}
+            <Link
+              href="/automacao/papeis-timbrados"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="flex items-center mb-4">
+                <div className="text-4xl mr-4">✉️</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  Papéis Timbrados
+                </h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Gerencie seus papéis timbrados personalizados
+              </p>
+              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                {tCommon('access')}
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
           </div>
 
           {/* Recent Activities */}

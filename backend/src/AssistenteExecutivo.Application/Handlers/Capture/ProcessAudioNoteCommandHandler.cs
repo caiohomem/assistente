@@ -198,6 +198,7 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         }
 
         // 7. Complete the capture job
+        // Campo Description agora é ilimitado (nvarchar(max)/text), não precisa truncar
         captureJob.CompleteAudioProcessing(transcript, summary, llmResult.Tasks, _clock);
         // Note: No need to call UpdateAsync here - captureJob is tracked and EF Core will detect changes
 

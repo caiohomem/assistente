@@ -7,6 +7,8 @@ using System.Net;
 using System.Text.Json;
 using System.Diagnostics;
 using Serilog.Context;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace AssistenteExecutivo.Api.Middleware;
 
@@ -51,17 +53,37 @@ public class GlobalExceptionHandlingMiddleware
                 stopwatch.Stop();
 
                 // Log informações da requisição bem-sucedida (apenas para erros ou warnings)
+                // Reduzir log level para 404s em paths comuns (root, favicon, etc) para evitar ruído
                 if (context.Response.StatusCode >= 400)
                 {
                     using (LogContext.PushProperty("Elapsed", stopwatch.ElapsedMilliseconds))
                     {
-                        _logger.LogWarning(
-                            "Requisição retornou status {StatusCode}. Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms",
-                            context.Response.StatusCode,
-                            requestPath,
-                            requestMethod,
-                            userName,
-                            stopwatch.ElapsedMilliseconds);
+                        // 404s em paths comuns são esperados e não precisam de warning
+                        var isCommon404 = context.Response.StatusCode == 404 && 
+                            (requestPath == "/" || 
+                             requestPath.StartsWith("/favicon", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.StartsWith("/robots.txt", StringComparison.OrdinalIgnoreCase));
+                        
+                        if (isCommon404)
+                        {
+                            _logger.LogDebug(
+                                "Requisição retornou status {StatusCode}. Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms",
+                                context.Response.StatusCode,
+                                requestPath,
+                                requestMethod,
+                                userName,
+                                stopwatch.ElapsedMilliseconds);
+                        }
+                        else
+                        {
+                            _logger.LogWarning(
+                                "Requisição retornou status {StatusCode}. Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms",
+                                context.Response.StatusCode,
+                                requestPath,
+                                requestMethod,
+                                userName,
+                                stopwatch.ElapsedMilliseconds);
+                        }
                     }
                 }
             }
@@ -74,6 +96,11 @@ public class GlobalExceptionHandlingMiddleware
             {
                 stopwatch.Stop();
                 await HandleDomainExceptionAsync(context, ex, requestPath, requestMethod, userName, stopwatch.ElapsedMilliseconds);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx)
+            {
+                stopwatch.Stop();
+                await HandleDatabaseExceptionAsync(context, ex, pgEx, requestPath, requestMethod, userName, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
@@ -218,6 +245,88 @@ public class GlobalExceptionHandlingMiddleware
         {
             message = localizedMessage,
             error = exception.GetType().Name
+        };
+
+        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        await context.Response.WriteAsync(json);
+    }
+
+    private async Task HandleDatabaseExceptionAsync(
+        HttpContext context,
+        DbUpdateException exception,
+        PostgresException pgEx,
+        string requestPath,
+        string requestMethod,
+        string userName,
+        long elapsedMs)
+    {
+        // Log detalhado da exceção de banco de dados
+        using (LogContext.PushProperty("Elapsed", elapsedMs))
+        using (LogContext.PushProperty("ExceptionType", exception.GetType().FullName))
+        using (LogContext.PushProperty("PostgresErrorCode", pgEx.SqlState))
+        using (LogContext.PushProperty("PostgresMessage", pgEx.Message))
+        {
+            _logger.LogError(
+                exception,
+                "Erro de banco de dados. Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms, PostgresErrorCode: {PostgresErrorCode}, Message: {Message}",
+                requestPath,
+                requestMethod,
+                userName,
+                elapsedMs,
+                pgEx.SqlState,
+                pgEx.Message);
+        }
+
+        // Se a resposta já foi iniciada, não podemos modificá-la
+        if (context.Response.HasStarted)
+        {
+            _logger.LogWarning("Não foi possível tratar DbUpdateException: resposta já foi iniciada");
+            return;
+        }
+
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+        // Mensagem amigável baseada no código de erro do PostgreSQL
+        string userMessage;
+        if (pgEx.SqlState == "22001") // value too long for type
+        {
+            userMessage = "Os dados fornecidos excedem o tamanho máximo permitido. Por favor, reduza o tamanho e tente novamente.";
+        }
+        else if (pgEx.SqlState == "23505") // unique_violation
+        {
+            userMessage = "Já existe um registro com esses dados. Por favor, verifique e tente novamente.";
+        }
+        else if (pgEx.SqlState == "23503") // foreign_key_violation
+        {
+            userMessage = "Referência inválida. O registro referenciado não existe.";
+        }
+        else if (pgEx.SqlState == "23502") // not_null_violation
+        {
+            userMessage = "Campo obrigatório não foi preenchido. Por favor, verifique os dados e tente novamente.";
+        }
+        else
+        {
+            // Erro genérico de banco de dados
+            if (_environment.IsDevelopment())
+            {
+                userMessage = $"Erro de banco de dados: {pgEx.Message} (Código: {pgEx.SqlState})";
+            }
+            else
+            {
+                userMessage = "Ocorreu um erro ao processar os dados. Por favor, tente novamente mais tarde.";
+            }
+        }
+
+        var response = new
+        {
+            message = userMessage,
+            error = "DatabaseError",
+            errorCode = pgEx.SqlState
         };
 
         var json = JsonSerializer.Serialize(response, new JsonSerializerOptions

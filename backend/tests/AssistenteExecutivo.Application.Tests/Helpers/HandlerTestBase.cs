@@ -43,6 +43,10 @@ public abstract class HandlerTestBase : IDisposable
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
         services.AddScoped<ICaptureJobRepository, CaptureJobRepository>();
         services.AddScoped<ICreditWalletRepository, CreditWalletRepository>();
+        services.AddScoped<IReminderRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.ReminderRepository>();
+        services.AddScoped<IDraftDocumentRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.DraftDocumentRepository>();
+        services.AddScoped<ITemplateRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.TemplateRepository>();
+        services.AddScoped<ILetterheadRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.LetterheadRepository>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -107,6 +111,32 @@ public abstract class HandlerTestBase : IDisposable
         }
         
         return (TResponse)result!;
+    }
+
+    protected async Task SendAsync(IRequest request, CancellationToken cancellationToken = default)
+    {
+        using var scope = ServiceProvider.CreateScope();
+
+        // Get the handler type from the request type
+        var requestType = request.GetType();
+        
+        // Find handler interface: IRequestHandler<TRequest>
+        var handlerInterfaceType = typeof(IRequestHandler<>).MakeGenericType(requestType);
+        
+        // Get handler implementation from service provider
+        var handler = scope.ServiceProvider.GetRequiredService(handlerInterfaceType);
+        
+        // Call Handle method using reflection
+        var handleMethod = handlerInterfaceType.GetMethod("Handle") 
+            ?? throw new InvalidOperationException($"Handler for {requestType.Name} does not implement Handle method");
+        
+        var result = handleMethod.Invoke(handler, new object[] { request, cancellationToken });
+        
+        // If result is Task, await it
+        if (result is Task task)
+        {
+            await task;
+        }
     }
 
     private static void RegisterHandlers(IServiceCollection services, Assembly assembly)
