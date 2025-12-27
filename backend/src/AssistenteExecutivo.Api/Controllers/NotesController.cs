@@ -291,6 +291,91 @@ public sealed class NotesController : ControllerBase
             $"audio-note-{note.NoteId}.{GetFileExtension(mediaAsset.MediaRef.MimeType)}");
     }
 
+    /// <summary>
+    /// Obtém um arquivo de mídia por ID (áudio, imagem, etc).
+    /// </summary>
+    [HttpGet("media/{id}/file")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMediaFile(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty)
+        {
+            return BadRequest(new { message = "MediaId é obrigatório." });
+        }
+
+        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+
+        // Buscar o MediaAsset
+        var mediaAsset = await _mediaAssetRepository.GetByIdAsync(
+            id,
+            ownerUserId,
+            cancellationToken);
+
+        if (mediaAsset == null)
+        {
+            return NotFound(new { message = "Arquivo de mídia não encontrado." });
+        }
+
+        // Recuperar o arquivo: primeiro tenta do banco de dados, depois do FileStore (fallback)
+        byte[]? fileBytes = null;
+        
+        if (mediaAsset.FileContent != null && mediaAsset.FileContent.Length > 0)
+        {
+            // Arquivo está armazenado no banco de dados
+            fileBytes = mediaAsset.FileContent;
+        }
+        else if (mediaAsset.MediaRef.StorageKey.StartsWith("db/"))
+        {
+            // StorageKey indica que deveria estar no banco, mas não está
+            _logger.LogWarning(
+                "Arquivo de mídia não encontrado no banco de dados. MediaId: {MediaId}",
+                mediaAsset.MediaId);
+            
+            return NotFound(new { 
+                message = "Arquivo de mídia não encontrado no banco de dados.",
+                mediaId = mediaAsset.MediaId
+            });
+        }
+        else
+        {
+            // Fallback: tentar recuperar do FileStore (para arquivos antigos)
+            fileBytes = await _fileStore.GetAsync(mediaAsset.MediaRef.StorageKey, cancellationToken);
+            
+            if (fileBytes == null || fileBytes.Length == 0)
+            {
+                _logger.LogWarning(
+                    "Arquivo de mídia não encontrado no armazenamento. MediaId: {MediaId}, StorageKey: {StorageKey}",
+                    mediaAsset.MediaId,
+                    mediaAsset.MediaRef.StorageKey);
+                
+                return NotFound(new { 
+                    message = "Arquivo de mídia não encontrado no armazenamento.",
+                    mediaId = mediaAsset.MediaId,
+                    storageKey = mediaAsset.MediaRef.StorageKey
+                });
+            }
+        }
+        
+        if (fileBytes == null || fileBytes.Length == 0)
+        {
+            return NotFound(new { message = "Arquivo de mídia não encontrado." });
+        }
+
+        // Retornar o arquivo
+        var extension = GetFileExtension(mediaAsset.MediaRef.MimeType);
+        var fileName = $"media-{mediaAsset.MediaId}.{extension}";
+        
+        return File(
+            fileBytes,
+            mediaAsset.MediaRef.MimeType,
+            fileName);
+    }
+
     private static string GetFileExtension(string mimeType)
     {
         return mimeType switch
@@ -299,7 +384,10 @@ public sealed class NotesController : ControllerBase
             "audio/wav" => "wav",
             "audio/webm" => "webm",
             "audio/ogg" => "ogg",
-            _ => "mp3"
+            "image/jpeg" or "image/jpg" => "jpg",
+            "image/png" => "png",
+            "image/webp" => "webp",
+            _ => "bin"
         };
     }
 

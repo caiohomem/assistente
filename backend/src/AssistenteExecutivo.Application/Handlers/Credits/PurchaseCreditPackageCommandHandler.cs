@@ -11,18 +11,18 @@ namespace AssistenteExecutivo.Application.Handlers.Credits;
 public class PurchaseCreditPackageCommandHandler : IRequestHandler<PurchaseCreditPackageCommand, PurchaseCreditPackageResult>
 {
     private readonly ICreditWalletRepository _walletRepository;
-    private readonly IApplicationDbContext _context;
+    private readonly ICreditPackageRepository _packageRepository;
     private readonly IClock _clock;
     private readonly IUnitOfWork _unitOfWork;
 
     public PurchaseCreditPackageCommandHandler(
         ICreditWalletRepository walletRepository,
-        IApplicationDbContext context,
+        ICreditPackageRepository packageRepository,
         IClock clock,
         IUnitOfWork unitOfWork)
     {
         _walletRepository = walletRepository;
-        _context = context;
+        _packageRepository = packageRepository;
         _clock = clock;
         _unitOfWork = unitOfWork;
     }
@@ -38,8 +38,7 @@ public class PurchaseCreditPackageCommandHandler : IRequestHandler<PurchaseCredi
             throw new ArgumentException("PackageId é obrigatório", nameof(request.PackageId));
 
         // Buscar pacote
-        var package = await _context.CreditPackages
-            .FirstOrDefaultAsync(p => p.PackageId == request.PackageId, cancellationToken);
+        var package = await _packageRepository.GetByIdAsync(request.PackageId, cancellationToken);
 
         if (package == null)
             throw new InvalidOperationException("Pacote não encontrado");

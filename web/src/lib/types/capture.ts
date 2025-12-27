@@ -57,6 +57,7 @@ export interface CaptureJob {
   audioTranscript?: AudioTranscript | null;
   audioSummary?: string | null;
   extractedTasks?: ExtractedTask[] | null;
+  responseMediaId?: string | null;
 }
 
 export interface UploadCardRequest {

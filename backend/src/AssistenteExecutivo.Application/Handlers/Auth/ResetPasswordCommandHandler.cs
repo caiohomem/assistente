@@ -12,7 +12,8 @@ namespace AssistenteExecutivo.Application.Handlers.Auth;
 public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand, ResetPasswordResult>
 {
     private readonly IMediator _mediator;
-    private readonly IApplicationDbContext _db;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IKeycloakService _keycloakService;
     private readonly IClock _clock;
     private readonly IConfiguration _configuration;
@@ -20,14 +21,16 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
 
     public ResetPasswordCommandHandler(
         IMediator mediator,
-        IApplicationDbContext db,
+        IUserProfileRepository userProfileRepository,
+        IUnitOfWork unitOfWork,
         IKeycloakService keycloakService,
         IClock clock,
         IConfiguration configuration,
         ILogger<ResetPasswordCommandHandler> logger)
     {
         _mediator = mediator;
-        _db = db;
+        _userProfileRepository = userProfileRepository;
+        _unitOfWork = unitOfWork;
         _keycloakService = keycloakService;
         _clock = clock;
         _configuration = configuration;
@@ -92,7 +95,8 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
                 cancellationToken);
 
             user.InvalidatePasswordResetToken();
-            await _db.SaveChangesAsync(cancellationToken);
+            await _userProfileRepository.UpdateAsync(user, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new ResetPasswordResult
             {

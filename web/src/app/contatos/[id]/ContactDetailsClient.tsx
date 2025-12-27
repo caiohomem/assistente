@@ -10,6 +10,13 @@ import { NoteType } from "@/lib/types/note";
 import { getApiBaseUrl } from "@/lib/bff";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
+function formatTime(seconds: number): string {
+  if (isNaN(seconds)) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 interface ContactDetailsClientProps {
   contactId: string;
   contact: Contact;
@@ -470,14 +477,22 @@ export function ContactDetailsClient({
                     {note.rawContent}
                   </p>
                 )}
+                {/* Show TTS button for audio notes with structured data */}
+                {note.type === NoteType.Audio && note.structuredData && (
+                  <div className="mt-2 mb-2">
+                    <StructuredDataTTSPlayer structuredData={note.structuredData} />
+                  </div>
+                )}
                 {note.structuredData && (
                   <details className="mt-2">
                     <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300">
                       Ver dados estruturados
                     </summary>
-                    <pre className="mt-2 overflow-auto rounded bg-zinc-100 dark:bg-zinc-800 p-2 text-xs text-zinc-900 dark:text-zinc-100">
-                      {JSON.stringify(JSON.parse(note.structuredData), null, 2)}
-                    </pre>
+                    <div className="mt-2">
+                      <pre className="overflow-auto rounded bg-zinc-100 dark:bg-zinc-800 p-2 text-xs text-zinc-900 dark:text-zinc-100">
+                        {JSON.stringify(JSON.parse(note.structuredData), null, 2)}
+                      </pre>
+                    </div>
                   </details>
                 )}
               </div>
@@ -493,7 +508,14 @@ function AudioPlayer({ noteId }: { noteId: string }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
 
   async function loadAudio() {
@@ -526,6 +548,142 @@ function AudioPlayer({ noteId }: { noteId: string }) {
     }
   }
 
+  // Setup Web Audio API for visualization
+  useEffect(() => {
+    if (!audioRef.current || !canvasRef.current || !audioBlobUrl) return;
+
+    const audio = audioRef.current;
+    const canvas = canvasRef.current;
+    
+    // Set canvas size
+    const resizeCanvas = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (rect) {
+        canvas.width = rect.width;
+        canvas.height = 64;
+      }
+    };
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    const setupAudioContext = async () => {
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaElementSource(audio);
+        
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        audioContextRef.current = audioContext;
+        analyserRef.current = analyser;
+      } catch (err) {
+        console.error('Error setting up audio context:', err);
+      }
+    };
+
+    if (audio.src) {
+      setupAudioContext();
+    }
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [audioBlobUrl]);
+
+  // Update current time
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    const audio = audioRef.current;
+    
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime);
+      if (audio.duration) {
+        setDuration(audio.duration);
+      }
+    };
+
+    const handleTimeUpdate = () => updateTime();
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
+  }, [audioBlobUrl]);
+
+  // Draw waveform visualization
+  useEffect(() => {
+    if (!canvasRef.current || !analyserRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      if (!isPlaying) {
+        // Draw static waveform when paused
+        ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const barWidth = (canvas.width / bufferLength) * 2.5;
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+
+        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(147, 51, 234, 0.9)'); // purple-600
+        gradient.addColorStop(1, 'rgba(147, 51, 234, 0.2)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+        x += barWidth + 1;
+      }
+
+      if (isPlaying) {
+        animationFrameRef.current = requestAnimationFrame(draw);
+      }
+    };
+
+    if (isPlaying) {
+      draw();
+    } else {
+      // Clear canvas when paused
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying]);
+
   async function handlePlay() {
     if (!audioRef.current) return;
 
@@ -539,6 +697,7 @@ function AudioPlayer({ noteId }: { noteId: string }) {
       const url = await loadAudio();
       if (audioRef.current && url) {
         audioRef.current.src = url;
+        audioRef.current.playbackRate = playbackRate;
         await audioRef.current.play();
         setIsPlaying(true);
       }
@@ -546,6 +705,25 @@ function AudioPlayer({ noteId }: { noteId: string }) {
       setError("Erro ao reproduzir áudio");
       setIsPlaying(false);
     }
+  }
+
+  function handlePlaybackRateChange(newRate: number) {
+    setPlaybackRate(newRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = newRate;
+    }
+  }
+
+  function handleSeek(e: React.MouseEvent<HTMLDivElement>) {
+    if (!audioRef.current || !duration) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = x / rect.width;
+    const newTime = percentage * duration;
+
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
   }
 
   function handleEnded() {
@@ -567,11 +745,11 @@ function AudioPlayer({ noteId }: { noteId: string }) {
 
   return (
     <div className="mb-3 rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 p-3">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-2">
         <button
           onClick={handlePlay}
           disabled={isLoading}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
         >
           {isLoading ? (
@@ -621,20 +799,562 @@ function AudioPlayer({ noteId }: { noteId: string }) {
             </svg>
           )}
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {error ? (
             <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
           ) : (
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              {isLoading
-                ? "Carregando áudio..."
-                : isPlaying
-                ? "Reproduzindo..."
-                : "Clique para reproduzir"}
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-600 dark:text-zinc-400 font-mono">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
+            </div>
           )}
         </div>
+        <PlaybackRateControl
+          playbackRate={playbackRate}
+          onChange={handlePlaybackRateChange}
+        />
       </div>
+      
+      {/* Audio Spectrum Visualization */}
+      {audioBlobUrl && (
+        <div className="mb-2">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-16 rounded bg-zinc-900 dark:bg-zinc-950"
+          />
+        </div>
+      )}
+
+      {/* Progress Bar */}
+      {duration > 0 && (
+        <div className="relative">
+          <div
+            className="h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full cursor-pointer"
+            onClick={handleSeek}
+          >
+            <div
+              className="h-full bg-purple-600 dark:bg-purple-500 rounded-full transition-all duration-100"
+              style={{ width: `${(currentTime / duration) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+      
+      <audio
+        ref={audioRef}
+        onEnded={handleEnded}
+        onPause={handlePause}
+        preload="none"
+      />
+    </div>
+  );
+}
+
+function PlaybackRateControl({
+  playbackRate,
+  onChange,
+}: {
+  playbackRate: number;
+  onChange: (rate: number) => void;
+}) {
+  const rates = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1 rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-2 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-600 transition-colors"
+        title="Velocidade de reprodução"
+      >
+        <svg
+          className="h-3 w-3"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
+        </svg>
+        <span>{playbackRate}x</span>
+      </button>
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute right-0 top-full mt-1 z-20 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg py-1 min-w-[120px]">
+            {rates.map((rate) => (
+              <button
+                key={rate}
+                onClick={() => {
+                  onChange(rate);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors ${
+                  playbackRate === rate
+                    ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium"
+                    : "text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                {rate}x
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StructuredDataTTSPlayer({ structuredData }: { structuredData: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+  const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Parse structured data
+  const [parsedData, setParsedData] = useState<{
+    responseMediaId?: string | null;
+    summary?: string | null;
+    tasks?: Array<{ description: string; dueDate?: string | null; priority?: string | null }>;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const data = JSON.parse(structuredData);
+      setParsedData({
+        responseMediaId: data?.responseMediaId || null,
+        summary: data?.summary || null,
+        tasks: data?.tasks || [],
+      });
+    } catch (e) {
+      console.error('StructuredDataTTSPlayer - Error parsing JSON:', e);
+      setParsedData(null);
+    }
+  }, [structuredData]);
+
+  // Build text to speak: summary + tasks
+  const buildTextToSpeak = (): string => {
+    if (!parsedData) return '';
+    
+    const parts: string[] = [];
+    
+    if (parsedData.summary) {
+      parts.push(`Resumo: ${parsedData.summary}`);
+    }
+    
+    if (parsedData.tasks && parsedData.tasks.length > 0) {
+      parts.push(`Tarefas:`);
+      parsedData.tasks.forEach((task, index) => {
+        const taskText = `${index + 1}. ${task.description}`;
+        if (task.priority) {
+          parts.push(`${taskText}. Prioridade: ${task.priority}`);
+        } else {
+          parts.push(taskText);
+        }
+      });
+    }
+    
+    return parts.join('. ');
+  };
+
+  const textToSpeak = buildTextToSpeak();
+
+  // Setup Web Audio API for visualization (only for pre-generated audio)
+  useEffect(() => {
+    if (!audioRef.current || !canvasRef.current || !audioBlobUrl || !parsedData?.responseMediaId) return;
+
+    const audio = audioRef.current;
+    const canvas = canvasRef.current;
+    
+    const resizeCanvas = () => {
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (rect) {
+        canvas.width = rect.width;
+        canvas.height = 48;
+      }
+    };
+    
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    const setupAudioContext = async () => {
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaElementSource(audio);
+        
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        audioContextRef.current = audioContext;
+        analyserRef.current = analyser;
+      } catch (err) {
+        console.error('Error setting up audio context:', err);
+      }
+    };
+
+    if (audio.src) {
+      setupAudioContext();
+    }
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [audioBlobUrl, parsedData?.responseMediaId]);
+
+  // Update current time (only for pre-generated audio)
+  useEffect(() => {
+    if (!audioRef.current || !parsedData?.responseMediaId) return;
+
+    const audio = audioRef.current;
+    
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime);
+      if (audio.duration) {
+        setDuration(audio.duration);
+      }
+    };
+
+    const handleTimeUpdate = () => updateTime();
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    };
+  }, [audioBlobUrl, parsedData?.responseMediaId]);
+
+  // Draw waveform visualization (only for pre-generated audio)
+  useEffect(() => {
+    if (!canvasRef.current || !analyserRef.current || !parsedData?.responseMediaId) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      if (!isPlaying) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      analyser.getByteFrequencyData(dataArray);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const barWidth = (canvas.width / bufferLength) * 2.5;
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+
+        const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(147, 51, 234, 0.9)'); // purple-600
+        gradient.addColorStop(1, 'rgba(147, 51, 234, 0.2)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+        x += barWidth + 1;
+      }
+
+      if (isPlaying) {
+        animationFrameRef.current = requestAnimationFrame(draw);
+      }
+    };
+
+    if (isPlaying) {
+      draw();
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, parsedData?.responseMediaId]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (audioBlobUrl) {
+        URL.revokeObjectURL(audioBlobUrl);
+      }
+      if (synthesisRef.current) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [audioBlobUrl]);
+
+  async function loadAudioFromMediaId(mediaId: string) {
+    if (audioBlobUrl) return audioBlobUrl;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const baseUrl = getApiBaseUrl();
+      const url = `${baseUrl}/api/media/${mediaId}/file`;
+
+      const response = await fetch(url, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar áudio");
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setAudioBlobUrl(blobUrl);
+      return blobUrl;
+    } catch (err) {
+      setError("Erro ao carregar áudio");
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function speakWithWebSpeechAPI() {
+    if (!('speechSynthesis' in window)) {
+      setError("Seu navegador não suporta síntese de voz");
+      return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'pt-BR';
+    utterance.rate = playbackRate; // Use the playback rate
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      setError(null);
+    };
+
+    utterance.onend = () => {
+      setIsPlaying(false);
+      synthesisRef.current = null;
+    };
+
+    utterance.onerror = (e) => {
+      setError("Erro ao reproduzir áudio");
+      setIsPlaying(false);
+      synthesisRef.current = null;
+    };
+
+    synthesisRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function handlePlay() {
+    if (isPlaying) {
+      // Stop playing
+      if (parsedData?.responseMediaId && audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } else if (synthesisRef.current) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlaying(false);
+      return;
+    }
+
+    setError(null);
+
+    // If we have a pre-generated audio, use it
+    if (parsedData?.responseMediaId) {
+      try {
+        const url = await loadAudioFromMediaId(parsedData.responseMediaId);
+        if (audioRef.current && url) {
+          audioRef.current.src = url;
+          audioRef.current.playbackRate = playbackRate;
+          await audioRef.current.play();
+          setIsPlaying(true);
+        }
+      } catch (err) {
+        setError("Erro ao reproduzir áudio");
+        setIsPlaying(false);
+      }
+    } else {
+      // Use Web Speech API as fallback
+      speakWithWebSpeechAPI();
+    }
+  }
+
+  function handlePlaybackRateChange(newRate: number) {
+    setPlaybackRate(newRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = newRate;
+    }
+    // For Web Speech API, we need to update the rate if currently playing
+    if (synthesisRef.current && isPlaying && !parsedData?.responseMediaId) {
+      window.speechSynthesis.cancel();
+      speakWithWebSpeechAPI();
+    }
+  }
+
+  function handleEnded() {
+    setIsPlaying(false);
+  }
+
+  function handlePause() {
+    setIsPlaying(false);
+  }
+
+  // Always show button if we have structuredData (even if empty, user can try to play)
+  // The button will work if we have responseMediaId OR if we have text to speak
+  const hasContent = textToSpeak.trim().length > 0 || parsedData?.responseMediaId !== null;
+  
+  if (!hasContent || !parsedData) {
+    return null;
+  }
+
+  return (
+    <div className="mb-2 w-full">
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          onClick={handlePlay}
+          disabled={isLoading}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          aria-label={isPlaying ? "Pausar áudio" : "Reproduzir resumo e tarefas em áudio"}
+          title={isPlaying ? "Pausar áudio" : "Reproduzir resumo e tarefas em áudio"}
+        >
+          {isLoading ? (
+            <svg
+              className="h-4 w-4 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          ) : isPlaying ? (
+            <svg
+              className="h-4 w-4"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="h-4 w-4"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          {error ? (
+            <span className="text-xs text-red-600 dark:text-red-400">{error}</span>
+          ) : parsedData?.responseMediaId ? (
+            <span className="text-xs text-zinc-600 dark:text-zinc-400 font-mono">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          ) : (
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {isPlaying ? "Reproduzindo..." : "Reproduzir resumo e tarefas"}
+            </span>
+          )}
+        </div>
+        <PlaybackRateControl
+          playbackRate={playbackRate}
+          onChange={handlePlaybackRateChange}
+        />
+      </div>
+      
+      {/* Audio Spectrum Visualization (only for pre-generated audio) */}
+      {parsedData?.responseMediaId && audioBlobUrl && (
+        <div className="mb-2">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-12 rounded bg-zinc-900 dark:bg-zinc-950"
+          />
+        </div>
+      )}
+
+      {/* Progress Bar (only for pre-generated audio) */}
+      {parsedData?.responseMediaId && duration > 0 && (
+        <div className="relative">
+          <div
+            className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full cursor-pointer"
+            onClick={(e) => {
+              if (!audioRef.current || !duration || !parsedData?.responseMediaId) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const percentage = x / rect.width;
+              const newTime = percentage * duration;
+              audioRef.current.currentTime = newTime;
+              setCurrentTime(newTime);
+            }}
+          >
+            <div
+              className="h-full bg-purple-600 dark:bg-purple-500 rounded-full transition-all duration-100"
+              style={{ width: `${(currentTime / duration) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+      
       <audio
         ref={audioRef}
         onEnded={handleEnded}

@@ -1,19 +1,17 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Queries.Auth;
-using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using System.IO;
 
 namespace AssistenteExecutivo.Application.Handlers.Auth;
 
 public class GetOwnerUserIdQueryHandler : IRequestHandler<GetOwnerUserIdQuery, Guid?>
 {
-    private readonly IApplicationDbContext _db;
+    private readonly IUserProfileRepository _userProfileRepository;
 
-    public GetOwnerUserIdQueryHandler(IApplicationDbContext db)
+    public GetOwnerUserIdQueryHandler(IUserProfileRepository userProfileRepository)
     {
-        _db = db;
+        _userProfileRepository = userProfileRepository;
     }
 
     public async Task<Guid?> Handle(GetOwnerUserIdQuery request, CancellationToken cancellationToken)
@@ -33,16 +31,11 @@ public class GetOwnerUserIdQueryHandler : IRequestHandler<GetOwnerUserIdQuery, G
 
         try
         {
-            var keycloakSubject = KeycloakSubject.Create(request.KeycloakSubject);
-            
             // #region agent log
-            try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_G", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "GetOwnerUserIdQueryHandler.Handle", message = "Before database query", data = new { keycloakSubjectValue = keycloakSubject.Value }, sessionId = "debug-session", runId = "run1", hypothesisId = "G" }) + "\n"); } catch { }
+            try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_G", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "GetOwnerUserIdQueryHandler.Handle", message = "Before database query", data = new { keycloakSubjectValue = request.KeycloakSubject }, sessionId = "debug-session", runId = "run1", hypothesisId = "G" }) + "\n"); } catch { }
             // #endregion
 
-            var userProfile = await _db.UserProfiles
-                .FirstOrDefaultAsync(
-                    u => u.KeycloakSubject.Value == keycloakSubject.Value,
-                    cancellationToken);
+            var userProfile = await _userProfileRepository.GetByKeycloakSubjectAsync(request.KeycloakSubject, cancellationToken);
 
             // #region agent log
             var userId = userProfile?.UserId;

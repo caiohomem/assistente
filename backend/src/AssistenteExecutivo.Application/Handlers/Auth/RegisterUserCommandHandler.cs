@@ -4,7 +4,6 @@ using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -12,20 +11,23 @@ namespace AssistenteExecutivo.Application.Handlers.Auth;
 
 public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, RegisterUserResult>
 {
-    private readonly IApplicationDbContext _db;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IKeycloakService _keycloakService;
     private readonly IClock _clock;
     private readonly IConfiguration _configuration;
     private readonly ILogger<RegisterUserCommandHandler> _logger;
 
     public RegisterUserCommandHandler(
-        IApplicationDbContext db,
+        IUserProfileRepository userProfileRepository,
+        IUnitOfWork unitOfWork,
         IKeycloakService keycloakService,
         IClock clock,
         IConfiguration configuration,
         ILogger<RegisterUserCommandHandler> logger)
     {
-        _db = db;
+        _userProfileRepository = userProfileRepository;
+        _unitOfWork = unitOfWork;
         _keycloakService = keycloakService;
         _clock = clock;
         _configuration = configuration;
@@ -35,9 +37,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
     public async Task<RegisterUserResult> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         // Validar email único
-        var normalizedEmail = EmailAddress.Create(request.Email).Value;
-        var existingUser = await _db.UserProfiles
-            .FirstOrDefaultAsync(u => u.Email.Value == normalizedEmail, cancellationToken);
+        var existingUser = await _userProfileRepository.GetByEmailAsync(request.Email, cancellationToken);
 
         if (existingUser != null)
         {
@@ -81,8 +81,8 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
             displayName: displayName,
             clock: _clock);
 
-        _db.UserProfiles.Add(userProfile);
-        await _db.SaveChangesAsync(cancellationToken);
+        await _userProfileRepository.AddAsync(userProfile, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("UserProfile criado com sucesso para {Email} (UserId={UserId}, KeycloakSubject={KeycloakSubject})",
             request.Email, userId, keycloakSubject.Value);

@@ -132,6 +132,7 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IContactRepository, ContactRepository>();
         services.AddScoped<IRelationshipRepository, RelationshipRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
@@ -139,6 +140,7 @@ public static class DependencyInjection
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
         services.AddScoped<ICaptureJobRepository, CaptureJobRepository>();
         services.AddScoped<ICreditWalletRepository, CreditWalletRepository>();
+        services.AddScoped<ICreditPackageRepository, CreditPackageRepository>();
         services.AddScoped<IPlanRepository, PlanRepository>();
         services.AddScoped<IAgentConfigurationRepository, AgentConfigurationRepository>();
 

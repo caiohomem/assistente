@@ -574,12 +574,17 @@ public class KeycloakService : IKeycloakService
                             "Falha no fallback de renovação de token. Status: {Status}, Response: {Response}",
                             response.StatusCode,
                             fallbackError);
-                        response.EnsureSuccessStatusCode();
+                        
+                        // Lançar exceção com informações detalhadas para melhor tratamento no AuthController
+                        var errorMessage = $"Refresh token failed with status {response.StatusCode}: {fallbackError}";
+                        throw new HttpRequestException(errorMessage);
                     }
                 }
                 else
                 {
-                    response.EnsureSuccessStatusCode();
+                    // Lançar exceção com informações detalhadas para melhor tratamento no AuthController
+                    var errorMessage = $"Refresh token failed with status {response.StatusCode}: {errorContent}";
+                    throw new HttpRequestException(errorMessage);
                 }
             }
 

@@ -1,9 +1,8 @@
 using AssistenteExecutivo.Api.Auth;
-using AssistenteExecutivo.Api.Extensions;
+using AssistenteExecutivo.Application.Commands.AgentConfiguration;
 using AssistenteExecutivo.Application.DTOs;
-using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.Interfaces;
+using AssistenteExecutivo.Application.Queries.AgentConfiguration;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,21 +14,11 @@ namespace AssistenteExecutivo.Api.Controllers;
 [Authorize(AuthenticationSchemes = $"{BffSessionAuthenticationDefaults.Scheme},{JwtBearerDefaults.AuthenticationScheme}")]
 public sealed class AgentConfigurationController : ControllerBase
 {
-    private readonly IAgentConfigurationRepository _repository;
-    private readonly IClock _clock;
-    private readonly IIdGenerator _idGenerator;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMediator _mediator;
 
-    public AgentConfigurationController(
-        IAgentConfigurationRepository repository,
-        IClock clock,
-        IIdGenerator idGenerator,
-        IUnitOfWork unitOfWork)
+    public AgentConfigurationController(IMediator mediator)
     {
-        _repository = repository;
-        _clock = clock;
-        _idGenerator = idGenerator;
-        _unitOfWork = unitOfWork;
+        _mediator = mediator;
     }
 
     /// <summary>
@@ -41,22 +30,15 @@ public sealed class AgentConfigurationController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetCurrent(CancellationToken cancellationToken = default)
     {
-        var configuration = await _repository.GetCurrentAsync(cancellationToken);
+        var query = new GetAgentConfigurationQuery();
+        var configuration = await _mediator.Send(query, cancellationToken);
         
         if (configuration == null)
         {
             return NotFound(new { message = "Configuração do agente não encontrada" });
         }
 
-        var dto = new AgentConfigurationDto
-        {
-            ConfigurationId = configuration.ConfigurationId,
-            ContextPrompt = configuration.ContextPrompt,
-            CreatedAt = configuration.CreatedAt,
-            UpdatedAt = configuration.UpdatedAt
-        };
-
-        return Ok(dto);
+        return Ok(configuration);
     }
 
     /// <summary>
@@ -76,47 +58,23 @@ public sealed class AgentConfigurationController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        var existing = await _repository.GetCurrentAsync(cancellationToken);
+        // Verificar se já existe antes de atualizar
+        var existing = await _mediator.Send(new GetAgentConfigurationQuery(), cancellationToken);
+        var wasCreated = existing == null;
+
+        var command = new UpdateAgentConfigurationCommand
+        {
+            ContextPrompt = dto.ContextPrompt
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
         
-        if (existing != null)
+        if (wasCreated)
         {
-            // Atualizar configuração existente
-            existing.UpdateContextPrompt(dto.ContextPrompt, _clock);
-            await _repository.UpdateAsync(existing, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
-            var responseDto = new AgentConfigurationDto
-            {
-                ConfigurationId = existing.ConfigurationId,
-                ContextPrompt = existing.ContextPrompt,
-                CreatedAt = existing.CreatedAt,
-                UpdatedAt = existing.UpdatedAt
-            };
-            
-            return Ok(responseDto);
+            return CreatedAtAction(nameof(GetCurrent), result);
         }
-        else
-        {
-            // Criar nova configuração
-            var configurationId = _idGenerator.NewGuid();
-            var newConfiguration = AgentConfiguration.Create(
-                configurationId,
-                dto.ContextPrompt,
-                _clock);
-            
-            await _repository.AddAsync(newConfiguration, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
-            var responseDto = new AgentConfigurationDto
-            {
-                ConfigurationId = newConfiguration.ConfigurationId,
-                ContextPrompt = newConfiguration.ContextPrompt,
-                CreatedAt = newConfiguration.CreatedAt,
-                UpdatedAt = newConfiguration.UpdatedAt
-            };
-            
-            return CreatedAtAction(nameof(GetCurrent), responseDto);
-        }
+        
+        return Ok(result);
     }
 }
 

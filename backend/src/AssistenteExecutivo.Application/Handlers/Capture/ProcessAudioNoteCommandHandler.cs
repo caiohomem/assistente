@@ -222,7 +222,8 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
                 description = t.Description,
                 dueDate = t.DueDate,
                 priority = t.Priority
-            }).ToList()
+            }).ToList(),
+            responseMediaId = responseMediaId
         };
         var structuredDataJson = System.Text.Json.JsonSerializer.Serialize(structuredData);
         note.UpdateStructuredData(structuredDataJson, _clock);

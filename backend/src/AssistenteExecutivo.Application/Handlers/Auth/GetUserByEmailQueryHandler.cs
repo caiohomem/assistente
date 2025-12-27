@@ -1,19 +1,17 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Queries.Auth;
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace AssistenteExecutivo.Application.Handlers.Auth;
 
 public class GetUserByEmailQueryHandler : IRequestHandler<GetUserByEmailQuery, UserProfile?>
 {
-    private readonly IApplicationDbContext _db;
+    private readonly IUserProfileRepository _userProfileRepository;
 
-    public GetUserByEmailQueryHandler(IApplicationDbContext db)
+    public GetUserByEmailQueryHandler(IUserProfileRepository userProfileRepository)
     {
-        _db = db;
+        _userProfileRepository = userProfileRepository;
     }
 
     public async Task<UserProfile?> Handle(GetUserByEmailQuery request, CancellationToken cancellationToken)
@@ -23,14 +21,7 @@ public class GetUserByEmailQueryHandler : IRequestHandler<GetUserByEmailQuery, U
 
         try
         {
-            var email = EmailAddress.Create(request.Email);
-            
-            var userProfile = await _db.UserProfiles
-                .FirstOrDefaultAsync(
-                    u => u.Email.Value == email.Value,
-                    cancellationToken);
-
-            return userProfile;
+            return await _userProfileRepository.GetByEmailAsync(request.Email, cancellationToken);
         }
         catch
         {

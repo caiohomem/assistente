@@ -2,7 +2,6 @@ using AssistenteExecutivo.Application.Commands.Auth;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Exceptions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -10,18 +9,21 @@ namespace AssistenteExecutivo.Application.Handlers.Auth;
 
 public class DeleteUserProfileCommandHandler : IRequestHandler<DeleteUserProfileCommand, Unit>
 {
-    private readonly IApplicationDbContext _db;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IKeycloakService _keycloakService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DeleteUserProfileCommandHandler> _logger;
 
     public DeleteUserProfileCommandHandler(
-        IApplicationDbContext db,
+        IUserProfileRepository userProfileRepository,
+        IUnitOfWork unitOfWork,
         IKeycloakService keycloakService,
         IConfiguration configuration,
         ILogger<DeleteUserProfileCommandHandler> logger)
     {
-        _db = db;
+        _userProfileRepository = userProfileRepository;
+        _unitOfWork = unitOfWork;
         _keycloakService = keycloakService;
         _configuration = configuration;
         _logger = logger;
@@ -32,8 +34,7 @@ public class DeleteUserProfileCommandHandler : IRequestHandler<DeleteUserProfile
         if (request.UserId == Guid.Empty)
             throw new DomainException("Domain:UserIdObrigatorio");
 
-        var userProfile = await _db.UserProfiles
-            .FirstOrDefaultAsync(u => u.UserId == request.UserId, cancellationToken);
+        var userProfile = await _userProfileRepository.GetByIdAsync(request.UserId, cancellationToken);
 
         if (userProfile == null)
             throw new DomainException("Domain:UsuarioNaoEncontrado");
@@ -63,7 +64,8 @@ public class DeleteUserProfileCommandHandler : IRequestHandler<DeleteUserProfile
 
         // Marcar como deletado (soft delete)
         userProfile.Delete();
-        await _db.SaveChangesAsync(cancellationToken);
+        await _userProfileRepository.UpdateAsync(userProfile, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("UserProfile {UserId} deletado com sucesso", request.UserId);
 

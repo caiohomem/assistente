@@ -152,6 +152,7 @@ public sealed class CaptureController : ControllerBase
             completedAt = result.CompletedAt,
             errorCode = result.ErrorCode,
             errorMessage = result.ErrorMessage,
+            responseMediaId = result.ResponseMediaId,
             message = "Nota de áudio processada com sucesso."
         });
     }

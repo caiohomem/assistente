@@ -454,23 +454,70 @@ public sealed class AuthController : ControllerBase
         // que pode causar perda de dados em formulários
         var expiresAtUnix = BffSessionStore.GetExpiresAtUnix(HttpContext.Session);
         var refreshToken = HttpContext.Session.GetString(BffSessionKeys.RefreshToken);
+        var shouldRefresh = false;
+        var tokenExpired = false;
 
         if (expiresAtUnix is not null && !string.IsNullOrWhiteSpace(refreshToken))
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            
+            // Verificar se o token já expirou completamente
+            if (expiresAtUnix.Value <= now)
+            {
+                // Token já expirou - tentar refresh mesmo assim
+                tokenExpired = true;
+                shouldRefresh = true;
+                _logger.LogInformation("Access token já expirou. Tentando refresh. ExpiresAt: {ExpiresAt}, Now: {Now}", 
+                    expiresAtUnix.Value, now);
+            }
             // Verificar se o token expira em menos de 3 minutos (180 segundos)
             // Isso reduz a frequência de refresh automático e evita perda de dados em formulários
-            if (expiresAtUnix.Value - now <= 180)
+            else if (expiresAtUnix.Value - now <= 180)
             {
-                try
+                shouldRefresh = true;
+                _logger.LogInformation("Access token expira em breve. Fazendo refresh preventivo. ExpiresAt: {ExpiresAt}, Now: {Now}, SecondsUntilExpiry: {SecondsUntilExpiry}", 
+                    expiresAtUnix.Value, now, expiresAtUnix.Value - now);
+            }
+        }
+
+        // Tentar fazer refresh do token se necessário
+        if (shouldRefresh)
+        {
+            try
+            {
+                var refreshed = await _keycloakService.RefreshTokenAsync(realm, refreshToken!, HttpContext.RequestAborted);
+                BffSessionStore.StoreTokens(HttpContext.Session, refreshed);
+                _logger.LogInformation("Token renovado com sucesso. Novo expiresAt: {ExpiresAt}", 
+                    BffSessionStore.GetExpiresAtUnix(HttpContext.Session));
+            }
+            catch (HttpRequestException ex) when (
+                ex.Message.Contains("400") || 
+                ex.Message.Contains("Bad Request") ||
+                ex.Message.Contains("401") ||
+                ex.Message.Contains("Unauthorized") ||
+                ex.Message.Contains("invalid_grant") ||
+                ex.Message.Contains("invalid_token"))
+            {
+                // Refresh token expirado ou inválido - limpar sessão e retornar não autenticado
+                _logger.LogWarning("Refresh token inválido ou expirado. Limpando sessão. Error: {Error}", ex.Message);
+                HttpContext.Session.Clear();
+                DeleteBffCookies();
+                
+                return Ok(new
                 {
-                    var refreshed = await _keycloakService.RefreshTokenAsync(realm, refreshToken, HttpContext.RequestAborted);
-                    BffSessionStore.StoreTokens(HttpContext.Session, refreshed);
-                }
-                catch (HttpRequestException ex) when (ex.Message.Contains("400") || ex.Message.Contains("Bad Request"))
+                    authenticated = false,
+                    csrfToken = csrf
+                });
+            }
+            catch (Exception ex)
+            {
+                // Outros erros ao renovar token - logar detalhadamente
+                _logger.LogError(ex, "Erro inesperado ao renovar token. Error: {Error}", ex.Message);
+                
+                // Se o token já expirou completamente e o refresh falhou, limpar sessão
+                if (tokenExpired)
                 {
-                    // Refresh token expirado ou inválido - limpar sessão e retornar não autenticado
-                    _logger.LogWarning("Refresh token inválido ou expirado. Limpando sessão. Error: {Error}", ex.Message);
+                    _logger.LogWarning("Token expirado e refresh falhou. Limpando sessão.");
                     HttpContext.Session.Clear();
                     DeleteBffCookies();
                     
@@ -480,19 +527,10 @@ public sealed class AuthController : ControllerBase
                         csrfToken = csrf
                     });
                 }
-                catch (Exception ex)
-                {
-                    // Outros erros ao renovar token - logar e limpar sessão por segurança
-                    _logger.LogError(ex, "Erro inesperado ao renovar token. Limpando sessão.");
-                    HttpContext.Session.Clear();
-                    DeleteBffCookies();
-                    
-                    return Ok(new
-                    {
-                        authenticated = false,
-                        csrfToken = csrf
-                    });
-                }
+                
+                // Se o token ainda é válido, continuar autenticado mas logar o erro
+                // O próximo request tentará refresh novamente
+                _logger.LogWarning("Erro ao renovar token, mas token atual ainda pode ser válido. Continuando autenticado.");
             }
         }
 

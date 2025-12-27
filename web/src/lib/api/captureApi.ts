@@ -37,6 +37,15 @@ export async function uploadCard(request: UploadCardRequest): Promise<UploadCard
   });
 
   if (!res.ok) {
+    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
+    if (res.status === 401 && typeof window !== "undefined") {
+      const currentPath = window.location.pathname;
+      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+      window.location.href = loginUrl;
+      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
+      return {} as UploadCardResponse;
+    }
+
     const contentType = res.headers.get("content-type") ?? "";
     const maybeJson = contentType.includes("application/json");
     const data = maybeJson ? await res.json() : undefined;
@@ -73,6 +82,7 @@ export interface ProcessAudioNoteResponse {
   completedAt?: string | null;
   errorCode?: string | null;
   errorMessage?: string | null;
+  responseMediaId?: string | null;
   message: string;
 }
 
@@ -96,6 +106,15 @@ export async function processAudioNote(
   });
 
   if (!res.ok) {
+    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
+    if (res.status === 401 && typeof window !== "undefined") {
+      const currentPath = window.location.pathname;
+      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+      window.location.href = loginUrl;
+      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
+      return {} as ProcessAudioNoteResponse;
+    }
+
     const contentType = res.headers.get("content-type") ?? "";
     const maybeJson = contentType.includes("application/json");
     const data = maybeJson ? await res.json() : undefined;

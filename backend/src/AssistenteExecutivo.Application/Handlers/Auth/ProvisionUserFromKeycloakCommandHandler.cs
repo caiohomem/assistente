@@ -6,23 +6,25 @@ using AssistenteExecutivo.Domain.Exceptions;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AssistenteExecutivo.Application.Handlers.Auth;
 
 public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<ProvisionUserFromKeycloakCommand, ProvisionUserFromKeycloakResult>
 {
-    private readonly IApplicationDbContext _db;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly ILogger<ProvisionUserFromKeycloakCommandHandler> _logger;
 
     public ProvisionUserFromKeycloakCommandHandler(
-        IApplicationDbContext db,
+        IUserProfileRepository userProfileRepository,
+        IUnitOfWork unitOfWork,
         IClock clock,
         ILogger<ProvisionUserFromKeycloakCommandHandler> logger)
     {
-        _db = db;
+        _userProfileRepository = userProfileRepository;
+        _unitOfWork = unitOfWork;
         _clock = clock;
         _logger = logger;
     }
@@ -50,14 +52,11 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
             firstName = "Usuário";
         }
 
-        var normalizedEmail = EmailAddress.Create(request.Email).Value;
-
-        var existingUser = await _db.UserProfiles
-            .FirstOrDefaultAsync(u => u.Email.Value == normalizedEmail, cancellationToken);
-
         var keycloakSubject = KeycloakSubject.Create(request.KeycloakSubject);
         var email = EmailAddress.Create(request.Email);
         var displayName = PersonName.Create(firstName, lastName ?? string.Empty);
+
+        var existingUser = await _userProfileRepository.GetByEmailAsync(request.Email, cancellationToken);
 
         if (existingUser == null)
         {
@@ -71,8 +70,8 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
                 displayName: displayName,
                 clock: _clock);
 
-            _db.UserProfiles.Add(userProfile);
-            await _db.SaveChangesAsync(cancellationToken);
+            await _userProfileRepository.AddAsync(userProfile, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
                 "UserProfile criado com sucesso para {Email} (UserId={UserId}, KeycloakSubject={KeycloakSubject})",
@@ -117,7 +116,8 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
         }
 
         existingUser.ProvisionFromKeycloak(keycloakSubject, email, displayName, _clock);
-        await _db.SaveChangesAsync(cancellationToken);
+        await _userProfileRepository.UpdateAsync(existingUser, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "UserProfile atualizado para {Email} (UserId={UserId}, KeycloakSubject={KeycloakSubject})",
