@@ -7,6 +7,8 @@ using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace AssistenteExecutivo.Application.Handlers.Capture;
@@ -20,10 +22,13 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
     private readonly ICreditWalletRepository _creditWalletRepository;
     private readonly ISpeechToTextProvider _speechToTextProvider;
     private readonly ILLMProvider _llmProvider;
+    private readonly ITextToSpeechProvider? _textToSpeechProvider;
     private readonly IFileStore _fileStore;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IIdGenerator _idGenerator;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<ProcessAudioNoteCommandHandler> _logger;
 
     // Credit costs (can be moved to configuration)
     private const decimal AudioProcessingCreditCost = 1.0m;
@@ -36,10 +41,13 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         ICreditWalletRepository creditWalletRepository,
         ISpeechToTextProvider speechToTextProvider,
         ILLMProvider llmProvider,
+        ITextToSpeechProvider? textToSpeechProvider,
         IFileStore fileStore,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IIdGenerator idGenerator)
+        IIdGenerator idGenerator,
+        IConfiguration configuration,
+        ILogger<ProcessAudioNoteCommandHandler> logger)
     {
         _mediaAssetRepository = mediaAssetRepository;
         _captureJobRepository = captureJobRepository;
@@ -48,10 +56,13 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         _creditWalletRepository = creditWalletRepository;
         _speechToTextProvider = speechToTextProvider;
         _llmProvider = llmProvider;
+        _textToSpeechProvider = textToSpeechProvider;
         _fileStore = fileStore;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _idGenerator = idGenerator;
+        _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<ProcessAudioNoteCommandResult> Handle(ProcessAudioNoteCommand request, CancellationToken cancellationToken)
@@ -131,24 +142,77 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
             throw;
         }
 
-        // Ensure summary is not empty (fallback to transcript if needed)
-        var summary = string.IsNullOrWhiteSpace(llmResult.Summary)
-            ? (string.IsNullOrWhiteSpace(transcript.Text)
-                ? "Nota de áudio processada."
-                : transcript.Text.Length > 200
-                    ? transcript.Text.Substring(0, 200) + "..."
-                    : transcript.Text)
-            : llmResult.Summary;
+        // Validar que o summary foi gerado corretamente
+        if (string.IsNullOrWhiteSpace(llmResult.Summary))
+        {
+            throw new InvalidOperationException("OpenAI LLM retornou summary vazio. Verifique a resposta da API.");
+        }
+        
+        var summary = llmResult.Summary;
 
-        // 6. Complete the capture job
+        // 6. Generate TTS response audio (if enabled and provider available)
+        Guid? responseMediaId = null;
+        var ttsEnabledValue = _configuration["OpenAI:TextToSpeech:Enabled"];
+        var ttsEnabled = !string.IsNullOrWhiteSpace(ttsEnabledValue) && 
+                         bool.TryParse(ttsEnabledValue, out var enabled) && enabled;
+        if (ttsEnabled && _textToSpeechProvider != null && !string.IsNullOrWhiteSpace(summary))
+        {
+            try
+            {
+                var ttsVoice = _configuration["OpenAI:TextToSpeech:Voice"] ?? "nova";
+                var ttsFormat = _configuration["OpenAI:TextToSpeech:Format"] ?? "mp3";
+                
+                _logger.LogInformation("Gerando áudio de resposta via TTS. Summary length: {Length}, Voice: {Voice}", 
+                    summary.Length, ttsVoice);
+                
+                var audioBytes = await _textToSpeechProvider.SynthesizeAsync(
+                    summary,
+                    ttsVoice,
+                    ttsFormat,
+                    cancellationToken);
+                
+                if (audioBytes != null && audioBytes.Length > 0)
+                {
+                    // Criar MediaAsset para o áudio gerado
+                    var responseHash = await _fileStore.ComputeHashAsync(audioBytes, cancellationToken);
+                    responseMediaId = _idGenerator.NewGuid();
+                    var responseStorageKey = $"db/{responseMediaId}";
+                    var responseMimeType = ttsFormat switch
+                    {
+                        "mp3" => "audio/mpeg",
+                        "opus" => "audio/opus",
+                        "aac" => "audio/aac",
+                        "flac" => "audio/flac",
+                        _ => "audio/mpeg"
+                    };
+                    var responseMediaRef = MediaRef.Create(responseStorageKey, responseHash, responseMimeType, audioBytes.Length);
+                    var responseMediaAsset = new MediaAsset(responseMediaId.Value, request.OwnerUserId, responseMediaRef, MediaKind.Audio, _clock);
+                    responseMediaAsset.SetFileContent(audioBytes);
+                    await _mediaAssetRepository.AddAsync(responseMediaAsset, cancellationToken);
+                    
+                    _logger.LogInformation("Áudio de resposta gerado e armazenado. MediaId: {MediaId}, Size: {Size} bytes", 
+                        responseMediaId, audioBytes.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log erro mas não falhar o processamento principal
+                _logger.LogWarning(ex, "Erro ao gerar áudio de resposta via TTS. Continuando sem áudio de resposta.");
+            }
+        }
+
+        // 7. Complete the capture job
         captureJob.CompleteAudioProcessing(transcript, summary, llmResult.Tasks, _clock);
         // Note: No need to call UpdateAsync here - captureJob is tracked and EF Core will detect changes
 
-        // 7. Create Note
-        // Ensure rawContent is not empty (fallback to summary if transcript is empty)
-        var rawContent = string.IsNullOrWhiteSpace(transcript.Text)
-            ? summary
-            : transcript.Text;
+        // 8. Create Note
+        // Validar que temos conteúdo para a nota
+        if (string.IsNullOrWhiteSpace(transcript.Text))
+        {
+            throw new InvalidOperationException("Transcrição vazia. Não é possível criar nota sem conteúdo.");
+        }
+        
+        var rawContent = transcript.Text;
 
         var noteId = _idGenerator.NewGuid();
         var note = Note.CreateAudioNote(noteId, request.ContactId, request.OwnerUserId, rawContent, _clock);
@@ -169,7 +233,7 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         
         await _noteRepository.AddAsync(note, cancellationToken);
 
-        // 8. Consume credits
+        // 9. Consume credits
         // #region agent log
         try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,E", location = "ProcessAudioNoteCommandHandler.cs:168", message = "Before Consume", data = new { walletOwnerUserId = wallet.OwnerUserId.ToString(), transactionCount = wallet.Transactions.Count }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
         // #endregion
@@ -182,7 +246,7 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         
         await _creditWalletRepository.UpdateAsync(wallet, cancellationToken);
 
-        // 9. Save all changes to database
+        // 10. Save all changes to database
         // #region agent log
         try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,B,C,D,E", location = "ProcessAudioNoteCommandHandler.cs:180", message = "Before SaveChangesAsync", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
         // #endregion
@@ -193,7 +257,7 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         try { System.IO.File.AppendAllText(@"c:\Projects\AssistenteExecutivo\.cursor\debug.log", JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,B,C,D,E", location = "ProcessAudioNoteCommandHandler.cs:185", message = "SaveChangesAsync succeeded", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
         // #endregion
 
-        // 10. Map job to DTO for response
+        // 11. Map job to DTO for response
         var jobDto = CaptureJobMapper.MapToDto(captureJob);
 
         return new ProcessAudioNoteCommandResult
@@ -208,7 +272,8 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
             RequestedAt = jobDto.RequestedAt,
             CompletedAt = jobDto.CompletedAt,
             ErrorCode = jobDto.ErrorCode,
-            ErrorMessage = jobDto.ErrorMessage
+            ErrorMessage = jobDto.ErrorMessage,
+            ResponseMediaId = responseMediaId
         };
     }
 }

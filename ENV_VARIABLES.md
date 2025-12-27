@@ -84,7 +84,7 @@ Email__Smtp__EnableSsl="true"                               # true/false
 
 #### OCR (Reconhecimento de Texto)
 ```bash
-# Provider: Stub, PaddleOcr, Azure, GoogleCloud, Aws
+# Provider: Stub, PaddleOcr, OpenAI, Ollama, Azure, GoogleCloud, Aws
 Ocr__Provider="PaddleOcr"
 
 # PaddleOCR
@@ -124,10 +124,40 @@ Ollama__LLM__MaxTokens="2000"
 
 #### Whisper (Transcrição de Áudio)
 ```bash
-Whisper__Provider="Ollama"                                  # Ollama ou Stub
+Whisper__Provider="Ollama"                                  # Ollama, OpenAI ou Stub
 Whisper__Model="whisper"
 Whisper__Language="pt"
 Whisper__ApiUrl="http://localhost:8000"
+```
+
+#### OpenAI (OCR, Speech-to-Text, LLM e Text-to-Speech)
+```bash
+OpenAI__ApiKey="sk-..."                                     # API Key da OpenAI (obrigatório)
+OpenAI__OrganizationId=""                                   # Organization ID (opcional)
+
+# OCR com OpenAI Vision
+Ocr__Provider="OpenAI"                                      # OpenAI, PaddleOcr, Ollama, Stub
+OpenAI__Ocr__Model="gpt-4o-mini"                            # gpt-4o-mini ou gpt-4o
+OpenAI__Ocr__Temperature="0.0"
+OpenAI__Ocr__MaxTokens="500"
+
+# Speech-to-Text com OpenAI Whisper
+Whisper__Provider="OpenAI"                                  # OpenAI, Ollama ou Stub
+OpenAI__SpeechToText__Model="whisper-1"
+OpenAI__SpeechToText__Language="pt"
+
+# LLM com OpenAI
+Ollama__LLM__Provider="OpenAI"                             # OpenAI, Ollama ou Stub
+OpenAI__LLM__Model="gpt-4o-mini"                          # gpt-4o-mini ou gpt-4o
+OpenAI__LLM__Temperature="0.3"
+OpenAI__LLM__MaxTokens="2000"
+
+# Text-to-Speech com OpenAI
+TextToSpeech__Provider="OpenAI"                            # OpenAI ou Stub
+OpenAI__TextToSpeech__Model="tts-1"                        # tts-1 ou tts-1-hd
+OpenAI__TextToSpeech__Voice="nova"                         # alloy, echo, fable, onyx, nova, shimmer
+OpenAI__TextToSpeech__Format="mp3"                          # mp3, opus, aac, flac
+OpenAI__TextToSpeech__Enabled="true"                       # true/false
 ```
 
 #### Logging

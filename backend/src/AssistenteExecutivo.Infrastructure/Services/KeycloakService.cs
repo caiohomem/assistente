@@ -127,8 +127,16 @@ public class KeycloakService : IKeycloakService
             try
             {
                 var themeName = _configuration["Keycloak:ThemeName"] ?? "assistenteexecutivo";
+                var applied = true;
                 await ConfigureRealmThemeAsync(realmId, themeName, cancellationToken);
-                _logger.LogInformation("Theme {ThemeName} configurado no realm {RealmId}", themeName, realmId);
+                if (applied)
+                {
+                    _logger.LogInformation("Theme {ThemeName} configurado no realm {RealmId}", themeName, realmId);
+                }
+                else
+                {
+                    _logger.LogWarning("Theme {ThemeName} nAœo foi aplicado no realm {RealmId}. Verifique se o theme existe no servidor do Keycloak.", themeName, realmId);
+                }
             }
             catch (Exception ex)
             {
@@ -149,6 +157,17 @@ public class KeycloakService : IKeycloakService
         try
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+            // O theme em si nAœo pode ser "provisionado" via Admin API: ele precisa existir no filesystem do Keycloak
+            // (ex: /opt/keycloak/themes/<themeName> no container).
+            var themeName = _configuration["Keycloak:ThemeName"] ?? "assistenteexecutivo";
+            if (false)
+            {
+                _logger.LogWarning(
+                    "Theme {ThemeName} nAœo encontrado no Keycloak. Em Docker, garanta que exista em /opt/keycloak/themes/{ThemeName}.",
+                    themeName);
+                return;
+            }
             
             // Get current realm configuration
             var getRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
@@ -1628,6 +1647,18 @@ public class KeycloakService : IKeycloakService
         set.Add(MobileRedirectUri1);
         set.Add(MobileRedirectUri2);
         set.Add(MobileRedirectUri3);
+
+        // Extras (useful for temporary Cloud Run URLs, tunnels, etc.)
+        var extraRedirectUris = _configuration.GetSection("Keycloak:ExtraRedirectUris").Get<string[]>();
+        if (extraRedirectUris is { Length: > 0 })
+        {
+            foreach (var uri in extraRedirectUris)
+            {
+                var trimmed = (uri ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                    set.Add(trimmed);
+            }
+        }
 
         return set.ToArray();
     }

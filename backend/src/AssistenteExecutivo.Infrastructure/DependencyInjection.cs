@@ -4,6 +4,7 @@ using AssistenteExecutivo.Infrastructure.HttpClients;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using AssistenteExecutivo.Infrastructure.Services;
+using AssistenteExecutivo.Infrastructure.Services.OpenAI;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -155,23 +156,6 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.Add("Accept", "application/json");
         });
 
-        // Ollama HTTP Client
-        var ollamaBaseUrl = configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
-        services.AddHttpClient<OllamaClient>(client =>
-        {
-            client.BaseAddress = new Uri(ollamaBaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(10); // Modelos podem demorar mais
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-        });
-
-        // PaddleOCR FastAPI Client (local)
-        var paddleOcrBaseUrl = configuration["Ocr:PaddleOcr:BaseUrl"] ?? "http://localhost:8001";
-        services.AddHttpClient<PaddleOcrApiClient>(client =>
-        {
-            client.BaseAddress = new Uri(paddleOcrBaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(2);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-        });
 
         // Keycloak provisioning runs as a hosted service (singleton).
         // Keep a single instance that can be used both as IHostedService and via the app interface.
@@ -182,103 +166,54 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, EmailService>();
         services.AddSingleton<IClock, SystemClock>();
 
-        // External service providers
+        // External service providers - OpenAI only
         
-        // Speech-to-Text Provider - Configurable via appsettings.json
-        // Options: "Stub" (default), "Ollama", "Whisper"
-        var speechToTextProvider = configuration["Whisper:Provider"] ?? "Stub";
-        switch (speechToTextProvider)
+        // Speech-to-Text Provider - OpenAI Whisper
+        services.AddScoped<ISpeechToTextProvider>(sp =>
         {
-            case "Ollama":
-            case "Whisper":
-                var whisperApiUrl = configuration["Whisper:ApiUrl"];
-                if (!string.IsNullOrWhiteSpace(whisperApiUrl))
-                {
-                    // Se houver API URL, criar HttpClient nomeado para API externa
-                    services.AddHttpClient("WhisperApi", client =>
-                    {
-                        client.BaseAddress = new Uri(whisperApiUrl);
-                        client.Timeout = TimeSpan.FromMinutes(10);
-                    });
-                    
-                    // Registrar provider com HttpClient via factory
-                    services.AddScoped<ISpeechToTextProvider>(sp =>
-                    {
-                        var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-                        var httpClient = httpClientFactory.CreateClient("WhisperApi");
-                        var config = sp.GetRequiredService<IConfiguration>();
-                        var logger = sp.GetRequiredService<ILogger<OllamaWhisperProvider>>();
-                        var ollamaClient = sp.GetService<OllamaClient>();
-                        return new OllamaWhisperProvider(config, logger, ollamaClient, httpClient, httpClientFactory);
-                    });
-                }
-                else
-                {
-                    // Se não houver API URL, registrar normalmente (vai falhar se tentar usar API)
-                    services.AddScoped<ISpeechToTextProvider, OllamaWhisperProvider>();
-                }
-                break;
-            case "Stub":
-            default:
-                services.AddScoped<ISpeechToTextProvider, StubSpeechToTextProvider>();
-                break;
-        }
+            var config = sp.GetRequiredService<IConfiguration>();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var logger = sp.GetRequiredService<ILogger<OpenAISpeechToTextProvider>>();
+            return new OpenAISpeechToTextProvider(config, httpClientFactory, logger);
+        });
         
-        // OCR Provider - Configurable via appsettings.json
-        // Options: "Stub" (default), "Ollama", "PaddleOcr", "Azure", "GoogleCloud", "Aws"
-        var ocrProvider = configuration["Ocr:Provider"] ?? "Stub";
-        switch (ocrProvider)
+        // OCR Provider - OpenAI Vision
+        services.AddScoped<IOcrProvider>(sp =>
         {
-            case "Ollama":
-                services.AddScoped<IOcrProvider, OllamaOcrProvider>();
-                break;
-            case "PaddleOcr":
-                services.AddScoped<IOcrProvider, PaddleOcrProvider>();
-                break;
-            case "Azure":
-                // TODO: Implement AzureComputerVisionOcrProvider
-                // var azureEndpoint = configuration["Ocr:Azure:Endpoint"];
-                // var azureApiKey = configuration["Ocr:Azure:ApiKey"];
-                // services.AddScoped<IOcrProvider, AzureComputerVisionOcrProvider>();
-                // For now, fallback to Stub
-                services.AddScoped<IOcrProvider, StubOcrProvider>();
-                break;
-            case "GoogleCloud":
-                // TODO: Implement GoogleCloudVisionOcrProvider
-                // var projectId = configuration["Ocr:GoogleCloud:ProjectId"];
-                // services.AddScoped<IOcrProvider, GoogleCloudVisionOcrProvider>();
-                // For now, fallback to Stub
-                services.AddScoped<IOcrProvider, StubOcrProvider>();
-                break;
-            case "Aws":
-                // TODO: Implement AwsTextractOcrProvider
-                // var region = configuration["Ocr:Aws:Region"];
-                // services.AddScoped<IOcrProvider, AwsTextractOcrProvider>();
-                // For now, fallback to Stub
-                services.AddScoped<IOcrProvider, StubOcrProvider>();
-                break;
-            case "Stub":
-            default:
-                services.AddScoped<IOcrProvider, StubOcrProvider>();
-                break;
-        }
+            var config = sp.GetRequiredService<IConfiguration>();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var logger = sp.GetRequiredService<ILogger<OpenAIOcrProvider>>();
+            return new OpenAIOcrProvider(config, httpClientFactory, logger);
+        });
         
-        // LLM Provider - Configurable via appsettings.json
-        // Options: "Stub" (default), "Ollama"
-        var llmProvider = configuration["Ollama:LLM:Provider"] ?? "Stub";
-        switch (llmProvider)
+        // LLM Provider - OpenAI GPT
+        services.AddScoped<ILLMProvider>(sp =>
         {
-            case "Ollama":
-                services.AddScoped<ILLMProvider, OllamaLLMProvider>();
-                break;
-            case "Stub":
-            default:
-                services.AddScoped<ILLMProvider, StubLLMProvider>();
-                break;
-        }
+            var config = sp.GetRequiredService<IConfiguration>();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var logger = sp.GetRequiredService<ILogger<OpenAILLMProvider>>();
+            return new OpenAILLMProvider(config, httpClientFactory, logger);
+        });
         
-        // OCR Field Refinement Service - Usa Qwen para melhorar associação de campos
-        services.AddScoped<IOcrFieldRefinementService, QwenOcrRefinementService>();
+        // Text-to-Speech Provider - OpenAI TTS
+        var textToSpeechEnabledValue = configuration["OpenAI:TextToSpeech:Enabled"];
+        var textToSpeechEnabled = string.IsNullOrWhiteSpace(textToSpeechEnabledValue) || 
+                                  (bool.TryParse(textToSpeechEnabledValue, out var enabled) && enabled);
+        if (textToSpeechEnabled)
+        {
+            services.AddScoped<ITextToSpeechProvider>(sp =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var logger = sp.GetRequiredService<ILogger<OpenAITextToSpeechProvider>>();
+                return new OpenAITextToSpeechProvider(config, httpClientFactory, logger);
+            });
+        }
+        else
+        {
+            // Se desabilitado, usar stub (apenas para desenvolvimento)
+            services.AddScoped<ITextToSpeechProvider, StubTextToSpeechProvider>();
+        }
         services.AddScoped<IFileStore, StubFileStore>();
         services.AddSingleton<IIdGenerator, GuidIdGenerator>();
 

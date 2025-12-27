@@ -27,6 +27,9 @@ public class ProcessAudioNoteCommandResult
     public DateTime? CompletedAt { get; set; }
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
+    
+    // Áudio de resposta gerado via TTS (opcional)
+    public Guid? ResponseMediaId { get; set; }
 }
 
 

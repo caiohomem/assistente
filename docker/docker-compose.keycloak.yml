@@ -2,7 +2,10 @@ version: '3.8'
 
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    build:
+      context: ../keycloak
+      dockerfile: Dockerfile
+    image: assistenteexecutivo-keycloak:dev
     container_name: keycloak
     command: start-dev
     environment:
@@ -38,8 +41,9 @@ services:
     volumes:
       - keycloak_data:/opt/keycloak/data
       - keycloak_import:/opt/keycloak/data/import
-      # Theme customizado Assistente Executivo
-      - ../keycloak/themes/assistenteexecutivo:/opt/keycloak/themes/assistenteexecutivo
+      # Theme customizado Assistente Executivo (já vem na imagem).
+      # Para editar o theme sem rebuild, descomente a linha abaixo:
+      # - ../keycloak/themes/assistenteexecutivo:/opt/keycloak/themes/assistenteexecutivo
     # extra_hosts permite acesso a serviços no host (SQL Server, SMTP, etc)
     extra_hosts:
       - "host.docker.internal:host-gateway"
