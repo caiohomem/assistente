@@ -48,7 +48,22 @@ public sealed class OpenAILLMProvider : ILLMProvider
         }
         
         _model = configuration["OpenAI:LLM:Model"] ?? "gpt-4o-mini";
-        _temperature = double.Parse(configuration["OpenAI:LLM:Temperature"] ?? "0.3");
+        var temperatureValue = double.Parse(configuration["OpenAI:LLM:Temperature"] ?? "0.3");
+        // OpenAI API requires temperature to be between 0 and 2
+        if (temperatureValue < 0)
+        {
+            _logger.LogWarning("Temperature value {Temperature} is below minimum (0), clamping to 0", temperatureValue);
+            _temperature = 0;
+        }
+        else if (temperatureValue > 2)
+        {
+            _logger.LogWarning("Temperature value {Temperature} exceeds maximum (2), clamping to 2", temperatureValue);
+            _temperature = 2;
+        }
+        else
+        {
+            _temperature = temperatureValue;
+        }
         _maxTokens = int.Parse(configuration["OpenAI:LLM:MaxTokens"] ?? "2000");
     }
 

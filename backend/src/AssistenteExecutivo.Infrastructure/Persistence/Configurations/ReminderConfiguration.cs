@@ -27,7 +27,7 @@ public class ReminderConfiguration : IEntityTypeConfiguration<Reminder>
 
         builder.Property(r => r.Reason)
             .HasColumnName("Reason")
-            .HasMaxLength(500)
+            .HasMaxLength(2000)
             .IsRequired();
 
         builder.Property(r => r.SuggestedMessage)

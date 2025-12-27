@@ -45,7 +45,22 @@ public sealed class OpenAIOcrProvider : IOcrProvider
         }
         
         _model = configuration["OpenAI:Ocr:Model"] ?? "gpt-4o-mini";
-        _temperature = double.Parse(configuration["OpenAI:Ocr:Temperature"] ?? "0.0");
+        var temperatureValue = double.Parse(configuration["OpenAI:Ocr:Temperature"] ?? "0.0");
+        // OpenAI API requires temperature to be between 0 and 2
+        if (temperatureValue < 0)
+        {
+            _logger.LogWarning("Temperature value {Temperature} is below minimum (0), clamping to 0", temperatureValue);
+            _temperature = 0;
+        }
+        else if (temperatureValue > 2)
+        {
+            _logger.LogWarning("Temperature value {Temperature} exceeds maximum (2), clamping to 2", temperatureValue);
+            _temperature = 2;
+        }
+        else
+        {
+            _temperature = temperatureValue;
+        }
         _maxTokens = int.Parse(configuration["OpenAI:Ocr:MaxTokens"] ?? "500");
     }
 
