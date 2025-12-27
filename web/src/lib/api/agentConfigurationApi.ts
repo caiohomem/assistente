@@ -4,13 +4,15 @@ import { getApiBaseUrl } from "@/lib/bff";
 
 export interface AgentConfiguration {
   configurationId: string;
-  contextPrompt: string;
+  ocrPrompt: string;
+  transcriptionPrompt?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface UpdateAgentConfigurationRequest {
-  contextPrompt: string;
+  ocrPrompt: string;
+  transcriptionPrompt?: string;
 }
 
 /**

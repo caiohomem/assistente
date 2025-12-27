@@ -74,9 +74,11 @@ public class CreditTransactionConfiguration : IEntityTypeConfiguration<CreditTra
             .HasDatabaseName("IX_CreditTransactions_OccurredAt");
 
         // Índice único em IdempotencyKey (quando não null)
+        // Nota: O EF Core traduz automaticamente o filtro para a sintaxe correta do banco
+        // Para PostgreSQL, usa aspas duplas; para SQL Server, usa colchetes
         builder.HasIndex(c => c.IdempotencyKey)
             .HasDatabaseName("IX_CreditTransactions_IdempotencyKey")
             .IsUnique()
-            .HasFilter("[IdempotencyKey] IS NOT NULL");
+            .HasFilter("\"IdempotencyKey\" IS NOT NULL");
     }
 }

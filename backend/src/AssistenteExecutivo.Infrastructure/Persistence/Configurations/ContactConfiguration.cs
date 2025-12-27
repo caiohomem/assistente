@@ -70,6 +70,9 @@ public class ContactConfiguration : IEntityTypeConfiguration<Contact>
             // Marcar como sempre criado para evitar problemas com optional dependent
             address.ToTable("Contacts");
         });
+        
+        // Mark Address navigation as required to always create instance
+        builder.Navigation(c => c.Address).IsRequired();
 
         // Owned Collection: Emails
         builder.OwnsMany(c => c.Emails, email =>

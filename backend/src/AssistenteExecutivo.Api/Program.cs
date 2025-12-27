@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.SqlServer;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.StackExchangeRedis;
@@ -20,7 +19,6 @@ using StackExchange.Redis;
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
-using Serilog.Sinks.MSSqlServer;
 using Microsoft.OpenApi;
 using System.Text.RegularExpressions;
 
@@ -54,49 +52,7 @@ var loggerConfig = new LoggerConfiguration()
     .WriteTo.Console(
         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
 
-// Configurar sink de banco de dados baseado no tipo
-if (isPostgreSQL)
-{
-    // PostgreSQL - usar console e tentar gravar no banco via SQL direto
-    // Nota: Serilog.Sinks.MSSqlServer não funciona com PostgreSQL
-    // Vamos usar apenas console por enquanto, mas logs importantes aparecem no Cloud Run
-    Log.Warning("PostgreSQL detectado - logs serão gravados apenas no console. Para gravar no banco, considere usar SQL Server ou implementar um sink customizado.");
-}
-else
-{
-    // SQL Server - usar sink do SQL Server
-    var columnOptions = new MSSqlServerSinkOptions
-    {
-        TableName = "Logs",
-        AutoCreateSqlTable = false, // Assumimos que a tabela já foi criada pelo script SQL
-        SchemaName = "dbo"
-    };
-
-    var columnOptionsObj = new ColumnOptions();
-    columnOptionsObj.Store.Add(StandardColumn.LogEvent);
-    columnOptionsObj.Store.Remove(StandardColumn.Properties);
-    columnOptionsObj.Store.Remove(StandardColumn.MessageTemplate);
-
-    // Adicionar colunas customizadas
-    // Nota: Tamanhos limitados para permitir criação de índices (NVARCHAR(MAX) não pode ser indexado)
-    columnOptionsObj.AdditionalColumns = new[]
-    {
-        new SqlColumn("SourceContext", System.Data.SqlDbType.NVarChar, dataLength: 512),
-        new SqlColumn("RequestPath", System.Data.SqlDbType.NVarChar, dataLength: 512),
-        new SqlColumn("RequestMethod", System.Data.SqlDbType.NVarChar, dataLength: 10),
-        new SqlColumn("StatusCode", System.Data.SqlDbType.Int, allowNull: true),
-        new SqlColumn("Elapsed", System.Data.SqlDbType.Float, allowNull: true),
-        new SqlColumn("UserName", System.Data.SqlDbType.NVarChar, dataLength: 256),
-        new SqlColumn("MachineName", System.Data.SqlDbType.NVarChar, dataLength: 256),
-        new SqlColumn("Environment", System.Data.SqlDbType.NVarChar, dataLength: 50)
-    };
-
-    loggerConfig.WriteTo.MSSqlServer(
-        connectionString: connectionString,
-        sinkOptions: columnOptions,
-        columnOptions: columnOptionsObj,
-        restrictedToMinimumLevel: LogEventLevel.Information); // Information, Warning, Error e Fatal vão para o banco
-}
+// Logs são gravados apenas no console (em produção, usar Google Cloud Console)
 
     Log.Logger = loggerConfig.CreateLogger();
 
@@ -430,15 +386,7 @@ try
     });
     builder.Services.AddAuthorization();
 
-    // Session (para BFF) - Usando Redis quando disponível, caso contrário banco de dados ou Memory Cache
-    var sessionConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' não configurada");
-    
-    // Detectar se é PostgreSQL ou SQL Server
-    var isPostgreSQLSession = sessionConnectionString.Contains("Host=") || 
-                              (sessionConnectionString.Contains("Server=") && sessionConnectionString.Contains("Database=") && !sessionConnectionString.Contains("Trusted_Connection"));
-    
-    // Tentar obter configuração do Redis (suporta múltiplos formatos)
+    // Session (para BFF) - Usando Redis (obrigatório em produção)
     var redisConnectionString = GetRedisConnectionString(builder.Configuration);
     
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
@@ -499,29 +447,14 @@ try
             options.InstanceName = "ae:";
         });
     }
-    else if (isPostgreSQLSession)
-    {
-        // PostgreSQL sem Redis - usar Memory Cache como fallback
-        // Nota: .NET não tem suporte nativo para PostgreSQL distributed cache
-        // Sessões serão perdidas ao reiniciar ou em múltiplas instâncias
-        if (!builder.Environment.IsDevelopment())
-        {
-            Log.Warning("PostgreSQL detected for SessionCache but Redis is not configured. In Cloud Run with multiple instances this can cause OAuth invalid_state and BFF session loss.");
-        }
-        builder.Services.AddDistributedMemoryCache();
-    }
     else
     {
-        // SQL Server sem Redis - usar SQL Server Cache
-        Log.Information("Configurando SQL Server para session storage");
-        builder.Services.AddDistributedSqlServerCache(options =>
+        // Redis não configurado - usar Memory Cache apenas em desenvolvimento
+        if (!builder.Environment.IsDevelopment())
         {
-            options.ConnectionString = sessionConnectionString;
-            options.SchemaName = "dbo";
-            options.TableName = "SessionCache";
-            // Expiração padrão de 20 minutos (as sessões individuais têm timeout de 30 minutos)
-            options.DefaultSlidingExpiration = TimeSpan.FromMinutes(20);
-        });
+            Log.Warning("Redis não configurado em ambiente de produção. Isso pode causar perda de sessões em múltiplas instâncias.");
+        }
+        builder.Services.AddDistributedMemoryCache();
     }
     
     builder.Services.AddSession(options =>

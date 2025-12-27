@@ -27,6 +27,7 @@ public class LetterheadConfiguration : IEntityTypeConfiguration<Letterhead>
 
         builder.Property(l => l.DesignData)
             .HasColumnName("DesignData")
+            .HasColumnType("text") // TEXT no PostgreSQL para dados de design (JSON/XML)
             .IsRequired();
 
         builder.Property(l => l.IsActive)

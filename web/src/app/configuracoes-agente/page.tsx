@@ -13,7 +13,8 @@ export default function AgentConfigurationPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [configuration, setConfiguration] = useState<AgentConfiguration | null>(null)
-  const [contextPrompt, setContextPrompt] = useState('')
+  const [ocrPrompt, setOcrPrompt] = useState('')
+  const [transcriptionPrompt, setTranscriptionPrompt] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -24,12 +25,13 @@ export default function AgentConfigurationPage() {
         setError(null)
         const config = await getAgentConfiguration()
         setConfiguration(config)
-        setContextPrompt(config.contextPrompt)
+        setOcrPrompt(config.ocrPrompt)
+        setTranscriptionPrompt(config.transcriptionPrompt || '')
       } catch (err: any) {
         if (err.message === 'Configuração não encontrada') {
           // Configuração ainda não existe, permitir criar
           setConfiguration(null)
-          setContextPrompt('')
+          setOcrPrompt('')
         } else {
           console.error('Erro ao carregar configuração:', err)
           setError(err.message || t('errorLoading'))
@@ -43,7 +45,7 @@ export default function AgentConfigurationPage() {
   }, [])
 
   const handleSave = async () => {
-    if (!contextPrompt.trim()) {
+    if (!ocrPrompt.trim()) {
       setError(t('promptRequired'))
       return
     }
@@ -54,7 +56,8 @@ export default function AgentConfigurationPage() {
       setSuccess(false)
 
       const updated = await updateAgentConfiguration({
-        contextPrompt: contextPrompt.trim()
+        ocrPrompt: ocrPrompt.trim(),
+        transcriptionPrompt: transcriptionPrompt.trim() || undefined
       })
 
       setConfiguration(updated)
@@ -100,19 +103,36 @@ export default function AgentConfigurationPage() {
           {/* Form */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
             <div className="mb-6">
-              <label htmlFor="contextPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('contextPromptLabel')}
+              <label htmlFor="ocrPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('ocrPromptLabel')}
               </label>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {t('contextPromptHint')}
+                {t('ocrPromptHint')}
               </p>
               <textarea
-                id="contextPrompt"
-                value={contextPrompt}
-                onChange={(e) => setContextPrompt(e.target.value)}
+                id="ocrPrompt"
+                value={ocrPrompt}
+                onChange={(e) => setOcrPrompt(e.target.value)}
                 rows={20}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 font-mono text-sm"
-                placeholder={t('contextPromptPlaceholder')}
+                placeholder={t('ocrPromptPlaceholder')}
+              />
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="transcriptionPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('transcriptionPromptLabel')}
+              </label>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                {t('transcriptionPromptHint')}
+              </p>
+              <textarea
+                id="transcriptionPrompt"
+                value={transcriptionPrompt}
+                onChange={(e) => setTranscriptionPrompt(e.target.value)}
+                rows={20}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 font-mono text-sm"
+                placeholder={t('transcriptionPromptPlaceholder')}
               />
             </div>
 

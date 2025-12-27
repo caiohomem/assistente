@@ -33,10 +33,12 @@ public class TemplateConfiguration : IEntityTypeConfiguration<Template>
 
         builder.Property(t => t.Body)
             .HasColumnName("Body")
+            .HasColumnType("text") // TEXT no PostgreSQL para corpo do template
             .IsRequired();
 
         builder.Property(t => t.PlaceholdersSchema)
-            .HasColumnName("PlaceholdersSchema");
+            .HasColumnName("PlaceholdersSchema")
+            .HasColumnType("text"); // TEXT no PostgreSQL para schema de placeholders (JSON)
 
         builder.Property(t => t.Active)
             .HasColumnName("Active")

@@ -50,9 +50,9 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
                 .IsRequired();
         });
 
-        // Metadata como JSON (NVARCHAR(MAX) no SQL Server)
+        // Metadata como JSON (TEXT no PostgreSQL)
         builder.Property(e => e.Metadata)
-            .HasColumnType("nvarchar(max)")
+            .HasColumnType("text")
             .HasConversion(
                 v => v == null || v.Count == 0 
                     ? "{}" 
@@ -81,10 +81,10 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
         builder.HasIndex(e => e.CreatedAt)
             .HasDatabaseName("IX_MediaAssets_CreatedAt");
 
-        // FileContent: armazena o conteúdo do arquivo no banco de dados (VARBINARY(MAX))
+        // FileContent: armazena o conteúdo do arquivo no banco de dados (BYTEA no PostgreSQL)
         builder.Property(e => e.FileContent)
             .HasColumnName("FileContent")
-            .HasColumnType("varbinary(max)")
+            .HasColumnType("bytea")
             .IsRequired(false);
     }
 }

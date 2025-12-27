@@ -29,7 +29,8 @@ public class GetAgentConfigurationQueryHandler : IRequestHandler<GetAgentConfigu
         return new AgentConfigurationDto
         {
             ConfigurationId = configuration.ConfigurationId,
-            ContextPrompt = configuration.ContextPrompt,
+            OcrPrompt = configuration.OcrPrompt,
+            TranscriptionPrompt = configuration.TranscriptionPrompt,
             CreatedAt = configuration.CreatedAt,
             UpdatedAt = configuration.UpdatedAt
         };

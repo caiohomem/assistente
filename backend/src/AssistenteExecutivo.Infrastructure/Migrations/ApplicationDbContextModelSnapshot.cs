@@ -29,14 +29,18 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("ConfigurationId");
 
-                    b.Property<string>("ContextPrompt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("ContextPrompt");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
+
+                    b.Property<string>("OcrPrompt")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("OcrPrompt");
+
+                    b.Property<string>("TranscriptionPrompt")
+                        .HasColumnType("text")
+                        .HasColumnName("TranscriptionPrompt");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -62,7 +66,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("character varying(4000)");
 
                     b.Property<string>("AudioTranscript")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("AudioTranscript_Json");
 
                     b.Property<DateTime?>("CompletedAt")
@@ -291,7 +295,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.HasIndex("IdempotencyKey")
                         .IsUnique()
                         .HasDatabaseName("IX_CreditTransactions_IdempotencyKey")
-                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
                     b.HasIndex("OccurredAt")
                         .HasDatabaseName("IX_CreditTransactions_OccurredAt");
@@ -490,7 +494,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<byte[]>("FileContent")
-                        .HasColumnType("varbinary(max)")
+                        .HasColumnType("bytea")
                         .HasColumnName("FileContent");
 
                     b.Property<int>("Kind")
@@ -498,7 +502,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                     b.Property<string>("Metadata")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
@@ -538,7 +542,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("character varying(4000)");
 
                     b.Property<string>("StructuredData")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -971,7 +975,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                                 .HasColumnType("uuid");
 
                             b1.Property<string>("AiRawResponse")
-                                .HasColumnType("nvarchar(max)")
+                                .HasColumnType("text")
                                 .HasColumnName("CardScanResult_AiRawResponse");
 
                             b1.Property<string>("Company")
@@ -981,7 +985,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.Property<string>("ConfidenceScores")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)")
+                                .HasColumnType("text")
                                 .HasColumnName("CardScanResult_ConfidenceScores");
 
                             b1.Property<string>("Email")
@@ -1005,7 +1009,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                                 .HasColumnName("CardScanResult_Phone");
 
                             b1.Property<string>("RawText")
-                                .HasColumnType("nvarchar(max)")
+                                .HasColumnType("text")
                                 .HasColumnName("CardScanResult_RawText");
 
                             b1.HasKey("CaptureJobJobId");
@@ -1026,7 +1030,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.Property<string>("Description")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)")
+                                .HasColumnType("text")
                                 .HasColumnName("Description");
 
                             b1.Property<DateTime?>("DueDate")
@@ -1180,7 +1184,8 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                                 .HasForeignKey("ContactId");
                         });
 
-                    b.Navigation("Address");
+                    b.Navigation("Address")
+                        .IsRequired();
 
                     b.Navigation("Emails");
 
@@ -1311,7 +1316,8 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                                 .HasForeignKey("PlanId");
                         });
 
-                    b.Navigation("Limits");
+                    b.Navigation("Limits")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Relationship", b =>

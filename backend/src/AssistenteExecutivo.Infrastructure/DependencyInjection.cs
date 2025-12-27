@@ -34,13 +34,7 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            // Detectar se é PostgreSQL ou SQL Server pela connection string
-            var isPostgreSQL = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-                               connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
-                               (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) && 
-                                !connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase));
-            
-            // Se for URL do PostgreSQL, converter para formato de parâmetros
+            // Converter URL do PostgreSQL para formato de parâmetros se necessário
             string finalConnectionString = connectionString;
             if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
                 connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
@@ -91,35 +85,19 @@ public static class DependencyInjection
                 }
             }
             
-            if (isPostgreSQL)
+            // PostgreSQL (Neon)
+            options.UseNpgsql(finalConnectionString, npgsqlOptions =>
             {
-                // PostgreSQL (Neon)
-                // Usar connection string convertida (já está no formato de parâmetros se era URL)
-                options.UseNpgsql(finalConnectionString, npgsqlOptions =>
-                {
-                    // Habilitar retry logic para falhas transitórias
-                    // Aumentado para conexões com Neon que podem ter latência maior
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorCodesToAdd: null);
-                    
-                    // Timeout de comando aumentado para operações que podem demorar
-                    npgsqlOptions.CommandTimeout(60);
-                });
-            }
-            else
-            {
-                // SQL Server (fallback para compatibilidade)
-                options.UseSqlServer(connectionString, sqlOptions =>
-                {
-                    // Habilitar retry logic para falhas transitórias
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(5),
-                        errorNumbersToAdd: null);
-                });
-            }
+                // Habilitar retry logic para falhas transitórias
+                // Aumentado para conexões com Neon que podem ter latência maior
+                npgsqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 5,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorCodesToAdd: null);
+                
+                // Timeout de comando aumentado para operações que podem demorar
+                npgsqlOptions.CommandTimeout(60);
+            });
             
             // Desabilitar detecção de concorrência otimista automática
             // (usaremos apenas quando explicitamente configurado com RowVersion/Timestamp)
@@ -192,8 +170,9 @@ public static class DependencyInjection
             var config = sp.GetRequiredService<IConfiguration>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var logger = sp.GetRequiredService<ILogger<OpenAIOcrProvider>>();
+            var configurationRepository = sp.GetRequiredService<IAgentConfigurationRepository>();
             logger.LogInformation("Usando OpenAI OCR Provider");
-            return new OpenAIOcrProvider(config, httpClientFactory, logger);
+            return new OpenAIOcrProvider(config, httpClientFactory, logger, configurationRepository);
         });
         
         // LLM Provider - OpenAI GPT
@@ -202,8 +181,9 @@ public static class DependencyInjection
             var config = sp.GetRequiredService<IConfiguration>();
             var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var logger = sp.GetRequiredService<ILogger<OpenAILLMProvider>>();
+            var configurationRepository = sp.GetRequiredService<IAgentConfigurationRepository>();
             logger.LogInformation("Usando OpenAI LLM Provider");
-            return new OpenAILLMProvider(config, httpClientFactory, logger);
+            return new OpenAILLMProvider(config, httpClientFactory, logger, configurationRepository);
         });
         
         // Text-to-Speech Provider - OpenAI TTS

@@ -30,9 +30,9 @@ public class NoteConfiguration : IEntityTypeConfiguration<Note>
             .IsRequired()
             .HasMaxLength(4000);
 
-        // StructuredData como JSON (NVARCHAR(MAX) no SQL Server)
+        // StructuredData como JSON (TEXT no PostgreSQL)
         builder.Property(e => e.StructuredData)
-            .HasColumnType("nvarchar(max)")
+            .HasColumnType("text")
             .HasConversion(
                 v => v ?? null,
                 v => v ?? null

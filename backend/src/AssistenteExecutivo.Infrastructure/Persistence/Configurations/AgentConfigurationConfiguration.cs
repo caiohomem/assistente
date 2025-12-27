@@ -16,10 +16,12 @@ public class AgentConfigurationConfiguration : IEntityTypeConfiguration<AgentCon
             .HasColumnName("ConfigurationId")
             .IsRequired();
 
-        builder.Property(c => c.ContextPrompt)
-            .HasColumnName("ContextPrompt")
-            .IsRequired()
-            .HasColumnType("nvarchar(max)");
+        builder.Property(c => c.OcrPrompt)
+            .HasColumnName("OcrPrompt")
+            .IsRequired();
+
+        builder.Property(c => c.TranscriptionPrompt)
+            .HasColumnName("TranscriptionPrompt");
 
         builder.Property(c => c.CreatedAt)
             .HasColumnName("CreatedAt")

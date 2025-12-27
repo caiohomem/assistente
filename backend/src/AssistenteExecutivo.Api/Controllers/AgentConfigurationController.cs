@@ -64,7 +64,8 @@ public sealed class AgentConfigurationController : ControllerBase
 
         var command = new UpdateAgentConfigurationCommand
         {
-            ContextPrompt = dto.ContextPrompt
+            OcrPrompt = dto.OcrPrompt,
+            TranscriptionPrompt = dto.TranscriptionPrompt
         };
 
         var result = await _mediator.Send(command, cancellationToken);

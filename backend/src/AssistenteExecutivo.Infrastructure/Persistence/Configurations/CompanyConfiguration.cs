@@ -25,6 +25,7 @@ public class CompanyConfiguration : IEntityTypeConfiguration<Company>
         // Collection: Domains (JSON)
         builder.Property(c => c.Domains)
             .HasColumnName("Domains")
+            .HasColumnType("text") // TEXT no PostgreSQL para armazenar JSON
             .HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())

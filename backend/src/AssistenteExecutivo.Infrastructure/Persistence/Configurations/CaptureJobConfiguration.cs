@@ -73,7 +73,7 @@ public class CaptureJobConfiguration : IEntityTypeConfiguration<CaptureJob>
         {
             ocrExtract.Property(o => o.RawText)
                 .HasColumnName("CardScanResult_RawText")
-                .HasColumnType("nvarchar(max)")
+                .HasColumnType("text")
                 .IsRequired(false);
 
             ocrExtract.Property(o => o.Name)
@@ -103,13 +103,13 @@ public class CaptureJobConfiguration : IEntityTypeConfiguration<CaptureJob>
 
             ocrExtract.Property(o => o.AiRawResponse)
                 .HasColumnName("CardScanResult_AiRawResponse")
-                .HasColumnType("nvarchar(max)")
+                .HasColumnType("text")
                 .IsRequired(false);
 
             // ConfidenceScores como JSON
             ocrExtract.Property(o => o.ConfidenceScores)
                 .HasColumnName("CardScanResult_ConfidenceScores")
-                .HasColumnType("nvarchar(max)")
+                .HasColumnType("text")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v ?? new Dictionary<string, decimal>()),
                     v => string.IsNullOrWhiteSpace(v)
@@ -139,7 +139,7 @@ public class CaptureJobConfiguration : IEntityTypeConfiguration<CaptureJob>
                     ? null
                     : DeserializeTranscript(v)
             )
-            .HasColumnType("nvarchar(max)")
+            .HasColumnType("text")
             .HasColumnName("AudioTranscript_Json")
             .IsRequired(false);
 
@@ -159,7 +159,7 @@ public class CaptureJobConfiguration : IEntityTypeConfiguration<CaptureJob>
             task.Property(t => t.Description)
                 .HasColumnName("Description")
                 .IsRequired()
-                .HasColumnType("nvarchar(max)"); // NVARCHAR(MAX) no SQL Server (ilimitado até 2GB) - EF Core converte automaticamente para TEXT no PostgreSQL (ilimitado até 1GB)
+                .HasColumnType("text"); // TEXT no PostgreSQL (ilimitado até 1GB)
 
             task.Property(t => t.DueDate)
                 .HasColumnName("DueDate")

@@ -8,7 +8,8 @@ namespace AssistenteExecutivo.Application.Commands.AgentConfiguration;
 
 public class UpdateAgentConfigurationCommand : IRequest<AgentConfigurationDto>
 {
-    public string ContextPrompt { get; set; } = string.Empty;
+    public string OcrPrompt { get; set; } = string.Empty;
+    public string? TranscriptionPrompt { get; set; }
 }
 
 public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgentConfigurationCommand, AgentConfigurationDto>
@@ -37,14 +38,18 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
         if (existing != null)
         {
             // Atualizar configuração existente
-            existing.UpdateContextPrompt(request.ContextPrompt, _clock);
+            existing.UpdatePrompts(
+                request.OcrPrompt,
+                _clock,
+                request.TranscriptionPrompt);
             await _repository.UpdateAsync(existing, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             
             return new AgentConfigurationDto
             {
                 ConfigurationId = existing.ConfigurationId,
-                ContextPrompt = existing.ContextPrompt,
+                OcrPrompt = existing.OcrPrompt,
+                TranscriptionPrompt = existing.TranscriptionPrompt,
                 CreatedAt = existing.CreatedAt,
                 UpdatedAt = existing.UpdatedAt
             };
@@ -55,8 +60,9 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
             var configurationId = _idGenerator.NewGuid();
             var newConfiguration = Domain.Entities.AgentConfiguration.Create(
                 configurationId,
-                request.ContextPrompt,
-                _clock);
+                request.OcrPrompt,
+                _clock,
+                request.TranscriptionPrompt);
             
             await _repository.AddAsync(newConfiguration, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -64,7 +70,8 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
             return new AgentConfigurationDto
             {
                 ConfigurationId = newConfiguration.ConfigurationId,
-                ContextPrompt = newConfiguration.ContextPrompt,
+                OcrPrompt = newConfiguration.OcrPrompt,
+                TranscriptionPrompt = newConfiguration.TranscriptionPrompt,
                 CreatedAt = newConfiguration.CreatedAt,
                 UpdatedAt = newConfiguration.UpdatedAt
             };

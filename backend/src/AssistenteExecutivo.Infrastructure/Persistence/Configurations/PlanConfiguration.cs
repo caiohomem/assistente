@@ -54,6 +54,9 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
                 .HasColumnName("LimitsStorageGB")
                 .HasColumnType("decimal(18,2)");
         });
+        
+        // Mark Limits navigation as required to always create instance
+        builder.Navigation(p => p.Limits).IsRequired();
 
         // Collection: Features (stored as delimited string for simplicity)
         // Mapear o campo privado _features usando backing field

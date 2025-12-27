@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +17,7 @@ public sealed class OpenAIOcrProvider : IOcrProvider
 
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenAIOcrProvider> _logger;
+    private readonly IAgentConfigurationRepository _configurationRepository;
     private readonly string _model;
     private readonly double _temperature;
     private readonly int _maxTokens;
@@ -24,9 +26,11 @@ public sealed class OpenAIOcrProvider : IOcrProvider
     public OpenAIOcrProvider(
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
-        ILogger<OpenAIOcrProvider> logger)
+        ILogger<OpenAIOcrProvider> logger,
+        IAgentConfigurationRepository configurationRepository)
     {
         _logger = logger;
+        _configurationRepository = configurationRepository;
         _httpClient = httpClientFactory.CreateClient();
         
         var baseUrl = configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
@@ -75,7 +79,7 @@ public sealed class OpenAIOcrProvider : IOcrProvider
                 "Processando imagem OCR com OpenAI. Tamanho: {Size} bytes, MimeType: {MimeType}, Model: {Model}",
                 imageBytes.Length, mimeType, _model);
 
-            var prompt = BuildPrompt();
+            var prompt = await BuildPromptAsync(cancellationToken);
             var base64Image = Convert.ToBase64String(imageBytes);
             
             var requestBody = new
@@ -138,7 +142,28 @@ public sealed class OpenAIOcrProvider : IOcrProvider
         }
     }
 
-    private static string BuildPrompt()
+    private async Task<string> BuildPromptAsync(CancellationToken cancellationToken)
+    {
+        // Tentar obter o prompt de OCR da base de dados
+        var configuration = await _configurationRepository.GetCurrentAsync(cancellationToken);
+        
+        string ocrPrompt;
+        if (configuration != null && !string.IsNullOrWhiteSpace(configuration.OcrPrompt))
+        {
+            ocrPrompt = configuration.OcrPrompt;
+            _logger.LogDebug("Usando prompt de OCR da base de dados");
+        }
+        else
+        {
+            // Fallback para o prompt padrão
+            ocrPrompt = GetDefaultOcrPrompt();
+            _logger.LogDebug("Usando prompt de OCR padrão (configuração não encontrada na base de dados)");
+        }
+
+        return ocrPrompt;
+    }
+
+    private static string GetDefaultOcrPrompt()
     {
         return @"Analise esta imagem de um cartão de visita e extraia as seguintes informações em formato JSON válido:
 {

@@ -40,6 +40,7 @@ public class DraftDocumentConfiguration : IEntityTypeConfiguration<DraftDocument
 
         builder.Property(d => d.Content)
             .HasColumnName("Content")
+            .HasColumnType("text") // TEXT no PostgreSQL para conteúdo de documentos
             .IsRequired();
 
         builder.Property(d => d.Status)

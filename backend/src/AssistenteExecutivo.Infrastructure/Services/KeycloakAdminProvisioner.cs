@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
@@ -279,22 +280,56 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
             { "password", adminPassword }
         };
 
+        var tokenUrl = $"{keycloakBaseUrl}/realms/{adminRealm}/protocol/openid-connect/token";
+        _logger.LogDebug("Tentando obter token de admin do Keycloak em {TokenUrl}", tokenUrl);
+
         using var httpClient = new System.Net.Http.HttpClient();
         var request = new System.Net.Http.HttpRequestMessage(
             System.Net.Http.HttpMethod.Post,
-            $"{keycloakBaseUrl}/realms/{adminRealm}/protocol/openid-connect/token")
+            tokenUrl)
         {
             Content = new System.Net.Http.FormUrlEncodedContent(tokenRequest)
         };
 
-        var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            var response = await httpClient.SendAsync(request, cancellationToken);
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        var tokenResponse = await response.Content.ReadFromJsonAsync<KeycloakTokenResponse>(cancellationToken: cancellationToken);
-        if (tokenResponse == null || string.IsNullOrWhiteSpace(tokenResponse.AccessToken))
-            throw new Exception("Token de admin não retornado");
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Falha ao obter token de admin do Keycloak. Status: {StatusCode}, Response: {Response}",
+                    response.StatusCode,
+                    responseContent);
+                throw new Exception($"Falha ao obter token de admin do Keycloak. Status: {response.StatusCode}, Response: {responseContent}");
+            }
 
-        return tokenResponse.AccessToken;
+            KeycloakTokenResponse? tokenResponse;
+            try
+            {
+                tokenResponse = JsonSerializer.Deserialize<KeycloakTokenResponse>(responseContent);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Erro ao deserializar resposta do token de admin. Response: {Response}", responseContent);
+                throw new Exception($"Erro ao deserializar resposta do token de admin: {ex.Message}. Response: {responseContent}", ex);
+            }
+
+            if (tokenResponse == null || string.IsNullOrWhiteSpace(tokenResponse.AccessToken))
+            {
+                _logger.LogError("Token de admin não retornado na resposta. Response: {Response}", responseContent);
+                throw new Exception($"Token de admin não retornado. Response: {responseContent}");
+            }
+
+            _logger.LogDebug("Token de admin obtido com sucesso");
+            return tokenResponse.AccessToken;
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Erro de rede ao obter token de admin do Keycloak");
+            throw new Exception($"Erro de rede ao obter token de admin do Keycloak: {ex.Message}", ex);
+        }
     }
 
     private class KeycloakTokenResponse

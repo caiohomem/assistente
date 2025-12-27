@@ -24,67 +24,54 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
 
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
         
-        // Detectar se é PostgreSQL ou SQL Server
-        var isPostgreSQL = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-                           connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
-                           (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) && 
-                            !connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase));
-        
-        if (isPostgreSQL)
+        // Converter URL para formato de parâmetros se necessário
+        string finalConnectionString = connectionString;
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
         {
-            // Converter URL para formato de parâmetros se necessário
-            string finalConnectionString = connectionString;
-            if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-                connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                try
+                var uri = new Uri(connectionString);
+                var builder = new Npgsql.NpgsqlConnectionStringBuilder
                 {
-                    var uri = new Uri(connectionString);
-                    var builder = new Npgsql.NpgsqlConnectionStringBuilder
+                    Host = uri.Host,
+                    Port = uri.Port != -1 ? uri.Port : 5432,
+                    Database = uri.AbsolutePath.TrimStart('/'),
+                    Username = uri.UserInfo.Split(':')[0],
+                    Password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "",
+                    SslMode = Npgsql.SslMode.Require
+                };
+                
+                if (!string.IsNullOrEmpty(uri.Query))
+                {
+                    var query = uri.Query.TrimStart('?');
+                    var pairs = query.Split('&');
+                    foreach (var pair in pairs)
                     {
-                        Host = uri.Host,
-                        Port = uri.Port != -1 ? uri.Port : 5432,
-                        Database = uri.AbsolutePath.TrimStart('/'),
-                        Username = uri.UserInfo.Split(':')[0],
-                        Password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "",
-                        SslMode = Npgsql.SslMode.Require
-                    };
-                    
-                    if (!string.IsNullOrEmpty(uri.Query))
-                    {
-                        var query = uri.Query.TrimStart('?');
-                        var pairs = query.Split('&');
-                        foreach (var pair in pairs)
+                        var parts = pair.Split('=');
+                        if (parts.Length == 2)
                         {
-                            var parts = pair.Split('=');
-                            if (parts.Length == 2)
+                            var key = parts[0].ToLowerInvariant();
+                            var value = parts[1];
+                            
+                            if (key == "sslmode")
                             {
-                                var key = parts[0].ToLowerInvariant();
-                                var value = parts[1];
-                                
-                                if (key == "sslmode")
-                                {
-                                    if (Enum.TryParse<Npgsql.SslMode>(value, true, out var mode))
-                                        builder.SslMode = mode;
-                                }
+                                if (Enum.TryParse<Npgsql.SslMode>(value, true, out var mode))
+                                    builder.SslMode = mode;
                             }
                         }
                     }
-                    
-                    finalConnectionString = builder.ConnectionString;
                 }
-                catch
-                {
-                    // Se falhar na conversão, usar a connection string original
-                }
+                
+                finalConnectionString = builder.ConnectionString;
             }
-            
-            optionsBuilder.UseNpgsql(finalConnectionString);
+            catch
+            {
+                // Se falhar na conversão, usar a connection string original
+            }
         }
-        else
-        {
-            optionsBuilder.UseSqlServer(connectionString);
-        }
+        
+        optionsBuilder.UseNpgsql(finalConnectionString);
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }

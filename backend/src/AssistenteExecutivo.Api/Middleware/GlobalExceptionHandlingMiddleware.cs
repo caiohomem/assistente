@@ -63,7 +63,14 @@ public class GlobalExceptionHandlingMiddleware
                         var isCommon404 = context.Response.StatusCode == 404 && 
                             (requestPath == "/" || 
                              requestPath.StartsWith("/favicon", StringComparison.OrdinalIgnoreCase) ||
-                             requestPath.StartsWith("/robots.txt", StringComparison.OrdinalIgnoreCase));
+                             requestPath.StartsWith("/robots.txt", StringComparison.OrdinalIgnoreCase) ||
+                             // WordPress scanner probes (common bot scans)
+                             requestPath.Contains("/wp-includes/", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.Contains("/wp-admin/", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.Contains("/wp-content/", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.Contains("wlwmanifest.xml", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.Contains("xmlrpc.php", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.Contains("/.well-known/", StringComparison.OrdinalIgnoreCase));
                         
                         if (isCommon404)
                         {
