@@ -493,13 +493,24 @@ function TTSPlayer({ mediaId }: { mediaId: string }) {
     try {
       const url = await loadAudio();
       if (audioRef.current && url) {
+        // Resume AudioContext before playing (required on Android)
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          try {
+            await audioContextRef.current.resume();
+          } catch (err) {
+            console.warn('Failed to resume AudioContext:', err);
+            // Continue anyway, audio playback might still work
+          }
+        }
+        
         audioRef.current.src = url;
         audioRef.current.playbackRate = playbackRate;
         await audioRef.current.play();
         setIsPlaying(true);
       }
-    } catch (err) {
-      setError("Erro ao reproduzir áudio");
+    } catch (err: any) {
+      console.error('Error playing audio:', err);
+      setError(err.message || "Erro ao reproduzir áudio");
       setIsPlaying(false);
     }
   }
@@ -539,18 +550,45 @@ function TTSPlayer({ mediaId }: { mediaId: string }) {
     
     const setupAudioContext = async () => {
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaElementSource(audio);
+        // Reuse existing context if available, otherwise create new one
+        let audioContext = audioContextRef.current;
         
-        analyser.fftSize = 256;
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        
+        // Resume AudioContext if suspended (required on Android)
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        
+        // Only create new analyser and source if they don't exist
+        if (!analyserRef.current) {
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          
+          // Check if audio element already has a source connected
+          // If not, create a new source
+          try {
+            const source = audioContext.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            analyserRef.current = analyser;
+          } catch (err: any) {
+            // If createMediaElementSource fails (e.g., already connected), 
+            // try to use existing connections or skip visualization
+            if (err.name === 'InvalidStateError' || err.message?.includes('already connected')) {
+              console.warn('Audio element already connected, skipping visualization setup');
+            } else {
+              throw err;
+            }
+          }
+        }
         
         audioContextRef.current = audioContext;
-        analyserRef.current = analyser;
       } catch (err) {
         console.error('Error setting up audio context:', err);
+        // Don't block audio playback if visualization fails
       }
     };
 
