@@ -101,33 +101,25 @@ try
 {
     Log.Information("Iniciando aplicação AssistenteExecutivo.Api");
     
-    // Helper function para obter e converter connection string do Redis
+    // Helper function para obter connection string do Redis
     static string? GetRedisConnectionString(IConfiguration configuration)
     {
-        // Prioridade 1: REDIS_URL (formato URL: rediss://user:password@host:port)
-        var redisUrl = configuration["REDIS_URL"] ?? Environment.GetEnvironmentVariable("REDIS_URL");
-        if (!string.IsNullOrWhiteSpace(redisUrl))
-        {
-            Log.Information("Redis configurado via REDIS_URL (formato URL detectado)");
-            var converted = ConvertRedisUrlToConnectionString(redisUrl);
-            return converted;
-        }
-        
-        // Prioridade 2: ConnectionStrings:Redis
+        // Prioridade 1: ConnectionStrings:Redis (formato StackExchange.Redis)
         var connectionString = configuration.GetConnectionString("Redis");
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             Log.Information("Redis configurado via ConnectionStrings:Redis");
-            // Verificar se é uma URL que precisa ser convertida
+            // Verificar se é uma URL que precisa ser convertida (caso alguém configure errado)
             if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
                 connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
+                Log.Warning("ConnectionStrings:Redis está no formato URL. Convertendo...");
                 return ConvertRedisUrlToConnectionString(connectionString);
             }
             return connectionString;
         }
         
-        // Prioridade 3: Redis:ConnectionString
+        // Prioridade 2: Redis:ConnectionString
         var redisConnectionString = configuration["Redis:ConnectionString"];
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
@@ -136,12 +128,13 @@ try
             if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
                 redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
+                Log.Warning("Redis:ConnectionString está no formato URL. Convertendo...");
                 return ConvertRedisUrlToConnectionString(redisConnectionString);
             }
             return redisConnectionString;
         }
         
-        // Prioridade 4: Redis:Configuration
+        // Prioridade 3: Redis:Configuration
         var redisConfiguration = configuration["Redis:Configuration"];
         if (!string.IsNullOrWhiteSpace(redisConfiguration))
         {
@@ -150,6 +143,7 @@ try
             if (redisConfiguration.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
                 redisConfiguration.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
+                Log.Warning("Redis:Configuration está no formato URL. Convertendo...");
                 return ConvertRedisUrlToConnectionString(redisConfiguration);
             }
             return redisConfiguration;
@@ -163,14 +157,21 @@ try
     static string ConvertRedisUrlToConnectionString(string redisUrl)
     {
         if (string.IsNullOrWhiteSpace(redisUrl))
+        {
+            Log.Warning("Redis URL está vazia");
             return redisUrl;
+        }
         
         // Se já está no formato correto (não começa com redis:// ou rediss://), retornar como está
         if (!redisUrl.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) && 
             !redisUrl.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
         {
+            Log.Information("Redis connection string já está no formato correto (não é URL)");
             return redisUrl;
         }
+        
+        Log.Information("Convertendo Redis URL para formato StackExchange.Redis: {Url}", 
+            redisUrl.Contains("@") ? redisUrl.Substring(0, redisUrl.IndexOf("@")) + "@***" : redisUrl);
         
         try
         {
@@ -179,6 +180,12 @@ try
             var isSsl = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase);
             
             var host = uri.Host;
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                throw new ArgumentException("Host não pode ser vazio na URL do Redis", nameof(redisUrl));
+            }
+            
+            // Porta: usar a porta da URL ou padrão baseado no esquema
             var port = uri.Port > 0 ? uri.Port : (isSsl ? 6380 : 6379);
             
             // Extrair user e password do UserInfo
@@ -200,11 +207,7 @@ try
             // Formato: host:port,ssl=true,password=...,user=...
             var parts = new List<string>();
             
-            // Adicionar host:port (sempre primeiro)
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                throw new ArgumentException("Host não pode ser vazio na URL do Redis", nameof(redisUrl));
-            }
+            // Adicionar host:port (sempre primeiro) - CRÍTICO: não incluir o esquema
             parts.Add($"{host}:{port}");
             
             // Configurações SSL (para rediss://)
@@ -213,8 +216,10 @@ try
                 parts.Add("ssl=true");
                 parts.Add("abortConnect=false");
                 // Upstash e outros serviços cloud geralmente precisam de timeout maior
-                parts.Add("connectTimeout=10000");
-                parts.Add("syncTimeout=10000");
+                parts.Add("connectTimeout=15000");
+                parts.Add("syncTimeout=15000");
+                // Configurações adicionais para melhorar confiabilidade
+                parts.Add("asyncTimeout=15000");
             }
             
             // Adicionar password (se existir)
@@ -236,6 +241,15 @@ try
             
             var connectionString = string.Join(",", parts);
             
+            // Validar que a conversão funcionou (não deve começar com redis:// ou rediss://)
+            if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+                connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Falha na conversão: connection string ainda começa com redis:// ou rediss://. " +
+                    $"Valor: {connectionString.Substring(0, Math.Min(100, connectionString.Length))}");
+            }
+            
             // Log da conversão (sem expor senha)
             var logOriginal = redisUrl;
             if (!string.IsNullOrWhiteSpace(password))
@@ -248,14 +262,21 @@ try
                 logConverted = connectionString.Replace(decodedPassword, "***");
             }
             
-            Log.Information("Redis URL convertida: {OriginalUrl} -> {ConnectionString}", logOriginal, logConverted);
+            Log.Information("Redis URL convertida com sucesso: {OriginalUrl} -> {ConnectionString}", 
+                logOriginal, logConverted);
             
             return connectionString;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Erro ao converter REDIS_URL. Usando valor original: {RedisUrl}", redisUrl);
-            return redisUrl;
+            Log.Error(ex, "ERRO CRÍTICO ao converter REDIS_URL: {RedisUrl}. Exception: {ExceptionType}: {Message}", 
+                redisUrl.Contains("@") ? redisUrl.Substring(0, redisUrl.IndexOf("@")) + "@***" : redisUrl,
+                ex.GetType().Name, ex.Message);
+            // Não retornar a URL original - lançar exceção para forçar correção
+            throw new InvalidOperationException(
+                $"Não foi possível converter REDIS_URL para formato StackExchange.Redis. " +
+                $"Configure usando o formato: host:port,password=...,ssl=true. " +
+                $"Erro: {ex.Message}", ex);
         }
     }
 
@@ -419,23 +440,58 @@ try
     
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {
-        // Redis disponível - usar para session storage (recomendado para Cloud Run com múltiplas instâncias)
-        Log.Information("Configurando Redis para session storage. ConnectionString: {ConnectionString}", 
-            redisConnectionString.Contains("password=") 
-                ? redisConnectionString.Substring(0, redisConnectionString.IndexOf("password=")) + "password=***"
-                : redisConnectionString);
-        
-        builder.Services.AddStackExchangeRedisCache(options =>
+        // CRÍTICO: Garantir que nunca passamos uma URL diretamente para StackExchange.Redis
+        // StackExchange.Redis não aceita URLs no formato rediss:// diretamente
+        if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+            redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
         {
-            // Garantir que não estamos passando uma URL diretamente
-            // StackExchange.Redis pode ter problemas com URLs no formato rediss://
+            Log.Warning("Redis connection string ainda está no formato URL. Convertendo forçadamente...");
+            redisConnectionString = ConvertRedisUrlToConnectionString(redisConnectionString);
+            
+            // Validar que a conversão funcionou
             if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
                 redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
-                Log.Warning("Redis connection string ainda está no formato URL. Convertendo novamente...");
-                redisConnectionString = ConvertRedisUrlToConnectionString(redisConnectionString);
+                Log.Error("FALHA CRÍTICA: Conversão do Redis URL falhou! A connection string ainda está no formato URL.");
+                throw new InvalidOperationException(
+                    $"Redis connection string não pôde ser convertida do formato URL. " +
+                    $"Valor recebido: {redisConnectionString.Substring(0, Math.Min(50, redisConnectionString.Length))}... " +
+                    $"Configure usando o formato StackExchange.Redis: host:port,password=...,ssl=true");
             }
-            
+        }
+        
+        // Log da connection string final (sem expor senha)
+        var logConnectionString = redisConnectionString;
+        if (logConnectionString.Contains("password="))
+        {
+            var passwordIndex = logConnectionString.IndexOf("password=");
+            var beforePassword = logConnectionString.Substring(0, passwordIndex);
+            var afterPassword = logConnectionString.Substring(passwordIndex);
+            var passwordEnd = afterPassword.IndexOf(",");
+            if (passwordEnd > 0)
+            {
+                logConnectionString = beforePassword + "password=***" + afterPassword.Substring(passwordEnd);
+            }
+            else
+            {
+                logConnectionString = beforePassword + "password=***";
+            }
+        }
+        
+        Log.Information("Configurando Redis para session storage. ConnectionString format: {Format}, Length: {Length}", 
+            logConnectionString, redisConnectionString.Length);
+        
+        // Validar formato antes de configurar
+        if (!redisConnectionString.Contains(":") || redisConnectionString.StartsWith("redis"))
+        {
+            Log.Error("Redis connection string em formato inválido: {ConnectionString}", 
+                redisConnectionString.Substring(0, Math.Min(100, redisConnectionString.Length)));
+            throw new InvalidOperationException(
+                "Redis connection string deve estar no formato: host:port,password=...,ssl=true");
+        }
+        
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
             options.Configuration = redisConnectionString;
             options.InstanceName = "ae:";
         });
