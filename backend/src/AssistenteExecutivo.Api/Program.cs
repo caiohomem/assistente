@@ -14,6 +14,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.SqlServer;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.StackExchangeRedis;
+using StackExchange.Redis;
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
@@ -557,6 +560,56 @@ try
             }
         }
     });
+
+    // Data Protection - Persist keys to Redis when available, otherwise use file system
+    // This is critical for Cloud Run where instances restart and scale, losing in-memory keys
+    if (!string.IsNullOrWhiteSpace(redisConnectionString))
+    {
+        // Use Redis for Data Protection keys (shared across all instances)
+        Log.Information("Configurando Data Protection para usar Redis");
+        try
+        {
+            // Create Redis connection for Data Protection
+            var redis = ConnectionMultiplexer.Connect(redisConnectionString);
+            builder.Services.AddDataProtection()
+                .PersistKeysToStackExchangeRedis(redis, "DataProtection-Keys")
+                .SetApplicationName("AssistenteExecutivo")
+                .SetDefaultKeyLifetime(TimeSpan.FromDays(90)); // Keys valid for 90 days
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao configurar Data Protection com Redis. Usando fallback para file system.");
+            // Fallback to file system if Redis connection fails
+            var dataProtectionPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AssistenteExecutivo",
+                "DataProtection-Keys");
+            Directory.CreateDirectory(dataProtectionPath);
+            builder.Services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+                .SetApplicationName("AssistenteExecutivo")
+                .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+        }
+    }
+    else
+    {
+        // Fallback: Use file system (ephemeral in Cloud Run, but better than in-memory)
+        // In production, Redis should be configured to avoid key loss on restart/scale
+        if (!builder.Environment.IsDevelopment())
+        {
+            Log.Warning("Redis não configurado para Data Protection. Chaves serão armazenadas em file system (ephemeral em Cloud Run). Configure Redis para produção.");
+        }
+        
+        var dataProtectionPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "AssistenteExecutivo",
+            "DataProtection-Keys");
+        Directory.CreateDirectory(dataProtectionPath);
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+            .SetApplicationName("AssistenteExecutivo")
+            .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+    }
 
     // CORS
     builder.Services.AddCors(options =>

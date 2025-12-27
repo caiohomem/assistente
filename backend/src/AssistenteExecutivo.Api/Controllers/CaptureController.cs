@@ -106,11 +106,12 @@ public sealed class CaptureController : ControllerBase
 
         // Validar tipo de arquivo (áudio)
         // Formatos suportados pela API OpenAI Whisper: mp3, mp4, mpeg, mpga, m4a, wav, webm
+        var contentType = file.ContentType ?? string.Empty;
         var allowedMimeTypes = new[] { 
             "audio/mpeg", "audio/mp3", "audio/mp4", "audio/mpeg", "audio/mpga", 
             "audio/m4a", "audio/wav", "audio/webm", "audio/ogg" 
         };
-        if (!allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
+        if (string.IsNullOrWhiteSpace(contentType) || !allowedMimeTypes.Contains(contentType.ToLowerInvariant()))
         {
             return BadRequest(new { 
                 message = "Tipo de arquivo não suportado. Use MP3, MP4, WAV, WebM, M4A ou OGG." 
@@ -118,19 +119,56 @@ public sealed class CaptureController : ControllerBase
         }
 
         // Obter OwnerUserId
-        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+        Guid ownerUserId;
+        try
+        {
+            ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Re-throw authentication exceptions - they're handled by middleware
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Log unexpected errors during user ID retrieval
+            throw new InvalidOperationException($"Erro ao obter ID do usuário: {ex.Message}", ex);
+        }
 
         // Ler bytes do arquivo
         byte[] originalAudioBytes;
-        using (var memoryStream = new MemoryStream())
+        try
         {
-            await file.CopyToAsync(memoryStream, cancellationToken);
-            originalAudioBytes = memoryStream.ToArray();
+            using (var memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream, cancellationToken);
+                originalAudioBytes = memoryStream.ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Erro ao ler arquivo de áudio: {ex.Message}", ex);
+        }
+
+        // Validar que o arquivo não está vazio após leitura
+        if (originalAudioBytes == null || originalAudioBytes.Length == 0)
+        {
+            return BadRequest(new { message = "Arquivo de áudio está vazio ou não pôde ser lido." });
         }
 
         // Cortar áudio automaticamente se exceder 25MB (limite da API OpenAI Whisper)
-        var (audioBytes, wasTrimmed) = _audioTrimmer.TrimToMaxSize(originalAudioBytes, file.ContentType);
-        var trimmedMessage = _audioTrimmer.GetTrimmedMessage(originalAudioBytes, wasTrimmed);
+        byte[] audioBytes;
+        bool wasTrimmed;
+        string trimmedMessage;
+        try
+        {
+            (audioBytes, wasTrimmed) = _audioTrimmer.TrimToMaxSize(originalAudioBytes, contentType);
+            trimmedMessage = _audioTrimmer.GetTrimmedMessage(originalAudioBytes, wasTrimmed);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Erro ao processar arquivo de áudio: {ex.Message}", ex);
+        }
 
         // Criar command
         var command = new ProcessAudioNoteCommand
@@ -138,12 +176,22 @@ public sealed class CaptureController : ControllerBase
             OwnerUserId = ownerUserId,
             ContactId = contactId,
             AudioBytes = audioBytes,
-            FileName = file.FileName,
-            MimeType = file.ContentType
+            FileName = file.FileName ?? "audio-note",
+            MimeType = contentType
         };
 
         // Executar command
-        var result = await _mediator.Send(command, cancellationToken);
+        ProcessAudioNoteCommandResult result;
+        try
+        {
+            result = await _mediator.Send(command, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Log the exception with context before rethrowing (middleware will handle it)
+            // This helps with debugging when the exception details aren't in the main log
+            throw;
+        }
 
         var successMessage = string.IsNullOrWhiteSpace(trimmedMessage)
             ? "Nota de áudio processada com sucesso."

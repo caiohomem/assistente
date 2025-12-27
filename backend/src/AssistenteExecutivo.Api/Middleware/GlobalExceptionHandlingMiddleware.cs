@@ -6,6 +6,7 @@ using System;
 using System.Net;
 using System.Text.Json;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using Serilog.Context;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -101,6 +102,11 @@ public class GlobalExceptionHandlingMiddleware
             {
                 stopwatch.Stop();
                 await HandleDatabaseExceptionAsync(context, ex, pgEx, requestPath, requestMethod, userName, stopwatch.ElapsedMilliseconds);
+            }
+            catch (CryptographicException ex) when (ex.Message.Contains("key") && ex.Message.Contains("not found"))
+            {
+                stopwatch.Stop();
+                await HandleCryptographicExceptionAsync(context, ex, requestPath, requestMethod, userName, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
@@ -337,6 +343,101 @@ public class GlobalExceptionHandlingMiddleware
         await context.Response.WriteAsync(json);
     }
 
+    private async Task HandleCryptographicExceptionAsync(
+        HttpContext context,
+        CryptographicException exception,
+        string requestPath,
+        string requestMethod,
+        string userName,
+        long elapsedMs)
+    {
+        // Log detalhado da exceção de Data Protection
+        using (LogContext.PushProperty("Elapsed", elapsedMs))
+        using (LogContext.PushProperty("ExceptionType", exception.GetType().FullName))
+        {
+            _logger.LogWarning(
+                exception,
+                "Erro de Data Protection (chave não encontrada). Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms, Message: {Message}. " +
+                "Isso geralmente ocorre quando a aplicação reinicia ou escala e as chaves não estão persistidas. " +
+                "A sessão será invalidada e o usuário precisará fazer login novamente.",
+                requestPath,
+                requestMethod,
+                userName,
+                elapsedMs,
+                exception.Message);
+        }
+
+        // Se a resposta já foi iniciada, não podemos modificá-la
+        if (context.Response.HasStarted)
+        {
+            _logger.LogWarning("Não foi possível tratar CryptographicException: resposta já foi iniciada");
+            return;
+        }
+
+        // Limpar o cookie de sessão inválido
+        // Usar as mesmas configurações do cookie de sessão para garantir que seja deletado corretamente
+        var cookieOptions = new CookieOptions
+        {
+            Path = "/",
+            HttpOnly = true,
+            Secure = context.Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddDays(-1) // Expirar o cookie
+        };
+        
+        // Se houver um domínio configurado no cookie de sessão, usar o mesmo
+        var apiPublicBaseUrl = _configuration["Api:PublicBaseUrl"] ?? _configuration["Api:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl) && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri))
+        {
+            var host = apiUri.Host;
+            var parts = host.Split('.');
+            if (parts.Length >= 2)
+            {
+                var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3 
+                    ? string.Join(".", parts.Skip(parts.Length - 3))
+                    : string.Join(".", parts.Skip(parts.Length - 2));
+                cookieOptions.Domain = $".{domainBase}";
+            }
+        }
+        
+        context.Response.Cookies.Delete("ae.sid", cookieOptions);
+
+        // Verificar se é uma requisição de API (JSON) ou web (HTML)
+        var acceptHeader = context.Request.Headers.Accept.ToString();
+        var isApiRequest = acceptHeader.Contains("application/json", StringComparison.OrdinalIgnoreCase) ||
+                          requestPath.StartsWith("/api/", StringComparison.OrdinalIgnoreCase);
+
+        if (isApiRequest)
+        {
+            // Para requisições de API, retornar 401 Unauthorized
+            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            context.Response.ContentType = "application/json";
+            var response = new
+            {
+                message = "Sessão expirada ou inválida. Por favor, faça login novamente.",
+                error = "SessionExpired"
+            };
+
+            var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            await context.Response.WriteAsync(json);
+        }
+        else
+        {
+            // Para requisições web, redirecionar para login
+            var frontendBaseUrl = _configuration["Frontend:BaseUrl"]
+                ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
+            var loginUrl = $"{frontendBaseUrl.TrimEnd('/')}/login?returnUrl={Uri.EscapeDataString(requestPath)}";
+            
+            context.Response.StatusCode = (int)HttpStatusCode.Redirect;
+            context.Response.Headers.Location = loginUrl;
+            await context.Response.WriteAsync(string.Empty);
+        }
+    }
+
     private async Task HandleGenericExceptionAsync(
         HttpContext context,
         Exception exception,
@@ -348,16 +449,22 @@ public class GlobalExceptionHandlingMiddleware
         // Log detalhado da exceção (Error pois são erros inesperados)
         using (LogContext.PushProperty("Elapsed", elapsedMs))
         using (LogContext.PushProperty("ExceptionType", exception.GetType().FullName))
+        using (LogContext.PushProperty("StackTrace", exception.StackTrace ?? string.Empty))
+        using (LogContext.PushProperty("InnerException", exception.InnerException?.ToString() ?? string.Empty))
         {
             _logger.LogError(
                 exception,
-                "Exceção não tratada capturada. Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms, ExceptionType: {ExceptionType}, Message: {Message}",
+                "Exceção não tratada capturada. Path: {Path}, Method: {Method}, User: {User}, Elapsed: {Elapsed}ms, ExceptionType: {ExceptionType}, Message: {Message}, StackTrace: {StackTrace}",
                 requestPath,
                 requestMethod,
                 userName,
                 elapsedMs,
                 exception.GetType().FullName,
-                exception.Message);
+                exception.Message,
+                exception.StackTrace ?? "N/A");
+            
+            // Log all inner exceptions recursively
+            LogInnerExceptions(exception.InnerException, 1);
         }
 
         context.Response.ContentType = "application/json";
@@ -415,6 +522,28 @@ public class GlobalExceptionHandlingMiddleware
 
             await context.Response.WriteAsync(json);
         }
+    }
+
+    /// <summary>
+    /// Recursively logs all inner exceptions in the exception chain
+    /// </summary>
+    private void LogInnerExceptions(Exception? innerException, int depth)
+    {
+        if (innerException == null)
+        {
+            return;
+        }
+
+        _logger.LogError(
+            innerException,
+            "Inner Exception (Depth {Depth}): {InnerExceptionType}, Message: {InnerExceptionMessage}, StackTrace: {StackTrace}",
+            depth,
+            innerException.GetType().FullName,
+            innerException.Message,
+            innerException.StackTrace ?? "N/A");
+
+        // Recursively log the next inner exception
+        LogInnerExceptions(innerException.InnerException, depth + 1);
     }
 }
 
