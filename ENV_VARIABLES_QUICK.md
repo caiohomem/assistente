@@ -15,6 +15,7 @@
 | Variável | Descrição | Exemplo |
 |----------|-----------|---------|
 | `ConnectionStrings__DefaultConnection` | Connection string do banco | `Host=...;Database=...;Username=...;Password=...;SSL Mode=Require;` |
+| `REDIS_URL` | URL do Redis (formato: `rediss://user:password@host:port`) | `rediss://default:password@host:6379` |
 | `Keycloak__BaseUrl` | URL interna do Keycloak | `http://keycloak:8080` |
 | `Keycloak__PublicBaseUrl` | URL pública do Keycloak (HTTPS) | `https://auth.seu-dominio.com` |
 | `Keycloak__Realm` | Nome do realm | `assistenteexecutivo` |
@@ -25,6 +26,17 @@
 | `Frontend__PublicBaseUrl` | URL pública do frontend | `https://assistente-web-xxx.run.app` |
 | `Frontend__CorsOrigins` | Origens permitidas (CORS) | `https://assistente-web-xxx.run.app` |
 | `ASPNETCORE_ENVIRONMENT` | Ambiente da aplicação | `Production` |
+
+### Opcionais
+
+#### Redis (Session Storage)
+- `REDIS_URL` (formato URL: `rediss://user:password@host:port`) - **Recomendado**
+- `ConnectionStrings__Redis` (formato StackExchange.Redis: `host:port,password=...,ssl=true`)
+- `Redis__ConnectionString` ou `Redis__Configuration`
+
+**Nota**: Se Redis não estiver configurado:
+- PostgreSQL: usa Memory Cache (sessões perdidas ao reiniciar)
+- SQL Server: usa SQL Server Cache (sessões persistidas no banco)
 
 ### Opcionais (Configurações Avançadas)
 

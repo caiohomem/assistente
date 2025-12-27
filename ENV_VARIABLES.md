@@ -25,10 +25,23 @@ ConnectionStrings__DefaultConnection="Host=...;Database=...;Username=...;Passwor
 
 #### Redis (Sessão BFF / OAuth state)
 ```bash
-ConnectionStrings__Redis="10.0.0.5:6379"
+# Opção 1: REDIS_URL (formato URL - recomendado para Upstash e outros serviços)
+REDIS_URL="rediss://default:password@host:6379"
+
+# Opção 2: ConnectionStrings:Redis (formato StackExchange.Redis)
+ConnectionStrings__Redis="host:6379,password=...,ssl=true,abortConnect=false"
+
+# Opção 3: Redis:ConnectionString
+Redis__ConnectionString="host:6379,password=...,ssl=true"
+
+# Opção 4: Redis:Configuration
+Redis__Configuration="host:6379,password=...,ssl=true"
 ```
-- **Descrição**: Redis para `IDistributedCache` (necessário em Cloud Run quando usando PostgreSQL, para não perder sessão/state entre instâncias)
-- **Exemplo (com senha/SSL)**: `host:6379,password=...,ssl=True,abortConnect=False`
+- **Descrição**: Redis para `IDistributedCache` (recomendado para Cloud Run com múltiplas instâncias, evita perda de sessão/state entre instâncias)
+- **Prioridade**: `REDIS_URL` > `ConnectionStrings:Redis` > `Redis:ConnectionString` > `Redis:Configuration`
+- **Formato REDIS_URL**: Suporta `redis://` (sem SSL) e `rediss://` (com SSL)
+- **Exemplo REDIS_URL (Upstash)**: `rediss://default:password@ruling-condor-14352.upstash.io:6379`
+- **Exemplo ConnectionStrings (formato StackExchange.Redis)**: `host:6379,password=...,ssl=True,abortConnect=False`
 
 #### Keycloak (Autenticação)
 ```bash
@@ -257,6 +270,9 @@ gcloud run services update assistente-api \
 ```bash
 # Banco de Dados
 ConnectionStrings__DefaultConnection="Host=ep-xxx-pooler.region.aws.neon.tech;Database=neondb;Username=user;Password=pass;SSL Mode=Require;"
+
+# Redis (Session Storage - Recomendado para Cloud Run)
+REDIS_URL="rediss://default:password@ruling-condor-14352.upstash.io:6379"
 
 # Keycloak
 Keycloak__BaseUrl="http://keycloak:8080"                    # URL interna (se Keycloak estiver no mesmo cluster)

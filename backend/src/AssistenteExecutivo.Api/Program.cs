@@ -19,6 +19,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
 using Microsoft.OpenApi;
+using System.Text.RegularExpressions;
 
 // Configurar Serilog antes de criar o builder
 var configuration = new ConfigurationBuilder()
@@ -53,13 +54,10 @@ var loggerConfig = new LoggerConfiguration()
 // Configurar sink de banco de dados baseado no tipo
 if (isPostgreSQL)
 {
-    // PostgreSQL - por enquanto usando apenas console
-    // Nota: Para salvar logs no PostgreSQL, você pode:
-    // 1. Usar um provider customizado
-    // 2. Usar Serilog.Sinks.PostgreSQL (requer configuração adicional)
-    // 3. Usar Serilog.Sinks.File e processar depois
-    // Por enquanto, logs vão apenas para console quando usar PostgreSQL
-    // A tabela Logs foi criada caso queira implementar um provider customizado
+    // PostgreSQL - usar console e tentar gravar no banco via SQL direto
+    // Nota: Serilog.Sinks.MSSqlServer não funciona com PostgreSQL
+    // Vamos usar apenas console por enquanto, mas logs importantes aparecem no Cloud Run
+    Log.Warning("PostgreSQL detectado - logs serão gravados apenas no console. Para gravar no banco, considere usar SQL Server ou implementar um sink customizado.");
 }
 else
 {
@@ -94,14 +92,172 @@ else
         connectionString: connectionString,
         sinkOptions: columnOptions,
         columnOptions: columnOptionsObj,
-        restrictedToMinimumLevel: LogEventLevel.Warning); // Apenas Warning, Error e Fatal vão para o banco
+        restrictedToMinimumLevel: LogEventLevel.Information); // Information, Warning, Error e Fatal vão para o banco
 }
 
-Log.Logger = loggerConfig.CreateLogger();
+    Log.Logger = loggerConfig.CreateLogger();
 
 try
 {
     Log.Information("Iniciando aplicação AssistenteExecutivo.Api");
+    
+    // Helper function para obter e converter connection string do Redis
+    static string? GetRedisConnectionString(IConfiguration configuration)
+    {
+        // Prioridade 1: REDIS_URL (formato URL: rediss://user:password@host:port)
+        var redisUrl = configuration["REDIS_URL"] ?? Environment.GetEnvironmentVariable("REDIS_URL");
+        if (!string.IsNullOrWhiteSpace(redisUrl))
+        {
+            Log.Information("Redis configurado via REDIS_URL (formato URL detectado)");
+            var converted = ConvertRedisUrlToConnectionString(redisUrl);
+            return converted;
+        }
+        
+        // Prioridade 2: ConnectionStrings:Redis
+        var connectionString = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            Log.Information("Redis configurado via ConnectionStrings:Redis");
+            // Verificar se é uma URL que precisa ser convertida
+            if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+                connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+            {
+                return ConvertRedisUrlToConnectionString(connectionString);
+            }
+            return connectionString;
+        }
+        
+        // Prioridade 3: Redis:ConnectionString
+        var redisConnectionString = configuration["Redis:ConnectionString"];
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            Log.Information("Redis configurado via Redis:ConnectionString");
+            // Verificar se é uma URL que precisa ser convertida
+            if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+                redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+            {
+                return ConvertRedisUrlToConnectionString(redisConnectionString);
+            }
+            return redisConnectionString;
+        }
+        
+        // Prioridade 4: Redis:Configuration
+        var redisConfiguration = configuration["Redis:Configuration"];
+        if (!string.IsNullOrWhiteSpace(redisConfiguration))
+        {
+            Log.Information("Redis configurado via Redis:Configuration");
+            // Verificar se é uma URL que precisa ser convertida
+            if (redisConfiguration.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+                redisConfiguration.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+            {
+                return ConvertRedisUrlToConnectionString(redisConfiguration);
+            }
+            return redisConfiguration;
+        }
+        
+        Log.Information("Redis não configurado - usando fallback (SQL Server Cache ou Memory Cache)");
+        return null;
+    }
+    
+    // Helper function para converter URL Redis (rediss:// ou redis://) para formato StackExchange.Redis
+    static string ConvertRedisUrlToConnectionString(string redisUrl)
+    {
+        if (string.IsNullOrWhiteSpace(redisUrl))
+            return redisUrl;
+        
+        // Se já está no formato correto (não começa com redis:// ou rediss://), retornar como está
+        if (!redisUrl.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) && 
+            !redisUrl.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+        {
+            return redisUrl;
+        }
+        
+        try
+        {
+            // Parse da URL: rediss://user:password@host:port ou redis://user:password@host:port
+            var uri = new Uri(redisUrl);
+            var isSsl = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase);
+            
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : (isSsl ? 6380 : 6379);
+            
+            // Extrair user e password do UserInfo
+            string? user = null;
+            string? password = null;
+            
+            if (!string.IsNullOrWhiteSpace(uri.UserInfo))
+            {
+                var userInfoParts = uri.UserInfo.Split(':', 2);
+                user = userInfoParts.Length > 0 && !string.IsNullOrWhiteSpace(userInfoParts[0]) 
+                    ? userInfoParts[0] 
+                    : null;
+                password = userInfoParts.Length > 1 && !string.IsNullOrWhiteSpace(userInfoParts[1]) 
+                    ? userInfoParts[1] 
+                    : null;
+            }
+            
+            // Construir connection string no formato StackExchange.Redis
+            // Formato: host:port,ssl=true,password=...,user=...
+            var parts = new List<string>();
+            
+            // Adicionar host:port (sempre primeiro)
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                throw new ArgumentException("Host não pode ser vazio na URL do Redis", nameof(redisUrl));
+            }
+            parts.Add($"{host}:{port}");
+            
+            // Configurações SSL (para rediss://)
+            if (isSsl)
+            {
+                parts.Add("ssl=true");
+                parts.Add("abortConnect=false");
+                // Upstash e outros serviços cloud geralmente precisam de timeout maior
+                parts.Add("connectTimeout=10000");
+                parts.Add("syncTimeout=10000");
+            }
+            
+            // Adicionar password (se existir)
+            string? decodedPassword = null;
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                // Decodificar password (pode ter caracteres especiais codificados)
+                decodedPassword = Uri.UnescapeDataString(password);
+                // Escapar caracteres especiais no password se necessário
+                parts.Add($"password={decodedPassword}");
+            }
+            
+            // Adicionar user (se existir e não for "default")
+            if (!string.IsNullOrWhiteSpace(user) && !user.Equals("default", StringComparison.OrdinalIgnoreCase))
+            {
+                var decodedUser = Uri.UnescapeDataString(user);
+                parts.Add($"user={decodedUser}");
+            }
+            
+            var connectionString = string.Join(",", parts);
+            
+            // Log da conversão (sem expor senha)
+            var logOriginal = redisUrl;
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                logOriginal = redisUrl.Replace(password, "***");
+            }
+            var logConverted = connectionString;
+            if (!string.IsNullOrWhiteSpace(decodedPassword))
+            {
+                logConverted = connectionString.Replace(decodedPassword, "***");
+            }
+            
+            Log.Information("Redis URL convertida: {OriginalUrl} -> {ConnectionString}", logOriginal, logConverted);
+            
+            return connectionString;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Erro ao converter REDIS_URL. Usando valor original: {RedisUrl}", redisUrl);
+            return redisUrl;
+        }
+    }
 
     var builder = WebApplication.CreateBuilder(args);
     
@@ -250,7 +406,7 @@ try
     });
     builder.Services.AddAuthorization();
 
-    // Session (para BFF) - Usando banco de dados para persistir sessões entre reinicializações
+    // Session (para BFF) - Usando Redis quando disponível, caso contrário banco de dados ou Memory Cache
     var sessionConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("ConnectionString 'DefaultConnection' não configurada");
     
@@ -258,39 +414,47 @@ try
     var isPostgreSQLSession = sessionConnectionString.Contains("Host=") || 
                               (sessionConnectionString.Contains("Server=") && sessionConnectionString.Contains("Database=") && !sessionConnectionString.Contains("Trusted_Connection"));
     
-    if (isPostgreSQLSession)
+    // Tentar obter configuração do Redis (suporta múltiplos formatos)
+    var redisConnectionString = GetRedisConnectionString(builder.Configuration);
+    
+    if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {
-        // PostgreSQL - usar Redis ou Memory Cache como fallback
-        // Nota: .NET não tem suporte nativo para PostgreSQL distributed cache
-        // Usando Memory Cache como fallback (sessões serão perdidas ao reiniciar)
-        // Para produção, considere usar Redis ou implementar um provider customizado
-        // PostgreSQL - preferir Redis (recomendado) para suportar Cloud Run com mais de 1 instAcncia.
-        // Sem Redis, a sessAćo pode cair em instAcncia diferente e perder OAuth state / tokens.
-        var redisConnectionString =
-            builder.Configuration.GetConnectionString("Redis")
-            ?? builder.Configuration["Redis:ConnectionString"]
-            ?? builder.Configuration["Redis:Configuration"];
-
-        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        // Redis disponível - usar para session storage (recomendado para Cloud Run com múltiplas instâncias)
+        Log.Information("Configurando Redis para session storage. ConnectionString: {ConnectionString}", 
+            redisConnectionString.Contains("password=") 
+                ? redisConnectionString.Substring(0, redisConnectionString.IndexOf("password=")) + "password=***"
+                : redisConnectionString);
+        
+        builder.Services.AddStackExchangeRedisCache(options =>
         {
-            builder.Services.AddStackExchangeRedisCache(options =>
+            // Garantir que não estamos passando uma URL diretamente
+            // StackExchange.Redis pode ter problemas com URLs no formato rediss://
+            if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+                redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
-                options.Configuration = redisConnectionString;
-                options.InstanceName = "ae:";
-            });
-        }
-        else
-        {
-            if (!builder.Environment.IsDevelopment())
-            {
-                Log.Warning("PostgreSQL detected for SessionCache but Redis is not configured. In Cloud Run with multiple instances this can cause OAuth invalid_state and BFF session loss.");
+                Log.Warning("Redis connection string ainda está no formato URL. Convertendo novamente...");
+                redisConnectionString = ConvertRedisUrlToConnectionString(redisConnectionString);
             }
-            builder.Services.AddDistributedMemoryCache();
+            
+            options.Configuration = redisConnectionString;
+            options.InstanceName = "ae:";
+        });
+    }
+    else if (isPostgreSQLSession)
+    {
+        // PostgreSQL sem Redis - usar Memory Cache como fallback
+        // Nota: .NET não tem suporte nativo para PostgreSQL distributed cache
+        // Sessões serão perdidas ao reiniciar ou em múltiplas instâncias
+        if (!builder.Environment.IsDevelopment())
+        {
+            Log.Warning("PostgreSQL detected for SessionCache but Redis is not configured. In Cloud Run with multiple instances this can cause OAuth invalid_state and BFF session loss.");
         }
+        builder.Services.AddDistributedMemoryCache();
     }
     else
     {
-        // SQL Server
+        // SQL Server sem Redis - usar SQL Server Cache
+        Log.Information("Configurando SQL Server para session storage");
         builder.Services.AddDistributedSqlServerCache(options =>
         {
             options.ConnectionString = sessionConnectionString;
@@ -346,26 +510,28 @@ try
         {
             string[]? configuredOrigins = null;
             
-            // Tentar ler como array primeiro (appsettings.json)
-            var originsArray = builder.Configuration
-                .GetSection("Frontend:CorsOrigins")
-                .Get<string[]>();
-            
-            if (originsArray != null && originsArray.Length > 0)
+            // PRIORIDADE 1: Tentar ler como string separada por vírgula (variáveis de ambiente)
+            // Variáveis de ambiente têm prioridade sobre appsettings.json
+            var originsString = builder.Configuration["Frontend:CorsOrigins"];
+            if (!string.IsNullOrWhiteSpace(originsString))
             {
-                configuredOrigins = originsArray;
+                configuredOrigins = originsString
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(o => o.Trim())
+                    .Where(o => !string.IsNullOrWhiteSpace(o))
+                    .ToArray();
             }
-            else
+            
+            // PRIORIDADE 2: Se não encontrou string, tentar ler como array (appsettings.json)
+            if (configuredOrigins == null || configuredOrigins.Length == 0)
             {
-                // Tentar ler como string separada por vírgula (variáveis de ambiente)
-                var originsString = builder.Configuration["Frontend:CorsOrigins"];
-                if (!string.IsNullOrWhiteSpace(originsString))
+                var originsArray = builder.Configuration
+                    .GetSection("Frontend:CorsOrigins")
+                    .Get<string[]>();
+                
+                if (originsArray != null && originsArray.Length > 0)
                 {
-                    configuredOrigins = originsString
-                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(o => o.Trim())
-                        .Where(o => !string.IsNullOrWhiteSpace(o))
-                        .ToArray();
+                    configuredOrigins = originsArray;
                 }
             }
 
@@ -432,6 +598,16 @@ try
     }
     app.UseRouting();
     app.UseCors();
+    
+    // Log CORS origins na inicialização
+    var corsOrigins = builder.Configuration.GetSection("Frontend:CorsOrigins").Get<string[]>();
+    var corsOriginsString = builder.Configuration["Frontend:CorsOrigins"];
+    var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"];
+    Log.Information("CORS - Origins Array: {OriginsArray}, Origins String: {OriginsString}, BaseUrl: {BaseUrl}", 
+        corsOrigins != null ? string.Join(", ", corsOrigins) : "null",
+        corsOriginsString ?? "null",
+        frontendBaseUrl ?? "null");
+    
     app.UseLocalizationConfiguration();
     app.UseSession();
     app.UseMiddleware<BffCsrfMiddleware>();

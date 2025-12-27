@@ -30,11 +30,6 @@ function getCookieDomain(req: NextRequest): string | undefined {
     return undefined;
   }
   
-  // Se terminar com .run.app, não configurar domain (Cloud Run não suporta)
-  if (hostname.endsWith(".run.app")) {
-    return undefined;
-  }
-  
   // Extrair o domínio base (ex: assistente.live de web.assistente.live)
   const parts = hostname.split(".");
   if (parts.length < 2) {

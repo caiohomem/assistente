@@ -81,6 +81,14 @@ public sealed class AuthController : ControllerBase
         // IMPORTANTE: Commit explícito da sessão antes do redirect
         // Isso garante que o state seja persistido antes de redirecionar para o Keycloak
         await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
+        
+        // Log para debug - verificar se sessão foi salva
+        var sessionIdAfterCommit = HttpContext.Session.Id;
+        var stateStored = HttpContext.Session.GetString(BffSessionKeys.OAuthState);
+        var hasSessionCookie = Response.Headers.ContainsKey("Set-Cookie");
+        _logger.LogInformation(
+            "Login - State gerado e armazenado. State: {State}, SessionId: {SessionId}, StateStored: {StateStored}, HasSetCookie: {HasSetCookie}",
+            state, sessionIdAfterCommit, stateStored != null ? "OK" : "NULL", hasSessionCookie);
 
         string loginUrl;
 
