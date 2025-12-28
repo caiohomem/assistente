@@ -246,11 +246,16 @@ public class UserProfileTests
 
     private UserProfile CreateUser()
     {
+        return CreateUserWithClock(_clock);
+    }
+
+    private UserProfile CreateUserWithClock(IClock clock)
+    {
         var userId = Guid.NewGuid();
         var keycloakSubject = KeycloakSubject.Create("sub-123");
         var email = EmailAddress.Create("test@example.com");
         var displayName = PersonName.Create("João", "Silva");
-        return new UserProfile(userId, keycloakSubject, email, displayName, _clock);
+        return new UserProfile(userId, keycloakSubject, email, displayName, clock);
     }
 
     [Fact]
@@ -425,9 +430,227 @@ public class UserProfileTests
             .WithMessage("*DisplayNameObrigatorio*");
     }
 
+    [Fact]
+    public void Reactivate_DeletedUser_ShouldReactivate()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.Delete();
+        user.ClearDomainEvents();
+
+        // Act
+        user.Reactivate(_clock);
+
+        // Assert
+        user.Status.Should().Be(UserStatus.Active);
+        user.LastLoginAt.Should().BeNull();
+        user.PasswordResetToken.Should().BeNull();
+        user.PasswordResetTokenExpiresAt.Should().BeNull();
+        user.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<UserReactivated>();
+    }
+
+    [Fact]
+    public void Reactivate_NotDeletedUser_ShouldThrow()
+    {
+        // Arrange
+        var user = CreateUser();
+
+        // Act & Assert
+        var act = () => user.Reactivate(_clock);
+        act.Should().Throw<DomainException>()
+            .WithMessage("*ApenasUsuariosDeletadosPodemSerReativados*");
+    }
+
+    [Fact]
+    public void ReactivateWithNewKeycloakSubject_DeletedUser_ShouldReactivate()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.Delete();
+        user.ClearDomainEvents();
+        var newKeycloakSubject = KeycloakSubject.Create("sub-456");
+
+        // Act
+        user.ReactivateWithNewKeycloakSubject(newKeycloakSubject, _clock);
+
+        // Assert
+        user.Status.Should().Be(UserStatus.Active);
+        user.KeycloakSubject.Should().Be(newKeycloakSubject);
+        user.LastLoginAt.Should().BeNull();
+        user.PasswordResetToken.Should().BeNull();
+        user.PasswordResetTokenExpiresAt.Should().BeNull();
+        user.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<UserReactivated>();
+    }
+
+    [Fact]
+    public void ReactivateWithNewKeycloakSubject_NotDeletedUser_ShouldThrow()
+    {
+        // Arrange
+        var user = CreateUser();
+        var newKeycloakSubject = KeycloakSubject.Create("sub-456");
+
+        // Act & Assert
+        var act = () => user.ReactivateWithNewKeycloakSubject(newKeycloakSubject, _clock);
+        act.Should().Throw<DomainException>()
+            .WithMessage("*ApenasUsuariosDeletadosPodemSerReativados*");
+    }
+
+    [Fact]
+    public void ReactivateWithNewKeycloakSubject_NullKeycloakSubject_ShouldThrow()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.Delete();
+
+        // Act & Assert
+        var act = () => user.ReactivateWithNewKeycloakSubject(null!, _clock);
+        act.Should().Throw<DomainException>()
+            .WithMessage("*KeycloakSubjectObrigatorio*");
+    }
+
+    [Fact]
+    public void GeneratePasswordResetToken_ActiveUser_ShouldGenerateToken()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.ClearDomainEvents();
+
+        // Act
+        user.GeneratePasswordResetToken(_clock);
+
+        // Assert
+        user.PasswordResetToken.Should().NotBeNullOrEmpty();
+        user.PasswordResetTokenExpiresAt.Should().NotBeNull();
+        user.PasswordResetTokenExpiresAt!.Value.Should().BeCloseTo(_clock.UtcNow.AddHours(24), TimeSpan.FromMinutes(1));
+        user.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<PasswordResetRequested>();
+    }
+
+    [Fact]
+    public void GeneratePasswordResetToken_SuspendedUser_ShouldThrow()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.Suspend("Test");
+
+        // Act & Assert
+        var act = () => user.GeneratePasswordResetToken(_clock);
+        act.Should().Throw<DomainException>()
+            .WithMessage("*UsuarioNaoAtivo*");
+    }
+
+    [Fact]
+    public void ValidatePasswordResetToken_ValidToken_ShouldReturnTrue()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.GeneratePasswordResetToken(_clock);
+        var token = user.PasswordResetToken!;
+
+        // Act
+        var result = user.ValidatePasswordResetToken(token, _clock);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ValidatePasswordResetToken_InvalidToken_ShouldReturnFalse()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.GeneratePasswordResetToken(_clock);
+
+        // Act
+        var result = user.ValidatePasswordResetToken("invalid-token", _clock);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidatePasswordResetToken_ExpiredToken_ShouldReturnFalse()
+    {
+        // Arrange
+        var pastClock = new PastClock();
+        var user = CreateUserWithClock(pastClock);
+        user.GeneratePasswordResetToken(pastClock);
+        var token = user.PasswordResetToken!;
+        
+        // Use a clock that returns a time after expiration
+        var futureClock = new FutureClock(pastClock.UtcNow.AddHours(25));
+
+        // Act
+        var result = user.ValidatePasswordResetToken(token, futureClock);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ValidatePasswordResetToken_NoToken_ShouldReturnFalse()
+    {
+        // Arrange
+        var user = CreateUser();
+
+        // Act
+        var result = user.ValidatePasswordResetToken("any-token", _clock);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void InvalidatePasswordResetToken_ShouldClearToken()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.GeneratePasswordResetToken(_clock);
+
+        // Act
+        user.InvalidatePasswordResetToken();
+
+        // Assert
+        user.PasswordResetToken.Should().BeNull();
+        user.PasswordResetTokenExpiresAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void UpdateSubscription_Null_ShouldSetToNull()
+    {
+        // Arrange
+        var user = CreateUser();
+        user.UpdateSubscription(Guid.NewGuid());
+
+        // Act
+        user.UpdateSubscription(null);
+
+        // Assert
+        user.SubscriptionId.Should().BeNull();
+    }
+
     private class TestClock : IClock
     {
         public DateTime UtcNow => DateTime.UtcNow;
+    }
+
+    private class PastClock : IClock
+    {
+        public DateTime UtcNow => DateTime.UtcNow.AddDays(-1);
+    }
+
+    private class FutureClock : IClock
+    {
+        private readonly DateTime _futureTime;
+
+        public FutureClock(DateTime futureTime)
+        {
+            _futureTime = futureTime;
+        }
+
+        public DateTime UtcNow => _futureTime;
     }
 }
 

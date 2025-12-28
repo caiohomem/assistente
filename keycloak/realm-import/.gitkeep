@@ -1,0 +1,3 @@
+# Este diretório contém arquivos JSON de realms para importação automática
+# Coloque arquivos .json aqui e eles serão importados na primeira inicialização do Keycloak
+

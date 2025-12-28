@@ -1,14 +1,15 @@
+using System.Net.Http.Json;
+using System.Text.Json;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
-using AssistenteExecutivo.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using AssistenteExecutivo.Infrastructure.Persistence;
 
 namespace AssistenteExecutivo.Infrastructure.Services;
 
@@ -56,37 +57,88 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
             var realmId = _configuration["Keycloak:Realm"] ?? "assistenteexecutivo";
             var realmName = _configuration["Keycloak:RealmName"] ?? "Assistente Executivo";
 
-            // Criar/atualizar realm
-            await _keycloakService.CreateRealmAsync(realmId, realmName, cancellationToken);
-            _logger.LogInformation("Realm {RealmId} garantido", realmId);
+            // Tenta importar do JSON primeiro (se configurado)
+            var realmJsonPath = _configuration["Keycloak:RealmJsonPath"];
+            var useJsonImport = _configuration.GetValue<bool>("Keycloak:UseJsonImport", false);
 
-            // Garantir que os clients existem
-            await _keycloakService.EnsureClientExistsAsync(realmId, cancellationToken);
-            _logger.LogInformation("Clients garantidos no realm {RealmId}", realmId);
-
-            // Criar roles básicas
-            await EnsureRolesAsync(realmId, cancellationToken);
-            _logger.LogInformation("Roles garantidas no realm {RealmId}", realmId);
-
-            // Criar usuários dev/teste
-            await CreateDevTestUsersAsync(realmId, cancellationToken);
-            _logger.LogInformation("Usuários dev/teste garantidos no realm {RealmId}", realmId);
-
-            // Configurar Google IdP se credenciais estiverem presentes
-            var googleClientId = _configuration["Keycloak:Google:ClientId"];
-            var googleClientSecret = _configuration["Keycloak:Google:ClientSecret"];
-            if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+            // Resolve caminho do JSON (caminho direto - arquivo está dentro do projeto C#)
+            string? resolvedJsonPath = null;
+            if (!string.IsNullOrWhiteSpace(realmJsonPath))
             {
-                await _keycloakService.ConfigureGoogleIdentityProviderAsync(realmId, googleClientId, googleClientSecret, cancellationToken);
-                _logger.LogInformation("Google Identity Provider configurado no realm {RealmId}", realmId);
+                // Tenta caminho relativo ao diretório do executável (onde o arquivo é copiado)
+                var execDir = AppDomain.CurrentDomain.BaseDirectory;
+                var jsonPath = Path.Combine(execDir, realmJsonPath);
+                
+                if (File.Exists(jsonPath))
+                {
+                    resolvedJsonPath = Path.GetFullPath(jsonPath);
+                    _logger.LogInformation("Arquivo JSON encontrado: {Path}", resolvedJsonPath);
+                }
+                else
+                {
+                    // Fallback: tenta relativo ao diretório atual (para desenvolvimento)
+                    var currentDir = Directory.GetCurrentDirectory();
+                    var currentPath = Path.Combine(currentDir, realmJsonPath);
+                    if (File.Exists(currentPath))
+                    {
+                        resolvedJsonPath = Path.GetFullPath(currentPath);
+                        _logger.LogInformation("Arquivo JSON encontrado no diretório atual: {Path}", resolvedJsonPath);
+                    }
+                    else
+                    {
+                        _logger.LogError("Arquivo JSON não encontrado. Caminhos tentados:");
+                        _logger.LogError("  - {Path} (existe: {Exists})", jsonPath, File.Exists(jsonPath));
+                        _logger.LogError("  - {Path} (existe: {Exists})", currentPath, File.Exists(currentPath));
+                        _logger.LogError("Certifique-se de que o arquivo está em Config/assistenteexecutivo-realm.json e que o .csproj está configurado para copiá-lo para o output.");
+                    }
+                }
+            }
+
+            if (useJsonImport && !string.IsNullOrWhiteSpace(resolvedJsonPath))
+            {
+                _logger.LogInformation("Tentando importar realm {RealmId} do arquivo JSON: {JsonPath}", realmId, resolvedJsonPath);
+                
+                try
+                {
+                    var importSuccess = await _keycloakService.ImportRealmFromJsonAsync(realmId, resolvedJsonPath, overwriteExisting: true, cancellationToken);
+                    
+                    if (importSuccess)
+                    {
+                        _logger.LogInformation("✓ Realm {RealmId} importado/atualizado com sucesso do JSON. Pulando provisionamento manual.", realmId);
+                        
+                        // Verificar se os Identity Providers foram criados
+                        await VerifyIdentityProvidersAsync(realmId, cancellationToken);
+                        
+                        // Configurar SMTP e rememberMe manualmente (importação parcial pode não aplicar)
+                        await ConfigureSmtpAndRememberMeAsync(realmId, resolvedJsonPath, cancellationToken);
+                        
+                        // Ainda precisa garantir frontend URL e outras configurações dinâmicas
+                        // skipProviders=true para não fazer chamadas desnecessárias (providers já estão no JSON)
+                        await _keycloakService.CreateRealmAsync(realmId, realmName, skipProviders: true, cancellationToken);
+                        _logger.LogInformation("Configurações dinâmicas (frontendUrl, etc.) atualizadas no realm {RealmId}", realmId);
+                        return;
+                    }
+                    else
+                    {
+                        _logger.LogError("Falha ao importar realm do JSON. Verifique os logs acima para detalhes do erro. Provisionamento manual está desabilitado.");
+                        throw new InvalidOperationException($"Falha ao importar realm {realmId} do arquivo JSON: {resolvedJsonPath}. Verifique os logs do KeycloakService para detalhes.");
+                    }
+                }
+                catch (Exception ex) when (ex is not InvalidOperationException)
+                {
+                    _logger.LogError(ex, "Exceção ao importar realm do JSON. Provisionamento manual está desabilitado.");
+                    throw new InvalidOperationException($"Erro ao importar realm {realmId} do arquivo JSON: {resolvedJsonPath}. Erro: {ex.Message}", ex);
+                }
+            }
+            else if (useJsonImport)
+            {
+                _logger.LogError("UseJsonImport está habilitado mas o arquivo JSON não foi encontrado. Caminho configurado: {JsonPath}.", realmJsonPath);
+                throw new FileNotFoundException($"Arquivo JSON do realm não encontrado. Caminho configurado: {realmJsonPath}");
             }
             else
             {
-                _logger.LogWarning("Credenciais do Google não encontradas. Google IdP não será configurado. " +
-                    "Configure Keycloak:Google:ClientId e Keycloak:Google:ClientSecret em appsettings para habilitar login com Google.");
+                _logger.LogInformation("Provisionamento via JSON está desabilitado (UseJsonImport=false). Nenhum provisionamento será executado.");
             }
-
-            _logger.LogInformation("Provisionamento do Keycloak concluído com sucesso");
         }
         catch (Exception ex)
         {
@@ -105,166 +157,248 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
         return Task.CompletedTask;
     }
 
-    private async Task EnsureRolesAsync(string realmId, CancellationToken cancellationToken)
-    {
-        var roles = new[] { "admin", "user", "viewer" };
-
-        foreach (var roleName in roles)
-        {
-            try
-            {
-                // Tentar atribuir a role a um usuário dummy para verificar se existe
-                // Se não existir, criar
-                var adminToken = await GetAdminTokenAsync(cancellationToken);
-                var checkRequest = new System.Net.Http.HttpRequestMessage(
-                    System.Net.Http.HttpMethod.Get,
-                    $"{_configuration["Keycloak:BaseUrl"] ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings")}/admin/realms/{realmId}/roles/{roleName}");
-                checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-
-                using var httpClient = new System.Net.Http.HttpClient();
-                var checkResponse = await httpClient.SendAsync(checkRequest, cancellationToken);
-
-                if (!checkResponse.IsSuccessStatusCode)
-                {
-                    // Role não existe, criar
-                    var createRequest = new System.Net.Http.HttpRequestMessage(
-                        System.Net.Http.HttpMethod.Post,
-                        $"{_configuration["Keycloak:BaseUrl"] ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings")}/admin/realms/{realmId}/roles");
-                    createRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-                    createRequest.Content = System.Net.Http.Json.JsonContent.Create(new { name = roleName });
-
-                    var createResponse = await httpClient.SendAsync(createRequest, cancellationToken);
-                    if (createResponse.IsSuccessStatusCode)
-                    {
-                        _logger.LogInformation("Role {RoleName} criada no realm {RealmId}", roleName, realmId);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Erro ao garantir role {RoleName} no realm {RealmId}", roleName, realmId);
-            }
-        }
-    }
-
-    private async Task CreateDevTestUsersAsync(string realmId, CancellationToken cancellationToken)
-    {
-        var devUsers = new[]
-        {
-            new { Email = "admin@assistenteexecutivo.local", FirstName = "Admin", LastName = "Sistema", Password = "Admin@123", Role = "admin" },
-            new { Email = "user@assistenteexecutivo.local", FirstName = "Usuário", LastName = "Teste", Password = "User@123", Role = "user" },
-            new { Email = "viewer@assistenteexecutivo.local", FirstName = "Visualizador", LastName = "Teste", Password = "Viewer@123", Role = "viewer" }
-        };
-
-        foreach (var user in devUsers)
-        {
-            try
-            {
-                // Verificar se usuário já existe
-                var existingUserId = await _keycloakService.GetUserIdByEmailAsync(realmId, user.Email, cancellationToken);
-
-                if (string.IsNullOrEmpty(existingUserId))
-                {
-                    // Criar usuário
-                    var userId = await _keycloakService.CreateUserAsync(
-                        realmId,
-                        user.Email,
-                        user.FirstName,
-                        user.LastName,
-                        user.Password,
-                        cancellationToken);
-
-                    // Atribuir role
-                    await _keycloakService.AssignRoleAsync(realmId, userId, user.Role, cancellationToken);
-
-                    _logger.LogInformation("Usuário dev/teste criado: {Email} (role: {Role})", user.Email, user.Role);
-
-                    // Garantir perfil local (para fluxo de forgot/reset-password via EmailService)
-                    await EnsureLocalUserProfileAsync(user.Email, user.FirstName, user.LastName, userId, cancellationToken);
-                }
-                else
-                {
-                    // Usuário já existe, apenas garantir que tem a role
-                    try
-                    {
-                        await _keycloakService.AssignRoleAsync(realmId, existingUserId, user.Role, cancellationToken);
-                        _logger.LogInformation("Usuário dev/teste já existe: {Email} (role: {Role})", user.Email, user.Role);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Erro ao atribuir role {Role} ao usuário {Email}", user.Role, user.Email);
-                    }
-
-                    // Garantir perfil local (para fluxo de forgot/reset-password via EmailService)
-                    await EnsureLocalUserProfileAsync(user.Email, user.FirstName, user.LastName, existingUserId, cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Erro ao criar/atualizar usuário dev/teste {Email}: {Error}", user.Email, ex.Message);
-            }
-        }
-    }
-
-    private async Task EnsureLocalUserProfileAsync(
-        string email,
-        string firstName,
-        string lastName,
-        string keycloakUserId,
-        CancellationToken cancellationToken)
+    private async Task VerifyIdentityProvidersAsync(string realmId, CancellationToken cancellationToken)
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+            var baseUrl = _configuration["Keycloak:BaseUrl"] ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
+            
+            // Verificar quais Identity Providers existem
+            var checkRequest = new System.Net.Http.HttpRequestMessage(
+                System.Net.Http.HttpMethod.Get,
+                $"{baseUrl}/admin/realms/{realmId}/identity-provider/instances");
+            checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
 
-            var normalizedEmail = EmailAddress.Create(email).Value;
-            var existing = await db.UserProfiles
-                .FirstOrDefaultAsync(u => u.Email.Value == normalizedEmail, cancellationToken);
-
-            var subject = KeycloakSubject.Create(keycloakUserId);
-            var personName = PersonName.Create(firstName, lastName);
-            var emailVo = EmailAddress.Create(email);
-
-            if (existing == null)
+            using var httpClient = new System.Net.Http.HttpClient();
+            var checkResponse = await httpClient.SendAsync(checkRequest, cancellationToken);
+            
+            if (checkResponse.IsSuccessStatusCode)
             {
-                var profile = new UserProfile(
-                    userId: Guid.NewGuid(),
-                    keycloakSubject: subject,
-                    email: emailVo,
-                    displayName: personName,
-                    clock: _clock);
-
-                db.UserProfiles.Add(profile);
-                await db.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("UserProfile local criado para {Email} (KeycloakSubject={KeycloakSubject})", emailVo.Value, subject.Value);
-                return;
+                var providers = await checkResponse.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>(cancellationToken: cancellationToken);
+                var googleExists = providers?.Any(p => p.ContainsKey("alias") && p["alias"]?.ToString() == "google") ?? false;
+                var microsoftExists = providers?.Any(p => p.ContainsKey("alias") && p["alias"]?.ToString() == "microsoft") ?? false;
+                
+                _logger.LogInformation("Identity Providers verificados - Google: {GoogleExists}, Microsoft: {MicrosoftExists}", googleExists, microsoftExists);
+                
+                // Se Microsoft não existe, criar manualmente
+                if (!microsoftExists)
+                {
+                    _logger.LogWarning("Microsoft Identity Provider não foi criado pela importação. Criando manualmente...");
+                    await CreateMicrosoftIdentityProviderAsync(realmId, adminToken, baseUrl, httpClient, cancellationToken);
+                }
             }
-
-            // Se já existe, garantir dados (sem trocar subject)
-            if (existing.KeycloakSubject != subject)
-            {
-                _logger.LogWarning(
-                    "UserProfile local para {Email} já existe com outro KeycloakSubject ({ExistingSubject}). Não será alterado para {NewSubject}.",
-                    emailVo.Value,
-                    existing.KeycloakSubject.Value,
-                    subject.Value);
-                return;
-            }
-
-            existing.ProvisionFromKeycloak(subject, emailVo, personName, _clock);
-            await db.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Falha ao garantir UserProfile local para {Email}", email);
+            _logger.LogWarning(ex, "Erro ao verificar Identity Providers no realm {RealmId}", realmId);
+        }
+    }
+
+    private async Task CreateMicrosoftIdentityProviderAsync(string realmId, string adminToken, string baseUrl, System.Net.Http.HttpClient httpClient, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var microsoftIdp = new
+            {
+                alias = "microsoft",
+                providerId = "microsoft",
+                enabled = true,
+                trustEmail = true,
+                storeToken = false,
+                addReadTokenRoleOnCreate = false,
+                firstBrokerLoginFlowAlias = "first broker login",
+                config = new Dictionary<string, string>
+                {
+                    { "clientId", "6e270dc7-1159-42c0-a4e8-dbc5a029ceb2" },
+                    { "clientSecret", "ygZ8Q~5MqVC6NIcfhyF7joSX_oa64iWW8tgHWcPS" },
+                    { "defaultScope", "openid profile email User.Read" },
+                    { "useJwksUrl", "true" },
+                    { "tenant", "common" },
+                    { "hideOnLoginPage", "false" },
+                    { "acceptsPromptNoneForwardFromClient", "false" },
+                    { "disableUserInfo", "false" }
+                }
+            };
+
+            var createRequest = new System.Net.Http.HttpRequestMessage(
+                System.Net.Http.HttpMethod.Post,
+                $"{baseUrl}/admin/realms/{realmId}/identity-provider/instances");
+            createRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+            createRequest.Content = System.Net.Http.Json.JsonContent.Create(microsoftIdp);
+
+            var createResponse = await httpClient.SendAsync(createRequest, cancellationToken);
+            
+            if (createResponse.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("✓ Microsoft Identity Provider criado com sucesso no realm {RealmId}", realmId);
+                
+                // Criar mappers para Microsoft
+                await CreateMicrosoftMappersAsync(realmId, adminToken, baseUrl, httpClient, cancellationToken);
+            }
+            else
+            {
+                var errorContent = await createResponse.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Erro ao criar Microsoft Identity Provider. Status: {Status}, Response: {Response}",
+                    createResponse.StatusCode, errorContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao criar Microsoft Identity Provider no realm {RealmId}", realmId);
+        }
+    }
+
+    private async Task CreateMicrosoftMappersAsync(string realmId, string adminToken, string baseUrl, System.Net.Http.HttpClient httpClient, CancellationToken cancellationToken)
+    {
+        var mappers = new[]
+        {
+            new { name = "microsoft-email", identityProviderAlias = "microsoft", identityProviderMapper = "oidc-user-attribute-idp-mapper", config = new Dictionary<string, string> { { "claim", "email" }, { "user.attribute", "email" }, { "syncMode", "INHERIT" } } },
+            new { name = "microsoft-given-name", identityProviderAlias = "microsoft", identityProviderMapper = "oidc-user-attribute-idp-mapper", config = new Dictionary<string, string> { { "claim", "given_name" }, { "user.attribute", "firstName" }, { "syncMode", "INHERIT" } } },
+            new { name = "microsoft-family-name", identityProviderAlias = "microsoft", identityProviderMapper = "oidc-user-attribute-idp-mapper", config = new Dictionary<string, string> { { "claim", "family_name" }, { "user.attribute", "lastName" }, { "syncMode", "INHERIT" } } },
+            new { name = "microsoft-name", identityProviderAlias = "microsoft", identityProviderMapper = "oidc-user-attribute-idp-mapper", config = new Dictionary<string, string> { { "claim", "name" }, { "user.attribute", "name" }, { "syncMode", "INHERIT" } } }
+        };
+
+        foreach (var mapper in mappers)
+        {
+            try
+            {
+                var createRequest = new System.Net.Http.HttpRequestMessage(
+                    System.Net.Http.HttpMethod.Post,
+                    $"{baseUrl}/admin/realms/{realmId}/identity-provider/instances/microsoft/mappers");
+                createRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+                createRequest.Content = System.Net.Http.Json.JsonContent.Create(mapper);
+
+                var createResponse = await httpClient.SendAsync(createRequest, cancellationToken);
+                
+                if (createResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Mapper {MapperName} criado para Microsoft Identity Provider", mapper.name);
+                }
+                else if (createResponse.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    _logger.LogInformation("Mapper {MapperName} já existe para Microsoft Identity Provider", mapper.name);
+                }
+                else
+                {
+                    var errorContent = await createResponse.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning("Erro ao criar mapper {MapperName}. Status: {Status}, Response: {Response}",
+                        mapper.name, createResponse.StatusCode, errorContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erro ao criar mapper {MapperName} para Microsoft Identity Provider", mapper.name);
+            }
+        }
+    }
+
+    private async Task ConfigureSmtpAndRememberMeAsync(string realmId, string jsonFilePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+            var baseUrl = _configuration["Keycloak:BaseUrl"] ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
+            
+            // Ler o JSON para extrair configurações SMTP e rememberMe
+            var jsonContent = await File.ReadAllTextAsync(jsonFilePath, cancellationToken);
+            var jsonDoc = System.Text.Json.JsonDocument.Parse(jsonContent);
+            var realmJson = jsonDoc.RootElement;
+            
+            // Obter configuração atual do realm
+            using var httpClient = new System.Net.Http.HttpClient();
+            var getRequest = new System.Net.Http.HttpRequestMessage(
+                System.Net.Http.HttpMethod.Get,
+                $"{baseUrl}/admin/realms/{realmId}");
+            getRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+            
+            var getResponse = await httpClient.SendAsync(getRequest, cancellationToken);
+            if (!getResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Não foi possível obter configuração do realm {RealmId} para configurar SMTP e rememberMe", realmId);
+                return;
+            }
+            
+            var realmJsonString = await getResponse.Content.ReadAsStringAsync(cancellationToken);
+            var realmDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(realmJsonString)
+                ?? new Dictionary<string, System.Text.Json.JsonElement>();
+            
+            // Preparar payload de atualização
+            var updatePayload = new Dictionary<string, object>();
+            foreach (var kvp in realmDict)
+            {
+                if (kvp.Key == "id")
+                    continue;
+                
+                object? value = kvp.Value.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.String => kvp.Value.GetString() ?? string.Empty,
+                    System.Text.Json.JsonValueKind.Number => kvp.Value.TryGetInt32(out var intVal) ? intVal : (object)kvp.Value.GetDouble(),
+                    System.Text.Json.JsonValueKind.True => true,
+                    System.Text.Json.JsonValueKind.False => false,
+                    System.Text.Json.JsonValueKind.Null => null,
+                    _ => kvp.Value
+                };
+                
+                if (value != null)
+                    updatePayload[kvp.Key] = value;
+            }
+            
+            // Configurar rememberMe do JSON
+            if (realmJson.TryGetProperty("rememberMe", out var rememberMeProp))
+            {
+                updatePayload["rememberMe"] = rememberMeProp.GetBoolean();
+                _logger.LogInformation("Configurando rememberMe: {RememberMe}", rememberMeProp.GetBoolean());
+            }
+            
+            // Configurar SMTP do JSON
+            if (realmJson.TryGetProperty("smtpServer", out var smtpServerProp))
+            {
+                var smtpConfig = new Dictionary<string, object>();
+                foreach (var prop in smtpServerProp.EnumerateObject())
+                {
+                    var propValue = prop.Value.ValueKind switch
+                    {
+                        System.Text.Json.JsonValueKind.String => prop.Value.GetString() ?? string.Empty,
+                        System.Text.Json.JsonValueKind.True => "true",
+                        System.Text.Json.JsonValueKind.False => "false",
+                        System.Text.Json.JsonValueKind.Number => prop.Value.GetInt32().ToString(),
+                        _ => prop.Value.GetString() ?? string.Empty
+                    };
+                    smtpConfig[prop.Name] = propValue;
+                }
+                updatePayload["smtpServer"] = smtpConfig;
+                _logger.LogInformation("Configurando SMTP: {Host}:{Port}", smtpConfig.GetValueOrDefault("host"), smtpConfig.GetValueOrDefault("port"));
+            }
+            
+            // Atualizar realm
+            var updateRequest = new System.Net.Http.HttpRequestMessage(
+                System.Net.Http.HttpMethod.Put,
+                $"{baseUrl}/admin/realms/{realmId}");
+            updateRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+            updateRequest.Content = System.Net.Http.Json.JsonContent.Create(updatePayload);
+            
+            var updateResponse = await httpClient.SendAsync(updateRequest, cancellationToken);
+            if (updateResponse.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("✓ SMTP e rememberMe configurados no realm {RealmId}", realmId);
+            }
+            else
+            {
+                var errorContent = await updateResponse.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Erro ao configurar SMTP e rememberMe no realm {RealmId}. Status: {Status}, Response: {Response}",
+                    realmId, updateResponse.StatusCode, errorContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Erro ao configurar SMTP e rememberMe no realm {RealmId}", realmId);
         }
     }
 
     private async Task<string> GetAdminTokenAsync(CancellationToken cancellationToken)
     {
-        var keycloakBaseUrl = _configuration["Keycloak:BaseUrl"]
+        var keycloakBaseUrl = _configuration["Keycloak:BaseUrl"] 
             ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
         var adminRealm = _configuration["Keycloak:AdminRealm"] ?? "master";
         var adminClientId = _configuration["Keycloak:AdminClientId"] ?? "admin-cli";
@@ -333,7 +467,10 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
 
     private class KeycloakTokenResponse
     {
+        [System.Text.Json.Serialization.JsonPropertyName("access_token")]
         public string AccessToken { get; set; } = string.Empty;
+        
+        [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
     }
 }

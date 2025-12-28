@@ -50,7 +50,7 @@ public class KeycloakService : IKeycloakService
         _clientSecret = _configuration["Keycloak:ClientSecret"] ?? "";
     }
 
-    public async Task<string> CreateRealmAsync(string realmId, string realmName, CancellationToken cancellationToken = default)
+    public async Task<string> CreateRealmAsync(string realmId, string realmName, bool skipProviders = false, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -113,13 +113,21 @@ public class KeycloakService : IKeycloakService
             }
 
             // Configurar Google Identity Provider (após frontendUrl ser atualizado)
-            try
+            // Pular se skipProviders=true (quando usando importação JSON)
+            if (!skipProviders)
             {
-                await ConfigureRealmProvidersAsync(realmId, cancellationToken);
+                try
+                {
+                    await ConfigureRealmProvidersAsync(realmId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Erro ao configurar providers no realm {RealmId}", realmId);
+                }
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogWarning(ex, "Erro ao configurar providers no realm {RealmId}", realmId);
+                _logger.LogInformation("Pulando configuração de providers (já configurados via JSON)", realmId);
             }
 
             // Configurar theme customizado
@@ -241,7 +249,10 @@ public class KeycloakService : IKeycloakService
             }
 
             // Atualizar frontendUrl
-            updatePayload["frontendUrl"] = frontendUrl;
+            // NOTA: Keycloak 26+ não aceita frontendUrl no payload de atualização do realm
+            // O frontendUrl deve ser configurado via variável de ambiente KC_HOSTNAME ou
+            // via endpoint específico (se disponível). Removendo do payload para evitar erro 400.
+            // updatePayload["frontendUrl"] = frontendUrl; // Comentado - Keycloak não aceita este campo
 
             var updateRequest = new HttpRequestMessage(HttpMethod.Put, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
             updateRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
@@ -309,7 +320,7 @@ public class KeycloakService : IKeycloakService
 
             updatePayload["registrationAllowed"] = true;
             updatePayload["resetPasswordAllowed"] = true;
-            updatePayload["rememberMe"] = false;
+            updatePayload["rememberMe"] = true; // Habilitado conforme JSON
 
             var updateRequest = new HttpRequestMessage(HttpMethod.Put, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
             updateRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
@@ -1760,5 +1771,139 @@ public class KeycloakService : IKeycloakService
     {
         public string Id { get; set; } = string.Empty;
         public string ClientId { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Importa realm a partir de um arquivo JSON usando importação parcial.
+    /// Atualiza o realm existente ou cria se não existir.
+    /// </summary>
+    public async Task<bool> ImportRealmFromJsonAsync(string realmId, string jsonFilePath, bool overwriteExisting = true, CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(jsonFilePath))
+        {
+            _logger.LogWarning("Arquivo JSON de realm não encontrado: {JsonFilePath}", jsonFilePath);
+            return false;
+        }
+
+        var jsonContent = await File.ReadAllTextAsync(jsonFilePath, cancellationToken);
+        return await ImportRealmFromJsonContentAsync(realmId, jsonContent, overwriteExisting, cancellationToken);
+    }
+
+    /// <summary>
+    /// Importa realm a partir do conteúdo JSON usando importação parcial.
+    /// Atualiza o realm existente ou cria se não existir.
+    /// </summary>
+    public async Task<bool> ImportRealmFromJsonContentAsync(string realmId, string jsonContent, bool overwriteExisting = true, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+            // Parse do JSON para validar e extrair o realm
+            JsonElement realmJson;
+            try
+            {
+                var jsonDoc = JsonDocument.Parse(jsonContent);
+                realmJson = jsonDoc.RootElement;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Erro ao fazer parse do JSON do realm {RealmId}", realmId);
+                return false;
+            }
+
+            // Verifica se o realm existe
+            var checkRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
+            checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+
+            var checkResponse = await _httpClient.SendAsync(checkRequest, cancellationToken);
+            var realmExists = checkResponse.IsSuccessStatusCode;
+
+            HttpResponseMessage importResponse;
+            string responseContent;
+
+            if (realmExists)
+            {
+                // Realm existe → usar importação parcial
+                _logger.LogInformation("Realm {RealmId} já existe. Fazendo importação parcial (OVERWRITE={Overwrite})...", realmId, overwriteExisting);
+
+                var partialImportRequest = new
+                {
+                    ifResourceExists = overwriteExisting ? "OVERWRITE" : "SKIP",
+                    realm = realmJson
+                };
+
+                var importRequest = new HttpRequestMessage(HttpMethod.Post, $"{_keycloakBaseUrl}/admin/realms/{realmId}/partialImport");
+                importRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+                importRequest.Content = JsonContent.Create(partialImportRequest);
+
+                importResponse = await _httpClient.SendAsync(importRequest, cancellationToken);
+                responseContent = await importResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                if (importResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("✓ Realm {RealmId} atualizado com sucesso via importação parcial", realmId);
+                    return true;
+                }
+                else
+                {
+                    // Log detalhado do erro
+                    _logger.LogError("❌ Importação parcial do realm {RealmId} falhou. Status: {StatusCode}, Response: {Response}",
+                        realmId, importResponse.StatusCode, responseContent);
+
+                    // Alguns códigos podem ser aceitáveis (ex: 204 No Content)
+                    if (importResponse.StatusCode == System.Net.HttpStatusCode.NoContent)
+                    {
+                        _logger.LogInformation("Realm {RealmId} atualizado (204 No Content)", realmId);
+                        return true;
+                    }
+
+                    // Log do payload enviado para debug (sem senhas)
+                    try
+                    {
+                        var payloadPreview = JsonSerializer.Serialize(partialImportRequest, new JsonSerializerOptions { WriteIndented = false });
+                        // Remover senhas do log
+                        payloadPreview = System.Text.RegularExpressions.Regex.Replace(payloadPreview, @"""password"":\s*""[^""]*""", @"""password"": ""***""");
+                        payloadPreview = System.Text.RegularExpressions.Regex.Replace(payloadPreview, @"""clientSecret"":\s*""[^""]*""", @"""clientSecret"": ""***""");
+                        _logger.LogDebug("Payload enviado (senhas ocultas): {Payload}", payloadPreview);
+                    }
+                    catch { }
+
+                    return false;
+                }
+            }
+            else
+            {
+                // Realm não existe → usar importação total (criação)
+                _logger.LogInformation("Realm {RealmId} não existe. Criando via importação total...", realmId);
+
+                // Para importação total, enviamos o realm diretamente
+                var importRequest = new HttpRequestMessage(HttpMethod.Post, $"{_keycloakBaseUrl}/admin/realms");
+                importRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
+                importRequest.Content = JsonContent.Create(realmJson);
+
+                importResponse = await _httpClient.SendAsync(importRequest, cancellationToken);
+                responseContent = await importResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                if (importResponse.IsSuccessStatusCode || importResponse.StatusCode == System.Net.HttpStatusCode.Created)
+                {
+                    _logger.LogInformation("✓ Realm {RealmId} criado com sucesso via importação total", realmId);
+                    return true;
+                }
+                else
+                {
+                    // Log detalhado do erro
+                    _logger.LogError("❌ Importação total do realm {RealmId} falhou. Status: {StatusCode}, Response: {Response}",
+                        realmId, importResponse.StatusCode, responseContent);
+
+                    return false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao importar realm {RealmId} via importação parcial", realmId);
+            return false;
+        }
     }
 }

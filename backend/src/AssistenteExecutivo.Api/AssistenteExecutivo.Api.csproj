@@ -29,6 +29,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\*.json" />
+    <None Include="Config\assistenteexecutivo-realm.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

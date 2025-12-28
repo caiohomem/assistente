@@ -2,7 +2,7 @@ namespace AssistenteExecutivo.Application.Interfaces;
 
 public interface IKeycloakService
 {
-    Task<string> CreateRealmAsync(string realmId, string realmName, CancellationToken cancellationToken = default);
+    Task<string> CreateRealmAsync(string realmId, string realmName, bool skipProviders = false, CancellationToken cancellationToken = default);
     Task<string> CreateUserAsync(string realmId, string email, string firstName, string lastName, string password, CancellationToken cancellationToken = default);
     Task AssignRoleAsync(string realmId, string userId, string roleName, CancellationToken cancellationToken = default);
     Task<string> GetAccessTokenAsync(string realmId, string username, string password, CancellationToken cancellationToken = default);
@@ -19,6 +19,8 @@ public interface IKeycloakService
     Task ConfigureRealmProvidersAsync(string realmId, CancellationToken cancellationToken = default);
     Task<string?> GetUserIdByEmailAsync(string realmId, string email, CancellationToken cancellationToken = default);
     Task DeleteUserAsync(string realmId, string userId, CancellationToken cancellationToken = default);
+    Task<bool> ImportRealmFromJsonAsync(string realmId, string jsonFilePath, bool overwriteExisting = true, CancellationToken cancellationToken = default);
+    Task<bool> ImportRealmFromJsonContentAsync(string realmId, string jsonContent, bool overwriteExisting = true, CancellationToken cancellationToken = default);
 }
 
 public class KeycloakTokenResult

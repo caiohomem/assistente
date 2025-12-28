@@ -203,7 +203,7 @@ public abstract class HandlerTestBase : IDisposable
 // Mock services for testing
 internal class MockKeycloakService : IKeycloakService
 {
-    public Task<string> CreateRealmAsync(string realmId, string realmName, CancellationToken cancellationToken = default)
+    public Task<string> CreateRealmAsync(string realmId, string realmName, bool skipProviders = false, CancellationToken cancellationToken = default)
         => Task.FromResult(realmId);
 
     public Task<string> CreateUserAsync(string realmId, string email, string firstName, string lastName, string password, CancellationToken cancellationToken = default)
@@ -253,6 +253,12 @@ internal class MockKeycloakService : IKeycloakService
 
     public Task DeleteUserAsync(string realmId, string userId, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    public Task<bool> ImportRealmFromJsonAsync(string realmId, string jsonFilePath, bool overwriteExisting = true, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    public Task<bool> ImportRealmFromJsonContentAsync(string realmId, string jsonContent, bool overwriteExisting = true, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
 }
 
 internal class MockEmailService : IEmailService

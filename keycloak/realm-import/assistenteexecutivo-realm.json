@@ -1,0 +1,243 @@
+{
+  "realm": "assistenteexecutivo",
+  "enabled": true,
+  "displayName": "Assistente Executivo",
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "registrationEmailAsUsername": false,
+  "loginTheme": "assistenteexecutivo",
+  "accountTheme": "assistenteexecutivo",
+  "emailTheme": "assistenteexecutivo",
+  "smtpServer": {
+    "host": "in-v3.mailjet.com",
+    "port": "587",
+    "from": "suporte@assistente.live",
+    "fromDisplayName": "Assistente Executivo",
+    "replyTo": "suporte@assistente.live",
+    "replyToDisplayName": "Assistente Executivo",
+    "ssl": false,
+    "starttls": true,
+    "auth": true,
+    "user": "75199ae1169bf79bf871b1f5383ec950",
+    "password": "2a13d4d6a63cc73ca15f50ad8b3786d2"
+  },
+  "clients": [
+    {
+      "clientId": "assistenteexecutivo-app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://assistente-web-local.callback-local-cchagas.xyz/login",
+        "https://assistente-api-local.callback-local-cchagas.xyz/auth/oauth-callback",
+        "https://web.assistente.live/login",
+        "https://api.assistente.live/auth/oauth-callback",
+        "http://localhost:3000/*",
+        "https://*.callback-local-cchagas.xyz/*"
+      ],
+      "webOrigins": [
+        "https://assistente-web-local.callback-local-cchagas.xyz",
+        "https://web.assistente.live",
+        "http://localhost:3000",
+        "*"
+      ],
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600",
+        "access.token.lifespan.implicit": "3600",
+        "sso.session.idle.timeout": "1800",
+        "sso.session.max.lifespan": "36000"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Administrador do sistema"
+      },
+      {
+        "name": "user",
+        "description": "Usuário padrão"
+      },
+      {
+        "name": "viewer",
+        "description": "Visualizador (somente leitura)"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin@assistenteexecutivo.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "suporte@assistente.live",
+      "firstName": "Admin",
+      "lastName": "Sistema",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "user@assistenteexecutivo.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "user@assistenteexecutivo.local",
+      "firstName": "Usuário",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "User@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "viewer@assistenteexecutivo.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "viewer@assistenteexecutivo.local",
+      "firstName": "Visualizador",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Viewer@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["viewer"]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "533937474214-ar1c0gr7onm0lvmvrj1cpid1jh718atu.apps.googleusercontent.com",
+        "clientSecret": "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",
+        "defaultScope": "openid profile email",
+        "useJwksUrl": "true"
+      }
+    },
+    {
+      "alias": "microsoft",
+      "providerId": "microsoft",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "6e270dc7-1159-42c0-a4e8-dbc5a029ceb2",
+        "clientSecret": "ygZ8Q~5MqVC6NIcfhyF7joSX_oa64iWW8tgHWcPS",
+        "defaultScope": "openid profile email User.Read",
+        "useJwksUrl": "true",
+        "tenant": "common",
+        "hideOnLoginPage": "false",
+        "acceptsPromptNoneForwardFromClient": "false",
+        "disableUserInfo": "false"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "google-email",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "email",
+        "user.attribute": "email",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "google-given-name",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "given_name",
+        "user.attribute": "firstName",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "google-family-name",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "family_name",
+        "user.attribute": "lastName",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "google-name",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "name",
+        "user.attribute": "name",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "microsoft-email",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "email",
+        "user.attribute": "email",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "microsoft-given-name",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "given_name",
+        "user.attribute": "firstName",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "microsoft-family-name",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "family_name",
+        "user.attribute": "lastName",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "microsoft-name",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "name",
+        "user.attribute": "name",
+        "syncMode": "INHERIT"
+      }
+    }
+  ]
+}
+

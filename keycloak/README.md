@@ -24,24 +24,44 @@ keycloak/
               └── messages/
 ```
 
+## Configuração Inicial
+
+### 1. Criar Personal Access Token (PAT) no Docker Hub
+
+O Docker Hub requer um PAT para autenticação. Veja instruções detalhadas em [DOCKERHUB_SETUP.md](DOCKERHUB_SETUP.md).
+
+Resumo rápido:
+1. Acesse: https://hub.docker.com/settings/security
+2. Crie um novo Access Token
+3. Copie o token (não será mostrado novamente!)
+
+### 2. Login no Docker Hub
+
+```powershell
+docker login -u SEU_USERNAME
+# Use o PAT quando solicitado (não a senha)
+```
+
 ## Build Local (Windows)
 
-### 1. Construir a imagem
+### 1. Construir a imagem e fazer push
 
 ```powershell
 cd keycloak
-.\build.ps1 [version]
+.\build.ps1 [version] [dockerhub-username]
 ```
 
 Exemplo:
 ```powershell
-.\build.ps1 1.0
+.\build.ps1 1.0 caiohb77
 ```
 
 Isso irá:
-- Construir a imagem Docker `keycloak-custom:1.0`
+- Construir a imagem Docker localmente
+- Taggar para Docker Hub: `caiohb77/keycloak-custom:1.0`
 - Opcionalmente testar localmente
-- Opcionalmente exportar para `.tar`
+- Opcionalmente fazer push para Docker Hub
+- Opcionalmente exportar para `.tar` (se não usar Docker Hub)
 
 ### 2. Testar localmente (opcional)
 
@@ -58,30 +78,28 @@ Acesse: http://localhost:8080
 
 ## Deploy para Lightsail
 
-### 1. Build e exportação
+### 1. Build e push para Docker Hub
 
 ```powershell
-.\build.ps1 1.0
-# Quando perguntado, escolha exportar para .tar
+.\build.ps1 1.0 caiohb77
+# Quando perguntado, escolha fazer push para Docker Hub (S)
 ```
 
-### 2. Enviar para Lightsail
+### 2. Verificar no Docker Hub
 
-```powershell
-.\deploy-to-lightsail.ps1 1.0 [IP_DO_LIGHTSAIL] ubuntu
-```
+Acesse: https://hub.docker.com/r/caiohb77/keycloak-custom
 
-Ou manualmente:
-
-```powershell
-scp .\keycloak-custom_1.0.tar ubuntu@SEU_IP:/home/ubuntu/
-```
+Certifique-se de que a imagem foi publicada.
 
 ### 3. No Lightsail (SSH)
 
 ```bash
-# Importar imagem
-docker load -i /home/ubuntu/keycloak-custom_1.0.tar
+# Login no Docker Hub
+docker login -u caiohb77
+# (use o PAT quando solicitado)
+
+# Baixar imagem do Docker Hub
+docker pull caiohb77/keycloak-custom:1.0
 
 # Verificar
 docker images | grep keycloak-custom
@@ -92,6 +110,7 @@ cd ~/keycloak
 
 # Copiar docker-compose.production.yml
 # (use scp ou crie manualmente)
+# IMPORTANTE: Atualize o username no docker-compose.yml
 
 # Subir containers
 docker compose -f docker-compose.production.yml up -d
@@ -99,6 +118,14 @@ docker compose -f docker-compose.production.yml up -d
 # Ver logs
 docker logs -f keycloak --tail=200
 ```
+
+### 4. Script automatizado (opcional)
+
+```powershell
+.\deploy-to-lightsail.ps1 caiohb77 1.0 [IP_DO_LIGHTSAIL] ubuntu
+```
+
+Este script fornece instruções passo a passo.
 
 ### 4. Acessar e configurar
 
@@ -136,6 +163,15 @@ KC_HOSTNAME_STRICT_HTTPS: "true"
 KC_HTTP_ENABLED: "false"
 KC_HTTPS_PORT: "8443"
 KC_PROXY: "edge"
+```
+
+### Atualizar imagem do Docker Hub
+
+Edite `docker-compose.production.yml` e atualize o username:
+
+```yaml
+keycloak:
+  image: SEU_USERNAME/keycloak-custom:1.0  # Substitua SEU_USERNAME
 ```
 
 ## Troubleshooting
