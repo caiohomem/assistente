@@ -21,7 +21,7 @@
     "starttls": true,
     "auth": true,
     "user": "75199ae1169bf79bf871b1f5383ec950",
-    "password": "2a13d4d6a63cc73ca15f50ad8b3786d2"
+    "password": "${SMTP_PASSWORD}"
   },
   "clients": [
     {
@@ -132,7 +132,7 @@
       "firstBrokerLoginFlowAlias": "first broker login",
       "config": {
         "clientId": "533937474214-ar1c0gr7onm0lvmvrj1cpid1jh718atu.apps.googleusercontent.com",
-        "clientSecret": "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",
+        "clientSecret": "${GOOGLE_CLIENT_SECRET}",
         "defaultScope": "openid profile email",
         "useJwksUrl": "true"
       }
@@ -147,7 +147,7 @@
       "firstBrokerLoginFlowAlias": "first broker login",
       "config": {
         "clientId": "6e270dc7-1159-42c0-a4e8-dbc5a029ceb2",
-        "clientSecret": "ygZ8Q~5MqVC6NIcfhyF7joSX_oa64iWW8tgHWcPS",
+        "clientSecret": "${MICROSOFT_CLIENT_SECRET}",
         "defaultScope": "openid profile email User.Read",
         "useJwksUrl": "true",
         "tenant": "common",

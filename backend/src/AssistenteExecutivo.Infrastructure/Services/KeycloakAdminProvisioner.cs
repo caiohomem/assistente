@@ -210,8 +210,8 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
                 firstBrokerLoginFlowAlias = "first broker login",
                 config = new Dictionary<string, string>
                 {
-                    { "clientId", "6e270dc7-1159-42c0-a4e8-dbc5a029ceb2" },
-                    { "clientSecret", "ygZ8Q~5MqVC6NIcfhyF7joSX_oa64iWW8tgHWcPS" },
+                    { "clientId", _configuration["Keycloak:Microsoft:ClientId"] ?? throw new InvalidOperationException("Keycloak:Microsoft:ClientId não configurado") },
+                    { "clientSecret", _configuration["Keycloak:Microsoft:ClientSecret"] ?? throw new InvalidOperationException("Keycloak:Microsoft:ClientSecret não configurado") },
                     { "defaultScope", "openid profile email User.Read" },
                     { "useJwksUrl", "true" },
                     { "tenant", "common" },
