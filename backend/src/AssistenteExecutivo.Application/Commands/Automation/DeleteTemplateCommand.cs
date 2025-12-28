@@ -8,3 +8,7 @@ public class DeleteTemplateCommand : IRequest
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

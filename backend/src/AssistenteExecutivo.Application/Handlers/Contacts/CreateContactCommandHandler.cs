@@ -34,7 +34,7 @@ public class CreateContactCommandHandler : IRequestHandler<CreateContactCommand,
 
         var contactId = Guid.NewGuid();
         var name = PersonName.Create(request.FirstName, request.LastName);
-        
+
         var contact = Contact.Create(contactId, request.OwnerUserId, name, _clock);
 
         if (!string.IsNullOrWhiteSpace(request.JobTitle))

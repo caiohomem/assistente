@@ -1,6 +1,4 @@
 using AssistenteExecutivo.Domain.Exceptions;
-using System;
-using System.Linq;
 
 namespace AssistenteExecutivo.Domain.ValueObjects;
 
@@ -20,8 +18,8 @@ public sealed class PersonName : IEquatable<PersonName>
 
         FirstName = firstName.Trim();
         LastName = lastName?.Trim();
-        FullName = string.IsNullOrWhiteSpace(LastName) 
-            ? FirstName 
+        FullName = string.IsNullOrWhiteSpace(LastName)
+            ? FirstName
             : $"{FirstName} {LastName}";
     }
 

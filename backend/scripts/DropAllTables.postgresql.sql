@@ -31,3 +31,7 @@ BEGIN
     RAISE NOTICE 'Todas as tabelas e sequences foram removidas com sucesso!';
 END $$;
 
+
+
+
+

@@ -32,7 +32,7 @@ public sealed class AgentConfigurationController : ControllerBase
     {
         var query = new GetAgentConfigurationQuery();
         var configuration = await _mediator.Send(query, cancellationToken);
-        
+
         if (configuration == null)
         {
             return NotFound(new { message = "Configuração do agente não encontrada" });
@@ -69,12 +69,12 @@ public sealed class AgentConfigurationController : ControllerBase
         };
 
         var result = await _mediator.Send(command, cancellationToken);
-        
+
         if (wasCreated)
         {
             return CreatedAtAction(nameof(GetCurrent), result);
         }
-        
+
         return Ok(result);
     }
 }

@@ -12,7 +12,7 @@ public interface IContactRepository
     Task UpdateAsync(Contact contact, CancellationToken cancellationToken = default);
     Task DeleteAsync(Contact contact, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid contactId, Guid ownerUserId, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Verifica se um contato existe (sem filtro de owner), útil para diagnóstico.
     /// Retorna informações sobre o status do contato.

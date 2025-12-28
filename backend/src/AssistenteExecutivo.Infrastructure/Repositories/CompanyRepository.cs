@@ -2,7 +2,6 @@ using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace AssistenteExecutivo.Infrastructure.Repositories;
 
@@ -45,7 +44,7 @@ public class CompanyRepository : ICompanyRepository
         // Para PostgreSQL, usar operadores JSON
         // Vamos usar uma abordagem que funciona com ambos: buscar todas e filtrar em memória
         // (Para produção, considere usar uma função específica do banco de dados)
-        
+
         var companies = await _context.Companies
             .ToListAsync(cancellationToken);
 
@@ -69,6 +68,10 @@ public class CompanyRepository : ICompanyRepository
             .AnyAsync(c => c.CompanyId == companyId, cancellationToken);
     }
 }
+
+
+
+
 
 
 

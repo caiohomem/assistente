@@ -33,15 +33,15 @@ public class OcrProviderExample : IOcrProvider
         ILogger<OcrProviderExample> logger)
     {
         _logger = logger;
-        _apiEndpoint = configuration["Ocr:Azure:Endpoint"] 
+        _apiEndpoint = configuration["Ocr:Azure:Endpoint"]
             ?? throw new InvalidOperationException("Ocr:Azure:Endpoint não configurado");
-        _apiKey = configuration["Ocr:Azure:ApiKey"] 
+        _apiKey = configuration["Ocr:Azure:ApiKey"]
             ?? throw new InvalidOperationException("Ocr:Azure:ApiKey não configurado");
     }
 
     public async Task<OcrExtract> ExtractFieldsAsync(
-        byte[] imageBytes, 
-        string mimeType, 
+        byte[] imageBytes,
+        string mimeType,
         CancellationToken cancellationToken = default)
     {
         try

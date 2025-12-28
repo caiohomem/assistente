@@ -8,3 +8,7 @@ public class GetTemplateByIdQuery : IRequest<TemplateDto?>
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

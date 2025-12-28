@@ -9,3 +9,7 @@ public record TemplateCreated(
     TemplateType Type,
     DateTime OccurredAt) : IDomainEvent;
 
+
+
+
+

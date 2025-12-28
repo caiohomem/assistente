@@ -10,3 +10,7 @@ public record DraftCreated(
     DocumentType DocumentType,
     DateTime OccurredAt) : IDomainEvent;
 
+
+
+
+

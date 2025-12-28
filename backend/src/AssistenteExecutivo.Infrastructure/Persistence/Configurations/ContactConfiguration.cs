@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -66,11 +65,11 @@ public class ContactConfiguration : IEntityTypeConfiguration<Contact>
             address.Property(a => a.Country)
                 .HasColumnName("AddressCountry")
                 .HasMaxLength(100);
-            
+
             // Marcar como sempre criado para evitar problemas com optional dependent
             address.ToTable("Contacts");
         });
-        
+
         // Mark Address navigation as required to always create instance
         builder.Navigation(c => c.Address).IsRequired();
 

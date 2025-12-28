@@ -383,6 +383,28 @@ export default function DashboardPage() {
                 </svg>
               </div>
             </Link>
+
+            {/* Templates de Email */}
+            <Link
+              href="/email-templates"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
+            >
+              <div className="flex items-center mb-4">
+                <div className="text-4xl mr-4">📧</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  Templates de Email
+                </h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Gerencie templates de email do sistema (boas-vindas, recuperação de senha, etc.)
+              </p>
+              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                {tCommon('access')}
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
           </div>
 
           {/* Recent Activities */}

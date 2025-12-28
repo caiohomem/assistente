@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Application.Queries.Credits;
 using MediatR;
 
 namespace AssistenteExecutivo.Application.Queries.Credits;

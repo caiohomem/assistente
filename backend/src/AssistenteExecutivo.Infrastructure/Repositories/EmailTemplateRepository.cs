@@ -1,3 +1,4 @@
+using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Notifications;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,29 @@ public class EmailTemplateRepository : IEmailTemplateRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<EmailTemplate>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.EmailTemplates
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<EmailTemplate>> GetByTypeFilterAsync(EmailTemplateType? templateType, bool? activeOnly, CancellationToken cancellationToken = default)
+    {
+        var query = _context.EmailTemplates.AsQueryable();
+
+        if (templateType.HasValue)
+        {
+            query = query.Where(t => t.TemplateType == templateType.Value);
+        }
+
+        if (activeOnly == true)
+        {
+            query = query.Where(t => t.IsActive);
+        }
+
+        return await query.ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(EmailTemplate template, CancellationToken cancellationToken = default)
     {
         await _context.EmailTemplates.AddAsync(template, cancellationToken);
@@ -39,6 +63,12 @@ public class EmailTemplateRepository : IEmailTemplateRepository
     public async Task UpdateAsync(EmailTemplate template, CancellationToken cancellationToken = default)
     {
         _context.EmailTemplates.Update(template);
+        await Task.CompletedTask;
+    }
+
+    public async Task DeleteAsync(EmailTemplate template, CancellationToken cancellationToken = default)
+    {
+        _context.EmailTemplates.Remove(template);
         await Task.CompletedTask;
     }
 }

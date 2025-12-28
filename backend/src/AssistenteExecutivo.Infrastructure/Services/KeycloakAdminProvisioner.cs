@@ -1,15 +1,14 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
+using AssistenteExecutivo.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using AssistenteExecutivo.Infrastructure.Persistence;
+using System.Text.Json;
 
 namespace AssistenteExecutivo.Infrastructure.Services;
 
@@ -124,7 +123,7 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
 
                 using var httpClient = new System.Net.Http.HttpClient();
                 var checkResponse = await httpClient.SendAsync(checkRequest, cancellationToken);
-                
+
                 if (!checkResponse.IsSuccessStatusCode)
                 {
                     // Role não existe, criar
@@ -163,7 +162,7 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
             {
                 // Verificar se usuário já existe
                 var existingUserId = await _keycloakService.GetUserIdByEmailAsync(realmId, user.Email, cancellationToken);
-                
+
                 if (string.IsNullOrEmpty(existingUserId))
                 {
                     // Criar usuário
@@ -177,7 +176,7 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
 
                     // Atribuir role
                     await _keycloakService.AssignRoleAsync(realmId, userId, user.Role, cancellationToken);
-                    
+
                     _logger.LogInformation("Usuário dev/teste criado: {Email} (role: {Role})", user.Email, user.Role);
 
                     // Garantir perfil local (para fluxo de forgot/reset-password via EmailService)
@@ -265,7 +264,7 @@ public class KeycloakAdminProvisioner : IKeycloakAdminProvisioner, IHostedServic
 
     private async Task<string> GetAdminTokenAsync(CancellationToken cancellationToken)
     {
-        var keycloakBaseUrl = _configuration["Keycloak:BaseUrl"] 
+        var keycloakBaseUrl = _configuration["Keycloak:BaseUrl"]
             ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
         var adminRealm = _configuration["Keycloak:AdminRealm"] ?? "master";
         var adminClientId = _configuration["Keycloak:AdminClientId"] ?? "admin-cli";

@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Domain.DomainEvents;
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Exceptions;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;

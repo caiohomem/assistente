@@ -1,12 +1,12 @@
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace AssistenteExecutivo.Infrastructure.Services.OpenAI;
 
@@ -32,22 +32,22 @@ public sealed class OpenAIOcrProvider : IOcrProvider
         _logger = logger;
         _configurationRepository = configurationRepository;
         _httpClient = httpClientFactory.CreateClient();
-        
+
         var baseUrl = configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
         _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
-        
-        _apiKey = configuration["OpenAI:ApiKey"] 
+
+        _apiKey = configuration["OpenAI:ApiKey"]
             ?? throw new InvalidOperationException("OpenAI:ApiKey não configurado");
-        
+
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-        
+
         var organizationId = configuration["OpenAI:OrganizationId"];
         if (!string.IsNullOrWhiteSpace(organizationId))
         {
             _httpClient.DefaultRequestHeaders.Add("OpenAI-Organization", organizationId);
         }
-        
+
         _model = configuration["OpenAI:Ocr:Model"] ?? "gpt-4o-mini";
         var temperatureValue = double.Parse(configuration["OpenAI:Ocr:Temperature"] ?? "0.0");
         // OpenAI API requires temperature to be between 0 and 2
@@ -81,7 +81,7 @@ public sealed class OpenAIOcrProvider : IOcrProvider
 
             var prompt = await BuildPromptAsync(cancellationToken);
             var base64Image = Convert.ToBase64String(imageBytes);
-            
+
             var requestBody = new
             {
                 model = _model,
@@ -114,17 +114,17 @@ public sealed class OpenAIOcrProvider : IOcrProvider
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
             var jsonDoc = JsonDocument.Parse(responseJson);
-            
+
             var responseText = jsonDoc.RootElement
                 .GetProperty("choices")[0]
                 .GetProperty("message")
                 .GetProperty("content")
                 .GetString() ?? string.Empty;
-            
+
             _logger.LogDebug("Resposta do OpenAI OCR: {Response}", responseText);
 
             var extract = ParseResponse(responseText, imageBytes.Length);
-            
+
             _logger.LogInformation(
                 "OCR concluído: Name={Name}, Email={Email}, Phone={Phone}, Company={Company}, JobTitle={JobTitle}",
                 extract.Name ?? "null",
@@ -146,7 +146,7 @@ public sealed class OpenAIOcrProvider : IOcrProvider
     {
         // Tentar obter o prompt de OCR da base de dados
         var configuration = await _configurationRepository.GetCurrentAsync(cancellationToken);
-        
+
         string ocrPrompt;
         if (configuration != null && !string.IsNullOrWhiteSpace(configuration.OcrPrompt))
         {

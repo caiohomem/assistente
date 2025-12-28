@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Application.Commands.Contacts;
@@ -8,6 +7,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace AssistenteExecutivo.Api.Controllers;
 

@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -54,7 +53,7 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
                 .HasColumnName("LimitsStorageGB")
                 .HasColumnType("decimal(18,2)");
         });
-        
+
         // Mark Limits navigation as required to always create instance
         builder.Navigation(p => p.Limits).IsRequired();
 
@@ -64,8 +63,8 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
             .HasColumnName("Features")
             .HasConversion(
                 v => v == null || v.Count == 0 ? string.Empty : string.Join(";", v),
-                v => string.IsNullOrWhiteSpace(v) 
-                    ? new List<string>() 
+                v => string.IsNullOrWhiteSpace(v)
+                    ? new List<string>()
                     : v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList(),
                 new ValueComparer<List<string>>(
                     (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),

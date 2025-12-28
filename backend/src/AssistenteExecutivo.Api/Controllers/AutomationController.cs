@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Application.Commands.Automation;
@@ -8,6 +7,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace AssistenteExecutivo.Api.Controllers;
 
@@ -626,14 +626,14 @@ public class CreateReminderRequest
 {
     [Required]
     public Guid ContactId { get; set; }
-    
+
     [Required]
     [MaxLength(500)]
     public string Reason { get; set; } = string.Empty;
-    
+
     [MaxLength(2000)]
     public string? SuggestedMessage { get; set; }
-    
+
     [Required]
     public DateTime ScheduledFor { get; set; }
 }
@@ -642,7 +642,7 @@ public class UpdateReminderStatusRequest
 {
     [Required]
     public ReminderStatus NewStatus { get; set; }
-    
+
     public DateTime? NewScheduledFor { get; set; }
 }
 
@@ -650,29 +650,29 @@ public class CreateDraftRequest
 {
     [Required]
     public DocumentType DocumentType { get; set; }
-    
+
     [Required]
     public string Content { get; set; } = string.Empty;
-    
+
     public Guid? ContactId { get; set; }
-    
+
     public Guid? CompanyId { get; set; }
-    
+
     public Guid? TemplateId { get; set; }
-    
+
     public Guid? LetterheadId { get; set; }
 }
 
 public class UpdateDraftRequest
 {
     public string? Content { get; set; }
-    
+
     public Guid? ContactId { get; set; }
-    
+
     public Guid? CompanyId { get; set; }
-    
+
     public Guid? TemplateId { get; set; }
-    
+
     public Guid? LetterheadId { get; set; }
 }
 
@@ -681,13 +681,13 @@ public class CreateTemplateRequest
     [Required]
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
-    
+
     [Required]
     public TemplateType Type { get; set; }
-    
+
     [Required]
     public string Body { get; set; } = string.Empty;
-    
+
     public string? PlaceholdersSchema { get; set; }
 }
 
@@ -695,11 +695,11 @@ public class UpdateTemplateRequest
 {
     [MaxLength(200)]
     public string? Name { get; set; }
-    
+
     public string? Body { get; set; }
-    
+
     public string? PlaceholdersSchema { get; set; }
-    
+
     public bool? Active { get; set; }
 }
 
@@ -708,7 +708,7 @@ public class CreateLetterheadRequest
     [Required]
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
-    
+
     [Required]
     public string DesignData { get; set; } = string.Empty;
 }
@@ -717,9 +717,9 @@ public class UpdateLetterheadRequest
 {
     [MaxLength(200)]
     public string? Name { get; set; }
-    
+
     public string? DesignData { get; set; }
-    
+
     public bool? IsActive { get; set; }
 }
 

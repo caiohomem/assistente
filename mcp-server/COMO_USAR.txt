@@ -1,0 +1,135 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                  COMO USAR O SERVIDOR MCP                                ║
+║                  Assistente Executivo                                    ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+📋 PASSO A PASSO SIMPLIFICADO
+═══════════════════════════════════════════════════════════════════════════
+
+1️⃣  INSTALAR E COMPILAR
+───────────────────────────────────────────────────────────────────────────
+   cd mcp-server
+   npm install
+   npm run build
+
+2️⃣  OBTER TOKEN
+───────────────────────────────────────────────────────────────────────────
+   Windows (PowerShell):
+   .\scripts\get-token.ps1 -Email "seu_email@exemplo.com" -Password "sua_senha" -Save
+
+   Linux/macOS:
+   node scripts/get-token.js seu_email@exemplo.com sua_senha --save
+
+   ⚠️  Copie o ACCESS_TOKEN que aparece na tela!
+
+3️⃣  CONFIGURAR NO CURSOR
+───────────────────────────────────────────────────────────────────────────
+   Abra o arquivo de configuração do Cursor:
+
+   Windows:
+   %APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json
+
+   macOS:
+   ~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+
+   Linux:
+   ~/.config/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+
+   Adicione esta configuração:
+
+   {
+     "mcpServers": {
+       "assistente-executivo": {
+         "command": "node",
+         "args": [
+           "CAMINHO_ABSOLUTO/mcp-server/dist/index.js"
+         ],
+         "env": {
+           "API_BASE_URL": "http://localhost:5239",
+           "ACCESS_TOKEN": "COLE_O_TOKEN_AQUI"
+         }
+       }
+     }
+   }
+
+   ⚠️  IMPORTANTE:
+   - Substitua CAMINHO_ABSOLUTO pelo caminho completo do seu projeto
+   - Substitua COLE_O_TOKEN_AQUI pelo token obtido no passo 2
+
+4️⃣  REINICIAR CURSOR
+───────────────────────────────────────────────────────────────────────────
+   Feche e abra o Cursor novamente
+
+5️⃣  TESTAR
+───────────────────────────────────────────────────────────────────────────
+   No Cursor, digite:
+   "Liste meus contatos"
+
+   Pronto! 🎉
+
+═══════════════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO COMPLETA
+═══════════════════════════════════════════════════════════════════════════
+
+   • QUICK_START.md    - Guia rápido (5 minutos)
+   • GUIA_USO.md       - Guia completo e detalhado
+   • EXEMPLOS.md       - Exemplos práticos de uso
+   • OBTER_TOKEN.md    - Detalhes sobre obtenção de token
+   • README.md         - Documentação geral
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔧 TROUBLESHOOTING RÁPIDO
+═══════════════════════════════════════════════════════════════════════════
+
+   ❌ "Ferramenta não encontrada"
+      → Verifique se compilou: npm run build
+      → Verifique o caminho (deve ser absoluto)
+      → Reinicie o Cursor
+
+   ❌ "Erro de autenticação" ou "401"
+      → Token expirou (renove com o script)
+      → Verifique se o token está correto
+
+   ❌ "Erro de conexão"
+      → Verifique se a API está rodando
+      → Verifique API_BASE_URL
+
+   ❌ Token expirado
+      → Execute o script novamente para obter novo token
+      → Atualize ACCESS_TOKEN na configuração
+
+═══════════════════════════════════════════════════════════════════════════
+
+💡 EXEMPLOS DE USO
+═══════════════════════════════════════════════════════════════════════════
+
+   • "Crie um contato chamado João Silva da empresa XYZ"
+   • "Liste meus contatos"
+   • "Crie um lembrete para entrar em contato com João amanhã"
+   • "Mostre meus lembretes pendentes"
+   • "Quantos créditos eu tenho?"
+   • "Adicione uma nota ao contato [id]"
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔄 RENOVAR TOKEN (quando expirar)
+═══════════════════════════════════════════════════════════════════════════
+
+   Tokens expiram em 1 hora. Para renovar:
+
+   Windows:
+   .\scripts\get-token.ps1 -Email "seu_email" -Password "sua_senha" -Save
+
+   Linux/macOS:
+   node scripts/get-token.js seu_email sua_senha --save
+
+   Depois atualize ACCESS_TOKEN na configuração do Cursor.
+
+═══════════════════════════════════════════════════════════════════════════
+
+
+
+
+

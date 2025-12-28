@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Application.Commands.Contacts;
-using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Queries.Contacts;
 using AssistenteExecutivo.Application.Tests.Helpers;
 using FluentAssertions;
@@ -81,6 +80,10 @@ public class GetContactByIdQueryHandlerTests : HandlerTestBase
         result.Should().BeNull();
     }
 }
+
+
+
+
 
 
 

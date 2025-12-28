@@ -8,3 +8,7 @@ public class ApproveDraftCommand : IRequest
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

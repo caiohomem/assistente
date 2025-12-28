@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.ValueObjects;
 
 namespace AssistenteExecutivo.Application.Interfaces;
 
@@ -14,5 +13,9 @@ public interface IUserProfileRepository
     Task AddAsync(UserProfile userProfile, CancellationToken cancellationToken = default);
     Task UpdateAsync(UserProfile userProfile, CancellationToken cancellationToken = default);
 }
+
+
+
+
 
 

@@ -52,12 +52,12 @@ public class DeleteUserProfileCommandHandler : IRequestHandler<DeleteUserProfile
         try
         {
             await _keycloakService.DeleteUserAsync(realm, keycloakUserId, cancellationToken);
-            _logger.LogInformation("Usuário {KeycloakUserId} deletado do Keycloak para UserProfile {UserId}", 
+            _logger.LogInformation("Usuário {KeycloakUserId} deletado do Keycloak para UserProfile {UserId}",
                 keycloakUserId, request.UserId);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Erro ao deletar usuário {KeycloakUserId} do Keycloak. Continuando com exclusão do perfil.", 
+            _logger.LogWarning(ex, "Erro ao deletar usuário {KeycloakUserId} do Keycloak. Continuando com exclusão do perfil.",
                 keycloakUserId);
             // Continuar mesmo se falhar - perfil será deletado do banco
         }

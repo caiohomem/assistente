@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Application.Commands.Capture;
-using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Mappings;
 using AssistenteExecutivo.Domain.Entities;
@@ -9,7 +8,6 @@ using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace AssistenteExecutivo.Application.Handlers.Capture;
 
@@ -143,13 +141,13 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         {
             throw new InvalidOperationException("OpenAI LLM retornou summary vazio. Verifique a resposta da API.");
         }
-        
+
         var summary = llmResult.Summary;
 
         // 6. Generate TTS response audio (if enabled and provider available)
         Guid? responseMediaId = null;
         var ttsEnabledValue = _configuration["OpenAI:TextToSpeech:Enabled"];
-        var ttsEnabled = !string.IsNullOrWhiteSpace(ttsEnabledValue) && 
+        var ttsEnabled = !string.IsNullOrWhiteSpace(ttsEnabledValue) &&
                          bool.TryParse(ttsEnabledValue, out var enabled) && enabled;
         if (ttsEnabled && _textToSpeechProvider != null && !string.IsNullOrWhiteSpace(summary))
         {
@@ -157,16 +155,16 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
             {
                 var ttsVoice = _configuration["OpenAI:TextToSpeech:Voice"] ?? "nova";
                 var ttsFormat = _configuration["OpenAI:TextToSpeech:Format"] ?? "mp3";
-                
-                _logger.LogInformation("Gerando áudio de resposta via TTS. Summary length: {Length}, Voice: {Voice}", 
+
+                _logger.LogInformation("Gerando áudio de resposta via TTS. Summary length: {Length}, Voice: {Voice}",
                     summary.Length, ttsVoice);
-                
+
                 var audioBytes = await _textToSpeechProvider.SynthesizeAsync(
                     summary,
                     ttsVoice,
                     ttsFormat,
                     cancellationToken);
-                
+
                 if (audioBytes != null && audioBytes.Length > 0)
                 {
                     // Criar MediaAsset para o áudio gerado
@@ -185,8 +183,8 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
                     var responseMediaAsset = new MediaAsset(responseMediaId.Value, request.OwnerUserId, responseMediaRef, MediaKind.Audio, _clock);
                     responseMediaAsset.SetFileContent(audioBytes);
                     await _mediaAssetRepository.AddAsync(responseMediaAsset, cancellationToken);
-                    
-                    _logger.LogInformation("Áudio de resposta gerado e armazenado. MediaId: {MediaId}, Size: {Size} bytes", 
+
+                    _logger.LogInformation("Áudio de resposta gerado e armazenado. MediaId: {MediaId}, Size: {Size} bytes",
                         responseMediaId, audioBytes.Length);
                 }
             }
@@ -208,12 +206,12 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         {
             throw new InvalidOperationException("Transcrição vazia. Não é possível criar nota sem conteúdo.");
         }
-        
+
         var rawContent = transcript.Text;
 
         var noteId = _idGenerator.NewGuid();
         var note = Note.CreateAudioNote(noteId, request.ContactId, request.OwnerUserId, rawContent, _clock);
-        
+
         // Store structured data (summary and tasks) as JSON
         var structuredData = new
         {
@@ -228,12 +226,12 @@ public class ProcessAudioNoteCommandHandler : IRequestHandler<ProcessAudioNoteCo
         };
         var structuredDataJson = System.Text.Json.JsonSerializer.Serialize(structuredData);
         note.UpdateStructuredData(structuredDataJson, _clock);
-        
+
         await _noteRepository.AddAsync(note, cancellationToken);
 
         // 9. Consume credits
         wallet.Consume(creditAmount, consumeIdempotencyKey, $"Audio note processing completed for contact {request.ContactId}", _clock);
-        
+
         await _creditWalletRepository.UpdateAsync(wallet, cancellationToken);
 
         // 10. Save all changes to database

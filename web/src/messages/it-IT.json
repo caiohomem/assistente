@@ -332,6 +332,20 @@
       "terms": "Termini",
       "privacy": "Privacy"
     }
+  },
+  "login": {
+    "checkingAuth": "Verifica autenticazione...",
+    "reactivateTitle": "Vuoi riattivare l'utente?",
+    "reactivateDescription": "Il tuo utente è stato eliminato in precedenza. Vuoi riattivarlo e continuare alla dashboard?",
+    "reactivateButton": "Sì, riattiva",
+    "reactivating": "Riattivazione...",
+    "goBack": "No, torna indietro",
+    "errorTitle": "Impossibile accedere",
+    "errorLabel": "Errore:",
+    "tryAgain": "Riprova",
+    "back": "Indietro",
+    "reactivateError": "Errore durante la riattivazione dell'utente",
+    "reactivateErrorRetry": "Errore durante la riattivazione dell'utente. Riprova."
   }
 }
 

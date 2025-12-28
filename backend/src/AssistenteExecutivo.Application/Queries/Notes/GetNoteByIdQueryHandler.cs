@@ -30,7 +30,7 @@ public class GetNoteByIdQueryHandler : IRequestHandler<GetNoteByIdQuery, NoteDto
 
         // Validate that the contact belongs to the ownerUserId
         var contactExists = await _contactRepository.ExistsAsync(note.ContactId, request.OwnerUserId, cancellationToken);
-        
+
         if (!contactExists)
             return null;
 
@@ -53,6 +53,10 @@ public class GetNoteByIdQueryHandler : IRequestHandler<GetNoteByIdQuery, NoteDto
         };
     }
 }
+
+
+
+
 
 
 

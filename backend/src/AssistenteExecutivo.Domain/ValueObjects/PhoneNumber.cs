@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using AssistenteExecutivo.Domain.Exceptions;
+using System.Text.RegularExpressions;
 
 namespace AssistenteExecutivo.Domain.ValueObjects;
 
@@ -11,7 +11,7 @@ public sealed class PhoneNumber : IEquatable<PhoneNumber>
     private PhoneNumber(string number)
     {
         var cleanNumber = RemoveFormatting(number);
-        
+
         if (!Validate(cleanNumber))
             throw new DomainException("Domain:TelefoneInvalido", number);
 

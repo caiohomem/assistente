@@ -8,3 +8,7 @@ public class GetReminderByIdQuery : IRequest<ReminderDto?>
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

@@ -1,5 +1,3 @@
-using AssistenteExecutivo.Domain.DomainEvents;
-
 namespace AssistenteExecutivo.Domain.DomainEvents;
 
 public record PasswordResetRequested(

@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using AssistenteExecutivo.Domain.Exceptions;
+using System.Text.RegularExpressions;
 
 namespace AssistenteExecutivo.Domain.ValueObjects;
 
@@ -10,7 +10,7 @@ public sealed class EmailAddress : IEquatable<EmailAddress>
     private EmailAddress(string value)
     {
         var normalizedEmail = Normalize(value);
-        
+
         if (!Validate(normalizedEmail))
             throw new DomainException("Domain:EmailInvalido", value);
 

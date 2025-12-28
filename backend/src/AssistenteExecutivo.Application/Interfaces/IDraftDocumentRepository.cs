@@ -16,3 +16,7 @@ public interface IDraftDocumentRepository
     Task DeleteAsync(DraftDocument draft, CancellationToken cancellationToken = default);
 }
 
+
+
+
+

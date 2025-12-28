@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.Commands.Credits;
 using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;

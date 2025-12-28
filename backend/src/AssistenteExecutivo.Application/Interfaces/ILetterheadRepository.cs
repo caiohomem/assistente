@@ -12,3 +12,7 @@ public interface ILetterheadRepository
     Task DeleteAsync(Letterhead letterhead, CancellationToken cancellationToken = default);
 }
 
+
+
+
+

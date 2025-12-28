@@ -8,3 +8,7 @@ public class DeleteReminderCommand : IRequest
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

@@ -307,6 +307,20 @@
     "contactDeleted": "Contato excluído com sucesso",
     "errorDeleting": "Erro ao excluir contato",
     "deleting": "Excluindo..."
+  },
+  "login": {
+    "checkingAuth": "Verificando autenticação...",
+    "reactivateTitle": "Deseja reativar o usuário?",
+    "reactivateDescription": "Seu usuário foi deletado anteriormente. Deseja reativá-lo e continuar para o dashboard?",
+    "reactivateButton": "Sim, reativar",
+    "reactivating": "Reativando...",
+    "goBack": "Não, voltar",
+    "errorTitle": "Não foi possível entrar",
+    "errorLabel": "Erro:",
+    "tryAgain": "Tentar novamente",
+    "back": "Voltar",
+    "reactivateError": "Erro ao reativar usuário",
+    "reactivateErrorRetry": "Erro ao reativar usuário. Tente novamente."
   }
 }
 

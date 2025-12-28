@@ -12,3 +12,7 @@ public class UpdateTemplateCommand : IRequest
     public bool? Active { get; set; }
 }
 
+
+
+
+

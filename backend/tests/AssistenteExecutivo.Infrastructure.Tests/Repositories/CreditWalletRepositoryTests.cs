@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using FluentAssertions;
@@ -23,7 +22,7 @@ public class CreditWalletRepositoryTests : RepositoryTestBase
         // Arrange
         var ownerUserId = Guid.NewGuid();
         var wallet = new CreditWallet(ownerUserId, Clock);
-        
+
         await Context.CreditWallets.AddAsync(wallet);
         await SaveChangesAsync();
 
@@ -56,7 +55,7 @@ public class CreditWalletRepositoryTests : RepositoryTestBase
         var ownerUserId = Guid.NewGuid();
         var wallet = new CreditWallet(ownerUserId, Clock);
         wallet.Grant(CreditAmount.Create(100.0m), "Initial grant", Clock);
-        
+
         await Context.CreditWallets.AddAsync(wallet);
         await SaveChangesAsync();
 
@@ -105,7 +104,7 @@ public class CreditWalletRepositoryTests : RepositoryTestBase
         var act = async () => await _repository.UpdateAsync(trackedWallet);
         await act.Should().NotThrowAsync();
     }
-    
+
     [Fact]
     public async Task UpdateAsync_NewWalletFromGetOrCreate_ShouldRemainAddedAndSave()
     {
@@ -137,7 +136,7 @@ public class CreditWalletRepositoryTests : RepositoryTestBase
         var ownerUserId = Guid.NewGuid();
         var wallet = new CreditWallet(ownerUserId, Clock);
         wallet.Grant(CreditAmount.Create(100.0m), "Initial grant", Clock);
-        
+
         await Context.CreditWallets.AddAsync(wallet);
         await SaveChangesAsync();
 
@@ -165,7 +164,7 @@ public class CreditWalletRepositoryTests : RepositoryTestBase
         result.Should().NotBeNull();
         result.OwnerUserId.Should().Be(ownerUserId);
         result.Transactions.Should().BeEmpty();
-        
+
         var dbResult = await Context.CreditWallets.FindAsync(ownerUserId);
         dbResult.Should().NotBeNull();
     }

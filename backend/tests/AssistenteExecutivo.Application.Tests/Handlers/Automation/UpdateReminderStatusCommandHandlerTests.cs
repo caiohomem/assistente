@@ -15,7 +15,7 @@ public class UpdateReminderStatusCommandHandlerTests : HandlerTestBase
     {
         // Arrange
         var ownerUserId = Guid.NewGuid();
-        
+
         var contactCommand = new CreateContactCommand
         {
             OwnerUserId = ownerUserId,
@@ -59,7 +59,7 @@ public class UpdateReminderStatusCommandHandlerTests : HandlerTestBase
     {
         // Arrange
         var ownerUserId = Guid.NewGuid();
-        
+
         var contactCommand = new CreateContactCommand
         {
             OwnerUserId = ownerUserId,
@@ -103,7 +103,7 @@ public class UpdateReminderStatusCommandHandlerTests : HandlerTestBase
     {
         // Arrange
         var ownerUserId = Guid.NewGuid();
-        
+
         var contactCommand = new CreateContactCommand
         {
             OwnerUserId = ownerUserId,
@@ -168,7 +168,7 @@ public class UpdateReminderStatusCommandHandlerTests : HandlerTestBase
     {
         // Arrange
         var ownerUserId = Guid.NewGuid();
-        
+
         var contactCommand = new CreateContactCommand
         {
             OwnerUserId = ownerUserId,

@@ -285,6 +285,20 @@
       "terms": "Términos",
       "privacy": "Privacidad"
     }
+  },
+  "login": {
+    "checkingAuth": "Verificando autenticación...",
+    "reactivateTitle": "¿Desea reactivar el usuario?",
+    "reactivateDescription": "Su usuario fue eliminado anteriormente. ¿Desea reactivarlo y continuar al panel?",
+    "reactivateButton": "Sí, reactivar",
+    "reactivating": "Reactivando...",
+    "goBack": "No, volver",
+    "errorTitle": "No se pudo iniciar sesión",
+    "errorLabel": "Error:",
+    "tryAgain": "Intentar de nuevo",
+    "back": "Volver",
+    "reactivateError": "Error al reactivar usuario",
+    "reactivateErrorRetry": "Error al reactivar usuario. Por favor, intente de nuevo."
   }
 }
 

@@ -1,11 +1,10 @@
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using AssistenteExecutivo.Application.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AssistenteExecutivo.Infrastructure.Services;
 
@@ -40,7 +39,7 @@ public class KeycloakService : IKeycloakService
         _logger = logger;
         _memoryCache = memoryCache;
         _tokenSemaphore = new SemaphoreSlim(1, 1);
-        _keycloakBaseUrl = _configuration["Keycloak:BaseUrl"] 
+        _keycloakBaseUrl = _configuration["Keycloak:BaseUrl"]
             ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
         _adminRealm = _configuration["Keycloak:AdminRealm"] ?? "master";
         _adminClientId = _configuration["Keycloak:AdminClientId"] ?? "admin-cli";
@@ -60,7 +59,7 @@ public class KeycloakService : IKeycloakService
             // Verificar se o realm já existe
             var checkRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
             checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var checkResponse = await _httpClient.SendAsync(checkRequest, cancellationToken);
             if (checkResponse.IsSuccessStatusCode)
             {
@@ -83,11 +82,11 @@ public class KeycloakService : IKeycloakService
                 request.Content = JsonContent.Create(realmRequest);
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
-                
+
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogError("Erro ao criar realm {RealmId}. Status: {Status}, Response: {Response}", 
+                    _logger.LogError("Erro ao criar realm {RealmId}. Status: {Status}, Response: {Response}",
                         realmId, response.StatusCode, errorContent);
                     response.EnsureSuccessStatusCode();
                 }
@@ -168,11 +167,11 @@ public class KeycloakService : IKeycloakService
                     themeName);
                 return;
             }
-            
+
             // Get current realm configuration
             var getRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
             getRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var getResponse = await _httpClient.SendAsync(getRequest, cancellationToken);
             if (!getResponse.IsSuccessStatusCode)
             {
@@ -183,7 +182,7 @@ public class KeycloakService : IKeycloakService
             // Ler o JSON como string primeiro para poder reutilizar
             var realmJson = await getResponse.Content.ReadAsStringAsync(cancellationToken);
             var realmConfig = JsonSerializer.Deserialize<JsonElement>(realmJson);
-            
+
             // Frontend URL do realm:
             // - Em DEV (Keycloak local), manter vazio para não forçar redirects para o hostname externo.
             // - Atrás de proxy HTTPS, o Keycloak consegue gerar URLs https corretamente desde que X-Forwarded-* esteja ok.
@@ -199,10 +198,10 @@ public class KeycloakService : IKeycloakService
             }
 
             // Verificar se o frontendUrl já está correto
-            var currentFrontendUrl = realmConfig.TryGetProperty("frontendUrl", out var frontendUrlProp) 
-                ? frontendUrlProp.GetString() 
+            var currentFrontendUrl = realmConfig.TryGetProperty("frontendUrl", out var frontendUrlProp)
+                ? frontendUrlProp.GetString()
                 : null;
-            
+
             if (currentFrontendUrl == frontendUrl)
             {
                 _logger.LogInformation("Realm {RealmId} já possui frontendUrl correto: {FrontendUrl}", realmId, frontendUrl);
@@ -212,9 +211,9 @@ public class KeycloakService : IKeycloakService
             // Update realm with frontendUrl
             // Usar o realmJson já lido acima para criar payload de atualização
             var jsonOptions = new JsonSerializerOptions { WriteIndented = false };
-            var realmDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(realmJson, jsonOptions) 
+            var realmDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(realmJson, jsonOptions)
                 ?? new Dictionary<string, JsonElement>();
-            
+
             // Criar payload de atualização com todas as propriedades do realm
             var updatePayload = new Dictionary<string, object>();
             foreach (var kvp in realmDict)
@@ -223,7 +222,7 @@ public class KeycloakService : IKeycloakService
                 {
                     continue; // Não incluir id no update
                 }
-                
+
                 // Converter JsonElement para object
                 object? value = kvp.Value.ValueKind switch
                 {
@@ -234,13 +233,13 @@ public class KeycloakService : IKeycloakService
                     JsonValueKind.Null => null,
                     _ => kvp.Value
                 };
-                
+
                 if (value != null)
                 {
                     updatePayload[kvp.Key] = value;
                 }
             }
-            
+
             // Atualizar frontendUrl
             updatePayload["frontendUrl"] = frontendUrl;
 
@@ -256,7 +255,7 @@ public class KeycloakService : IKeycloakService
             else
             {
                 var errorContent = await updateResponse.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Erro ao atualizar frontendUrl do realm {RealmId}. Status: {Status}, Response: {Response}", 
+                _logger.LogWarning("Erro ao atualizar frontendUrl do realm {RealmId}. Status: {Status}, Response: {Response}",
                     realmId, updateResponse.StatusCode, errorContent);
             }
         }
@@ -379,12 +378,12 @@ public class KeycloakService : IKeycloakService
             request.Content = JsonContent.Create(userRequest);
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Erro ao criar usuário. Status: {Status}, Response: {Response}", response.StatusCode, errorContent);
-                
+
                 if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
                 {
                     var userId = await GetUserIdByEmailAsync(realmId, email, cancellationToken);
@@ -394,7 +393,7 @@ public class KeycloakService : IKeycloakService
                         return userId;
                     }
                 }
-                
+
                 response.EnsureSuccessStatusCode();
             }
 
@@ -404,10 +403,10 @@ public class KeycloakService : IKeycloakService
             {
                 var getUserRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/users?email={Uri.EscapeDataString(email)}");
                 getUserRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-                
+
                 var getUserResponse = await _httpClient.SendAsync(getUserRequest, cancellationToken);
                 getUserResponse.EnsureSuccessStatusCode();
-                
+
                 var users = await getUserResponse.Content.ReadFromJsonAsync<List<KeycloakUser>>(cancellationToken: cancellationToken);
                 var userId = users?.FirstOrDefault()?.Id;
 
@@ -443,10 +442,10 @@ public class KeycloakService : IKeycloakService
             if (!getRoleResponse.IsSuccessStatusCode)
             {
                 await CreateRoleAsync(realmId, roleName, cancellationToken);
-                
+
                 var getRoleRequestRetry = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/roles/{roleName}");
                 getRoleRequestRetry.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-                
+
                 getRoleResponse = await _httpClient.SendAsync(getRoleRequestRetry, cancellationToken);
             }
             getRoleResponse.EnsureSuccessStatusCode();
@@ -495,7 +494,7 @@ public class KeycloakService : IKeycloakService
             };
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -552,7 +551,7 @@ public class KeycloakService : IKeycloakService
             }
 
             var response = await SendAsync(tokenBaseUrl);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -574,7 +573,7 @@ public class KeycloakService : IKeycloakService
                             "Falha no fallback de renovação de token. Status: {Status}, Response: {Response}",
                             response.StatusCode,
                             fallbackError);
-                        
+
                         // Lançar exceção com informações detalhadas para melhor tratamento no AuthController
                         var errorMessage = $"Refresh token failed with status {response.StatusCode}: {fallbackError}";
                         throw new HttpRequestException(errorMessage);
@@ -703,7 +702,7 @@ public class KeycloakService : IKeycloakService
         try
         {
             _logger.LogInformation("Trocando código de autorização por token. Realm: {RealmId}, RedirectUri: {RedirectUri}", realmId, redirectUri);
-            
+
             var tokenBaseUrl = ResolveKeycloakBaseUrlForRedirectUri(redirectUri);
             var tokenRequest = new Dictionary<string, string>
             {
@@ -719,7 +718,7 @@ public class KeycloakService : IKeycloakService
             };
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -766,14 +765,14 @@ public class KeycloakService : IKeycloakService
             if (string.IsNullOrWhiteSpace(userInfo.Email) && !string.IsNullOrWhiteSpace(userInfo.Sub))
             {
                 _logger.LogWarning("UserInfo retornado sem email. Tentando buscar diretamente do usuário no Keycloak. Sub={Sub}", userInfo.Sub);
-                
+
                 try
                 {
                     var userDetails = await GetUserByIdAsync(realmId, userInfo.Sub, cancellationToken);
                     if (userDetails != null && !string.IsNullOrWhiteSpace(userDetails.Email))
                     {
                         userInfo.Email = userDetails.Email;
-                        
+
                         if (string.IsNullOrWhiteSpace(userInfo.GivenName) && !string.IsNullOrWhiteSpace(userDetails.FirstName))
                             userInfo.GivenName = userDetails.FirstName;
                         if (string.IsNullOrWhiteSpace(userInfo.FamilyName) && !string.IsNullOrWhiteSpace(userDetails.LastName))
@@ -921,7 +920,7 @@ public class KeycloakService : IKeycloakService
                     response = await SendAsync(internalBaseUrl);
                 }
             }
-            
+
             if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 _logger.LogWarning("Refresh token já estava invalidado no realm {RealmId}", realmId);
@@ -945,14 +944,14 @@ public class KeycloakService : IKeycloakService
 
             var checkRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/identity-provider/instances");
             checkRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var checkResponse = await _httpClient.SendAsync(checkRequest, cancellationToken);
             if (checkResponse.IsSuccessStatusCode)
             {
                 var existingProviders = await checkResponse.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>(cancellationToken: cancellationToken);
-                var googleProvider = existingProviders?.FirstOrDefault(p => 
+                var googleProvider = existingProviders?.FirstOrDefault(p =>
                     p.ContainsKey("alias") && p["alias"]?.ToString() == "google");
-                
+
                 if (googleProvider != null)
                 {
                     // Sempre atualizar o provider para garantir que o redirect URI seja recalculado
@@ -989,7 +988,7 @@ public class KeycloakService : IKeycloakService
                     else
                     {
                         var errorContent = await updateResponse.Content.ReadAsStringAsync(cancellationToken);
-                        _logger.LogWarning("Erro ao atualizar Google Identity Provider. Status: {Status}, Response: {Response}", 
+                        _logger.LogWarning("Erro ao atualizar Google Identity Provider. Status: {Status}, Response: {Response}",
                             updateResponse.StatusCode, errorContent);
                     }
                 }
@@ -1018,7 +1017,7 @@ public class KeycloakService : IKeycloakService
             request.Content = JsonContent.Create(idpRequest);
 
             var response = await _httpClient.SendAsync(request, cancellationToken);
-            
+
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
                 _logger.LogInformation("Google Identity Provider já existe no realm {RealmId}. Configurando mappers...", realmId);
@@ -1026,13 +1025,13 @@ public class KeycloakService : IKeycloakService
                 LogRedirectUriInfo(realmId);
                 return;
             }
-            
+
             response.EnsureSuccessStatusCode();
 
             _logger.LogInformation("Google Identity Provider configurado com sucesso no realm {RealmId}", realmId);
-            
+
             await ConfigureGoogleIdentityProviderMappersAsync(realmId, adminToken, cancellationToken);
-            
+
             LogRedirectUriInfo(realmId);
         }
         catch (Exception ex)
@@ -1100,24 +1099,24 @@ public class KeycloakService : IKeycloakService
 
             var getMappersRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/identity-provider/instances/google/mappers");
             getMappersRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var getMappersResponse = await _httpClient.SendAsync(getMappersRequest, cancellationToken);
             var existingMappers = new List<Dictionary<string, object>>();
-            
+
             if (getMappersResponse.IsSuccessStatusCode)
             {
-                existingMappers = await getMappersResponse.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>(cancellationToken: cancellationToken) 
+                existingMappers = await getMappersResponse.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>(cancellationToken: cancellationToken)
                     ?? new List<Dictionary<string, object>>();
             }
 
             foreach (var mapper in mappers)
             {
-                var existingMapper = existingMappers.FirstOrDefault(m => 
+                var existingMapper = existingMappers.FirstOrDefault(m =>
                     m.ContainsKey("name") && m["name"]?.ToString() == mapper.name);
 
                 if (existingMapper != null)
                 {
-                    var updateRequest = new HttpRequestMessage(HttpMethod.Put, 
+                    var updateRequest = new HttpRequestMessage(HttpMethod.Put,
                         $"{_keycloakBaseUrl}/admin/realms/{realmId}/identity-provider/instances/google/mappers/{existingMapper["id"]?.ToString()}");
                     updateRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
                     updateRequest.Content = JsonContent.Create(mapper);
@@ -1130,7 +1129,7 @@ public class KeycloakService : IKeycloakService
                 }
                 else
                 {
-                    var createRequest = new HttpRequestMessage(HttpMethod.Post, 
+                    var createRequest = new HttpRequestMessage(HttpMethod.Post,
                         $"{_keycloakBaseUrl}/admin/realms/{realmId}/identity-provider/instances/google/mappers");
                     createRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
                     createRequest.Content = JsonContent.Create(mapper);
@@ -1155,15 +1154,15 @@ public class KeycloakService : IKeycloakService
     {
         // O redirect URI do Google Identity Provider é calculado pelo Keycloak baseado no frontendUrl do realm
         var baseUrl = _keycloakBaseUrl.TrimEnd('/');
-        
+
         // Garantir HTTPS
         if (baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
         {
             baseUrl = baseUrl.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
         }
-        
+
         var googleRedirectUri = $"{baseUrl}/realms/{realmId}/broker/google/endpoint";
-        
+
         _logger.LogWarning(
             "IMPORTANTE: Adicione este Redirect URI no Google Cloud Console:\n" +
             "  {RedirectUri}\n" +
@@ -1194,38 +1193,38 @@ public class KeycloakService : IKeycloakService
         try
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
-            
+
             // Obter configuração atual do realm
             var getRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
             getRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var getResponse = await _httpClient.SendAsync(getRequest, cancellationToken);
             if (!getResponse.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Não foi possível obter configuração do realm {RealmId} para configurar theme", realmId);
                 return;
             }
-            
+
             // Ler o JSON como string primeiro para poder reutilizar
             var realmJson = await getResponse.Content.ReadAsStringAsync(cancellationToken);
             var realmConfig = JsonSerializer.Deserialize<JsonElement>(realmJson);
-            
+
             // Verificar se o theme já está configurado
-            var currentLoginTheme = realmConfig.TryGetProperty("loginTheme", out var loginThemeProp) 
-                ? loginThemeProp.GetString() 
+            var currentLoginTheme = realmConfig.TryGetProperty("loginTheme", out var loginThemeProp)
+                ? loginThemeProp.GetString()
                 : null;
-            
+
             if (currentLoginTheme == themeName)
             {
                 _logger.LogInformation("Realm {RealmId} já possui theme {ThemeName} configurado", realmId, themeName);
                 return;
             }
-            
+
             // Deserializar para dicionário para poder modificar
             var jsonOptions = new JsonSerializerOptions { WriteIndented = false };
-            var realmDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(realmJson, jsonOptions) 
+            var realmDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(realmJson, jsonOptions)
                 ?? new Dictionary<string, JsonElement>();
-            
+
             // Criar payload de atualização com todas as propriedades do realm
             var updatePayload = new Dictionary<string, object>();
             foreach (var kvp in realmDict)
@@ -1234,7 +1233,7 @@ public class KeycloakService : IKeycloakService
                 {
                     continue; // Não incluir id no update
                 }
-                
+
                 // Converter JsonElement para object
                 object? value = kvp.Value.ValueKind switch
                 {
@@ -1245,23 +1244,23 @@ public class KeycloakService : IKeycloakService
                     JsonValueKind.Null => null,
                     _ => kvp.Value
                 };
-                
+
                 if (value != null)
                 {
                     updatePayload[kvp.Key] = value;
                 }
             }
-            
+
             // Atualizar themes
             updatePayload["loginTheme"] = themeName;
             updatePayload["accountTheme"] = themeName;
             updatePayload["adminTheme"] = "keycloak"; // Manter theme padrão para admin
             updatePayload["emailTheme"] = themeName;
-            
+
             var updateRequest = new HttpRequestMessage(HttpMethod.Put, $"{_keycloakBaseUrl}/admin/realms/{realmId}");
             updateRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
             updateRequest.Content = JsonContent.Create(updatePayload);
-            
+
             var updateResponse = await _httpClient.SendAsync(updateRequest, cancellationToken);
             if (updateResponse.IsSuccessStatusCode)
             {
@@ -1270,7 +1269,7 @@ public class KeycloakService : IKeycloakService
             else
             {
                 var errorContent = await updateResponse.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Erro ao configurar theme {ThemeName} no realm {RealmId}. Status: {Status}, Response: {Response}", 
+                _logger.LogWarning("Erro ao configurar theme {ThemeName} no realm {RealmId}. Status: {Status}, Response: {Response}",
                     themeName, realmId, updateResponse.StatusCode, errorContent);
             }
         }
@@ -1287,7 +1286,7 @@ public class KeycloakService : IKeycloakService
         {
             var googleClientId = _configuration["Keycloak:Google:ClientId"];
             var googleClientSecret = _configuration["Keycloak:Google:ClientSecret"];
-            
+
             if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
             {
                 await ConfigureGoogleIdentityProviderAsync(realmId, googleClientId, googleClientSecret, cancellationToken);
@@ -1309,16 +1308,16 @@ public class KeycloakService : IKeycloakService
         try
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
-            
+
             var getUserRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/users?email={Uri.EscapeDataString(email)}");
             getUserRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var getUserResponse = await _httpClient.SendAsync(getUserRequest, cancellationToken);
             if (!getUserResponse.IsSuccessStatusCode)
             {
                 return null;
             }
-            
+
             var users = await getUserResponse.Content.ReadFromJsonAsync<List<KeycloakUser>>(cancellationToken: cancellationToken);
             return users?.FirstOrDefault()?.Id;
         }
@@ -1334,16 +1333,16 @@ public class KeycloakService : IKeycloakService
         try
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
-            
+
             var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"{_keycloakBaseUrl}/admin/realms/{realmId}/users/{userId}");
             deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var deleteResponse = await _httpClient.SendAsync(deleteRequest, cancellationToken);
-            
+
             if (!deleteResponse.IsSuccessStatusCode)
             {
                 var errorContent = await deleteResponse.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Erro ao deletar usuário {UserId} do realm {RealmId}. Status: {Status}, Response: {Response}", 
+                _logger.LogWarning("Erro ao deletar usuário {UserId} do realm {RealmId}. Status: {Status}, Response: {Response}",
                     userId, realmId, deleteResponse.StatusCode, errorContent);
             }
             else
@@ -1375,20 +1374,20 @@ public class KeycloakService : IKeycloakService
             }
 
             var tokenResponse = await RequestAdminTokenAsync(cancellationToken);
-            
+
             var expiresIn = tokenResponse.ExpiresIn > 0 ? tokenResponse.ExpiresIn : 300;
             var expirationTime = TimeSpan.FromSeconds(expiresIn * 0.9);
-            
+
             var cacheOptions = new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expirationTime,
                 SlidingExpiration = null
             };
-            
+
             _memoryCache.Set(AdminTokenCacheKey, tokenResponse.AccessToken, cacheOptions);
-            
+
             _logger.LogInformation("Token de admin obtido e armazenado no cache. Expira em {ExpirationTime} segundos", expiresIn);
-            
+
             return tokenResponse.AccessToken;
         }
         finally
@@ -1404,7 +1403,7 @@ public class KeycloakService : IKeycloakService
             try
             {
                 _logger.LogDebug("Tentando autenticação via client_credentials com client {ClientId}", _adminClientId);
-                
+
                 var tokenRequest = new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },
@@ -1422,13 +1421,13 @@ public class KeycloakService : IKeycloakService
                 {
                     var clientCredentialsResponse = await response.Content.ReadAsStringAsync(cancellationToken);
                     var tokenResponse = JsonSerializer.Deserialize<KeycloakTokenResponse>(clientCredentialsResponse);
-                    
+
                     if (tokenResponse == null || string.IsNullOrWhiteSpace(tokenResponse.AccessToken))
                     {
                         _logger.LogError("Token de admin vazio na resposta. Response completo: {Response}", clientCredentialsResponse);
                         throw new Exception($"Token de admin não retornado. Response: {clientCredentialsResponse}");
                     }
-                    
+
                     _logger.LogInformation("Token de admin obtido com sucesso via client_credentials");
                     return tokenResponse;
                 }
@@ -1440,7 +1439,7 @@ public class KeycloakService : IKeycloakService
         }
 
         _logger.LogDebug("Autenticando via password grant com usuário {Username}", _adminUsername);
-        
+
         var passwordTokenRequest = new Dictionary<string, string>
         {
             { "grant_type", "password" },
@@ -1455,13 +1454,13 @@ public class KeycloakService : IKeycloakService
         };
 
         var passwordResponse = await _httpClient.SendAsync(passwordRequest, cancellationToken);
-        
+
         if (!passwordResponse.IsSuccessStatusCode)
         {
             var errorContent = await passwordResponse.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("Erro ao obter token de admin. URL: {Url}, Status: {Status}, Response: {Response}", 
+            _logger.LogError("Erro ao obter token de admin. URL: {Url}, Status: {Status}, Response: {Response}",
                 passwordRequest.RequestUri, passwordResponse.StatusCode, errorContent);
-            
+
             if (passwordResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 throw new HttpRequestException(
@@ -1470,7 +1469,7 @@ public class KeycloakService : IKeycloakService
                     $"Tente acessar: {_keycloakBaseUrl}/realms/master no navegador."
                 );
             }
-            
+
             throw new HttpRequestException(
                 $"Erro ao autenticar no Keycloak: {passwordResponse.StatusCode}. " +
                 $"URL: {passwordRequest.RequestUri}. " +
@@ -1481,13 +1480,13 @@ public class KeycloakService : IKeycloakService
 
         var passwordResponseContent = await passwordResponse.Content.ReadAsStringAsync(cancellationToken);
         var passwordTokenResponse = JsonSerializer.Deserialize<KeycloakTokenResponse>(passwordResponseContent);
-        
+
         if (passwordTokenResponse == null || string.IsNullOrWhiteSpace(passwordTokenResponse.AccessToken))
         {
             _logger.LogError("Token de admin vazio na resposta. Response completo: {Response}", passwordResponseContent);
             throw new Exception($"Token de admin não retornado. Response: {passwordResponseContent}");
         }
-        
+
         _logger.LogInformation("Token de admin obtido com sucesso via password grant");
         return passwordTokenResponse;
     }
@@ -1497,7 +1496,7 @@ public class KeycloakService : IKeycloakService
         try
         {
             _logger.LogInformation("Iniciando criação do client {ClientId} no realm {RealmId}", _clientId, realmId);
-            
+
             var adminToken = await GetAdminTokenAsync(cancellationToken);
 
             var getClientRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/clients?clientId={_clientId}");
@@ -1517,7 +1516,7 @@ public class KeycloakService : IKeycloakService
             }
 
             _logger.LogInformation("Criando client {ClientId} como público (sem secret) no realm {RealmId}", _clientId, realmId);
-            
+
             var redirectUris = BuildRedirectUris();
             var webOrigins = BuildWebOrigins();
             _logger.LogInformation("Config client redirectUris: {RedirectUris}", string.Join(", ", redirectUris));
@@ -1547,7 +1546,7 @@ public class KeycloakService : IKeycloakService
             createRequest.Content = JsonContent.Create(clientRequest);
 
             var createResponse = await _httpClient.SendAsync(createRequest, cancellationToken);
-            
+
             if (!createResponse.IsSuccessStatusCode)
             {
                 var errorContent = await createResponse.Content.ReadAsStringAsync(cancellationToken);
@@ -1597,7 +1596,7 @@ public class KeycloakService : IKeycloakService
             updateRequest.Content = JsonContent.Create(clientUpdate);
 
             var updateResponse = await _httpClient.SendAsync(updateRequest, cancellationToken);
-            
+
             if (!updateResponse.IsSuccessStatusCode)
             {
                 var errorContent = await updateResponse.Content.ReadAsStringAsync(cancellationToken);
@@ -1634,7 +1633,7 @@ public class KeycloakService : IKeycloakService
         {
             // Fallback: Se RedirectUris não estiver configurado, usar lógica antiga (compatibilidade)
             _logger.LogWarning("Keycloak:RedirectUris não configurado. Usando lógica automática (fallback).");
-            
+
             // BFF callback targets (backend)
             var apiBaseUrl = _configuration["Api:BaseUrl"];
             if (!string.IsNullOrWhiteSpace(apiBaseUrl))
@@ -1704,17 +1703,17 @@ public class KeycloakService : IKeycloakService
         try
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
-            
+
             var getUserRequest = new HttpRequestMessage(HttpMethod.Get, $"{_keycloakBaseUrl}/admin/realms/{realmId}/users/{userId}");
             getUserRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", adminToken);
-            
+
             var getUserResponse = await _httpClient.SendAsync(getUserRequest, cancellationToken);
             if (!getUserResponse.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Usuário {UserId} não encontrado no realm {RealmId}. Status: {Status}", userId, realmId, getUserResponse.StatusCode);
                 return null;
             }
-            
+
             var user = await getUserResponse.Content.ReadFromJsonAsync<KeycloakUser>(cancellationToken: cancellationToken);
             return user;
         }
@@ -1746,13 +1745,13 @@ public class KeycloakService : IKeycloakService
     {
         [JsonPropertyName("access_token")]
         public string AccessToken { get; set; } = string.Empty;
-        
+
         [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
-        
+
         [JsonPropertyName("token_type")]
         public string TokenType { get; set; } = string.Empty;
-        
+
         [JsonPropertyName("refresh_token")]
         public string? RefreshToken { get; set; }
     }

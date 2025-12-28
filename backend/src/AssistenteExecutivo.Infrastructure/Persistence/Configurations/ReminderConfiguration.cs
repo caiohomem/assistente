@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

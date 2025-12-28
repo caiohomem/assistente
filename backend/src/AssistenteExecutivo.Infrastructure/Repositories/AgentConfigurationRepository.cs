@@ -36,15 +36,19 @@ public class AgentConfigurationRepository : IAgentConfigurationRepository
     public async Task UpdateAsync(AgentConfiguration configuration, CancellationToken cancellationToken = default)
     {
         var entry = _context.Entry(configuration);
-        
+
         if (entry.State == EntityState.Detached)
         {
             _context.AgentConfigurations.Update(configuration);
         }
-        
+
         await Task.CompletedTask;
     }
 }
+
+
+
+
 
 
 

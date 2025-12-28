@@ -1,7 +1,6 @@
 using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Queries.Contacts;
-using AssistenteExecutivo.Domain.Entities;
 using MediatR;
 
 namespace AssistenteExecutivo.Application.Handlers.Contacts;

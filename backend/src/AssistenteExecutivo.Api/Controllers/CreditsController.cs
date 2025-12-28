@@ -35,7 +35,7 @@ public sealed class CreditsController : ControllerBase
         };
 
         var result = await _mediator.Send(query, cancellationToken);
-        
+
         if (result == null)
         {
             // Wallet não existe ainda, retornar saldo zero

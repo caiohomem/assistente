@@ -73,7 +73,7 @@ public class EmailOutboxMessage
 
     public bool ShouldRetry(int maxRetries = 3)
     {
-        return Status == EmailOutboxStatus.Failed 
+        return Status == EmailOutboxStatus.Failed
             && RetryCount < maxRetries
             && (NextRetryAt == null || DateTime.UtcNow >= NextRetryAt);
     }

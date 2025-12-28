@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System.Text.Json;
@@ -54,8 +53,8 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
         builder.Property(e => e.Metadata)
             .HasColumnType("text")
             .HasConversion(
-                v => v == null || v.Count == 0 
-                    ? "{}" 
+                v => v == null || v.Count == 0
+                    ? "{}"
                     : JsonSerializer.Serialize(v),
                 v => string.IsNullOrWhiteSpace(v) || v == "{}"
                     ? new Dictionary<string, string>()
@@ -64,7 +63,7 @@ public class MediaAssetConfiguration : IEntityTypeConfiguration<MediaAsset>
             .Metadata.SetValueComparer(
                 new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<Dictionary<string, string>>(
                     (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                    c => c != null 
+                    c => c != null
                         ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.GetHashCode()))
                         : 0,
                     c => c != null ? new Dictionary<string, string>(c) : new Dictionary<string, string>()

@@ -25,7 +25,7 @@ public class ListNotesByContactQueryHandler : IRequestHandler<ListNotesByContact
 
         // Validate that the contact belongs to the ownerUserId
         var contactExists = await _contactRepository.ExistsAsync(request.ContactId, request.OwnerUserId, cancellationToken);
-        
+
         if (!contactExists)
             return new List<NoteDto>();
 
@@ -51,6 +51,10 @@ public class ListNotesByContactQueryHandler : IRequestHandler<ListNotesByContact
         };
     }
 }
+
+
+
+
 
 
 

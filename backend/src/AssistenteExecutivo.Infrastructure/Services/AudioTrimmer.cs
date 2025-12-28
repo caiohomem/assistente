@@ -62,9 +62,13 @@ public class AudioTrimmer
 
         var originalSizeMB = originalBytes.Length / (1024.0 * 1024.0);
         var trimmedSizeMB = MaxFileSizeBytes / (1024.0 * 1024.0);
-        
+
         return $"⚠️ Arquivo de áudio grande ({originalSizeMB:F2} MB) foi automaticamente cortado para {trimmedSizeMB:F2} MB. " +
                $"Apenas o início da gravação será processado. Para processar o áudio completo, considere dividir em partes menores.";
     }
 }
+
+
+
+
 

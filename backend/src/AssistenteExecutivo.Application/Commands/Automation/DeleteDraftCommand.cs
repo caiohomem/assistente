@@ -8,3 +8,7 @@ public class DeleteDraftCommand : IRequest
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

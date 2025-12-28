@@ -37,8 +37,8 @@ public class ReminderRepository : IReminderRepository
     public async Task<List<Reminder>> GetPendingByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         return await _context.Reminders
-            .Where(r => r.Status == ReminderStatus.Pending && 
-                       r.ScheduledFor >= startDate && 
+            .Where(r => r.Status == ReminderStatus.Pending &&
+                       r.ScheduledFor >= startDate &&
                        r.ScheduledFor <= endDate)
             .ToListAsync(cancellationToken);
     }
@@ -67,4 +67,8 @@ public class ReminderRepository : IReminderRepository
         return Task.CompletedTask;
     }
 }
+
+
+
+
 

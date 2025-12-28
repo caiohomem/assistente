@@ -107,14 +107,15 @@ public sealed class CaptureController : ControllerBase
         // Validar tipo de arquivo (áudio)
         // Formatos suportados pela API OpenAI Whisper: mp3, mp4, mpeg, mpga, m4a, wav, webm
         var contentType = file.ContentType ?? string.Empty;
-        var allowedMimeTypes = new[] { 
-            "audio/mpeg", "audio/mp3", "audio/mp4", "audio/mpeg", "audio/mpga", 
-            "audio/m4a", "audio/wav", "audio/webm", "audio/ogg" 
+        var allowedMimeTypes = new[] {
+            "audio/mpeg", "audio/mp3", "audio/mp4", "audio/mpeg", "audio/mpga",
+            "audio/m4a", "audio/wav", "audio/webm", "audio/ogg"
         };
         if (string.IsNullOrWhiteSpace(contentType) || !allowedMimeTypes.Contains(contentType.ToLowerInvariant()))
         {
-            return BadRequest(new { 
-                message = "Tipo de arquivo não suportado. Use MP3, MP4, WAV, WebM, M4A ou OGG." 
+            return BadRequest(new
+            {
+                message = "Tipo de arquivo não suportado. Use MP3, MP4, WAV, WebM, M4A ou OGG."
             });
         }
 

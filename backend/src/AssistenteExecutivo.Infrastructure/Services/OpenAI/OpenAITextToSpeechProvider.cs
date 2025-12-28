@@ -1,9 +1,9 @@
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using AssistenteExecutivo.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace AssistenteExecutivo.Infrastructure.Services.OpenAI;
 
@@ -23,22 +23,22 @@ public sealed class OpenAITextToSpeechProvider : ITextToSpeechProvider
     {
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient();
-        
+
         var baseUrl = configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
         _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
-        
-        _apiKey = configuration["OpenAI:ApiKey"] 
+
+        _apiKey = configuration["OpenAI:ApiKey"]
             ?? throw new InvalidOperationException("OpenAI:ApiKey não configurado");
-        
+
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-        
+
         var organizationId = configuration["OpenAI:OrganizationId"];
         if (!string.IsNullOrWhiteSpace(organizationId))
         {
             _httpClient.DefaultRequestHeaders.Add("OpenAI-Organization", organizationId);
         }
-        
+
         _model = configuration["OpenAI:TextToSpeech:Model"] ?? "tts-1";
         _defaultVoice = configuration["OpenAI:TextToSpeech:Voice"] ?? "nova";
         _defaultFormat = configuration["OpenAI:TextToSpeech:Format"] ?? "mp3";

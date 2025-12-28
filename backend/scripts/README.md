@@ -30,6 +30,7 @@ psql -h seu-host -U seu-usuario -d seu-banco -f ../../scripts/InitializeDatabase
 
 - **`InsertAgentConfigurationPrompt.postgresql.sql`** - Insere prompts padrão do agente
 - **`InsertCreditPackages.postgresql.sql`** - Insere packages de créditos padrão
+- **`InsertEmailTemplates.postgresql.sql`** - Insere templates de email do sistema (boas-vindas, recuperação de senha, etc.)
 
 ### Notas
 
@@ -50,6 +51,13 @@ psql -h seu-host -U seu-usuario -d seu-banco -f ../../scripts/InitializeDatabase
    ```bash
    psql -h seu-host -U seu-usuario -d seu-banco -f backend/scripts/InitializeDatabase.postgresql.sql
    ```
+
+3. **Inserir templates de email (opcional, já incluído no DatabaseSeeder):**
+   ```bash
+   psql -h seu-host -U seu-usuario -d seu-banco -f backend/scripts/InsertEmailTemplates.postgresql.sql
+   ```
+   
+   **Nota:** Os templates de email também são criados automaticamente pelo `DatabaseSeeder` quando a aplicação inicia. O script SQL é útil para atualizar templates manualmente ou em ambientes onde o seeder não é executado.
 
 ### Para limpar e recriar tudo:
 

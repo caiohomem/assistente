@@ -1,16 +1,13 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
-using AssistenteExecutivo.Infrastructure;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Infrastructure.Repositories;
-using AssistenteExecutivo.Infrastructure.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace AssistenteExecutivo.Application.Tests.Helpers;
 
@@ -30,9 +27,9 @@ public abstract class HandlerTestBase : IDisposable
         // Database - In-Memory para testes
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: _databaseName));
-        
+
         // Register IApplicationDbContext to resolve to ApplicationDbContext
-        services.AddScoped<AssistenteExecutivo.Application.Interfaces.IApplicationDbContext>(sp => 
+        services.AddScoped<AssistenteExecutivo.Application.Interfaces.IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>());
 
         // Repositories
@@ -64,7 +61,7 @@ public abstract class HandlerTestBase : IDisposable
         services.AddScoped<IFileStore, MockFileStore>();
         services.AddScoped<ISpeechToTextProvider, MockSpeechToTextProvider>();
         services.AddScoped<ILLMProvider, MockLLMProvider>();
-        
+
         // Mock IPublisher for domain events (no-op in tests)
         services.AddScoped<IPublisher, MockPublisher>();
 
@@ -91,25 +88,25 @@ public abstract class HandlerTestBase : IDisposable
         // Get the handler type from the request type
         var requestType = request.GetType();
         var responseType = typeof(TResponse);
-        
+
         // Find handler interface: IRequestHandler<TRequest, TResponse>
         var handlerInterfaceType = typeof(IRequestHandler<,>).MakeGenericType(requestType, responseType);
-        
+
         // Get handler implementation from service provider
         var handler = scope.ServiceProvider.GetRequiredService(handlerInterfaceType);
-        
+
         // Call Handle method using reflection
-        var handleMethod = handlerInterfaceType.GetMethod("Handle") 
+        var handleMethod = handlerInterfaceType.GetMethod("Handle")
             ?? throw new InvalidOperationException($"Handler for {requestType.Name} does not implement Handle method");
-        
+
         var result = handleMethod.Invoke(handler, new object[] { request, cancellationToken });
-        
+
         // If result is Task<TResponse>, await it
         if (result is Task<TResponse> task)
         {
             return await task;
         }
-        
+
         return (TResponse)result!;
     }
 
@@ -119,19 +116,19 @@ public abstract class HandlerTestBase : IDisposable
 
         // Get the handler type from the request type
         var requestType = request.GetType();
-        
+
         // Find handler interface: IRequestHandler<TRequest>
         var handlerInterfaceType = typeof(IRequestHandler<>).MakeGenericType(requestType);
-        
+
         // Get handler implementation from service provider
         var handler = scope.ServiceProvider.GetRequiredService(handlerInterfaceType);
-        
+
         // Call Handle method using reflection
-        var handleMethod = handlerInterfaceType.GetMethod("Handle") 
+        var handleMethod = handlerInterfaceType.GetMethod("Handle")
             ?? throw new InvalidOperationException($"Handler for {requestType.Name} does not implement Handle method");
-        
+
         var result = handleMethod.Invoke(handler, new object[] { request, cancellationToken });
-        
+
         // If result is Task, await it
         if (result is Task task)
         {

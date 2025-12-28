@@ -1,7 +1,6 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Notifications;
-using AssistenteExecutivo.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace AssistenteExecutivo.Infrastructure.Persistence;
@@ -45,25 +44,25 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             entity.ToTable("UserProfiles");
             entity.HasKey(e => e.UserId);
-            
+
             entity.OwnsOne(e => e.Email, email =>
             {
                 email.Property(e => e.Value).HasColumnName("Email").HasMaxLength(255);
                 email.HasIndex(e => e.Value).IsUnique();
             });
-            
+
             entity.OwnsOne(e => e.DisplayName, displayName =>
             {
                 displayName.Property(d => d.FirstName).HasColumnName("FirstName").HasMaxLength(100);
                 displayName.Property(d => d.LastName).HasColumnName("LastName").HasMaxLength(100);
             });
-            
+
             entity.OwnsOne(e => e.KeycloakSubject, keycloakSubject =>
             {
                 keycloakSubject.Property(k => k.Value).HasColumnName("KeycloakSubject").HasMaxLength(255);
                 keycloakSubject.HasIndex(k => k.Value).IsUnique();
             });
-            
+
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(50);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.PasswordResetToken).HasMaxLength(255);
@@ -74,13 +73,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             entity.ToTable("LoginAuditEntries");
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.AuthMethod).HasConversion<string>().HasMaxLength(50);
             entity.Property(e => e.IpAddress).HasMaxLength(45);
             entity.Property(e => e.UserAgent).HasMaxLength(500);
             entity.Property(e => e.OccurredAt).IsRequired();
-            
+
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.OccurredAt);
         });
@@ -90,14 +89,14 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             entity.ToTable("EmailTemplates");
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.TemplateType).HasConversion<int>();
             entity.Property(e => e.Subject).IsRequired().HasMaxLength(500);
             entity.Property(e => e.HtmlBody).IsRequired();
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
-            
+
             entity.HasIndex(e => e.TemplateType);
             entity.HasIndex(e => new { e.TemplateType, e.IsActive });
         });
@@ -107,7 +106,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             entity.ToTable("EmailOutboxMessages");
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.RecipientEmail).IsRequired().HasMaxLength(255);
             entity.Property(e => e.RecipientName).HasMaxLength(200);
             entity.Property(e => e.Subject).IsRequired().HasMaxLength(500);
@@ -116,7 +115,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.ErrorMessage).HasMaxLength(2000);
             entity.Property(e => e.RetryCount).IsRequired();
-            
+
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
             entity.HasIndex(e => e.NextRetryAt);

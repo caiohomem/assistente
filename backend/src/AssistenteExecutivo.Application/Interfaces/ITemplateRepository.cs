@@ -15,3 +15,7 @@ public interface ITemplateRepository
     Task DeleteAsync(Template template, CancellationToken cancellationToken = default);
 }
 
+
+
+
+

@@ -1,7 +1,6 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Enums;
-using AssistenteExecutivo.Domain.ValueObjects;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +24,7 @@ public class CaptureJobRepositoryTests : RepositoryTestBase
         var mediaId = Guid.NewGuid();
         var jobId = Guid.NewGuid();
         var job = new CaptureJob(jobId, ownerUserId, JobType.CardScan, mediaId, null, Clock);
-        
+
         await Context.CaptureJobs.AddAsync(job);
         await SaveChangesAsync();
 
@@ -61,7 +60,7 @@ public class CaptureJobRepositoryTests : RepositoryTestBase
         var ownerUserId2 = Guid.NewGuid();
         var mediaId = Guid.NewGuid();
         var job = new CaptureJob(Guid.NewGuid(), ownerUserId1, JobType.CardScan, mediaId, null, Clock);
-        
+
         await Context.CaptureJobs.AddAsync(job);
         await SaveChangesAsync();
 
@@ -81,11 +80,11 @@ public class CaptureJobRepositoryTests : RepositoryTestBase
         var mediaId1 = Guid.NewGuid();
         var mediaId2 = Guid.NewGuid();
         var mediaId3 = Guid.NewGuid();
-        
+
         var job1 = new CaptureJob(Guid.NewGuid(), ownerUserId1, JobType.CardScan, mediaId1, null, Clock);
         var job2 = new CaptureJob(Guid.NewGuid(), ownerUserId1, JobType.AudioNoteTranscription, mediaId2, null, Clock);
         var job3 = new CaptureJob(Guid.NewGuid(), ownerUserId2, JobType.CardScan, mediaId3, null, Clock);
-        
+
         await Context.CaptureJobs.AddRangeAsync(job1, job2, job3);
         await SaveChangesAsync();
 
@@ -107,14 +106,14 @@ public class CaptureJobRepositoryTests : RepositoryTestBase
         var mediaId1 = Guid.NewGuid();
         var mediaId2 = Guid.NewGuid();
         var mediaId3 = Guid.NewGuid();
-        
+
         var job1 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.CardScan, mediaId1, null, Clock);
         var job2 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.AudioNoteTranscription, mediaId2, null, Clock);
         var job3 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.CardScan, mediaId3, null, Clock);
-        
+
         job2.Fail("ERROR_CODE", "Error message", Clock);
         job3.Fail("ERROR_CODE", "Error message", Clock);
-        
+
         await Context.CaptureJobs.AddRangeAsync(job1, job2, job3);
         await SaveChangesAsync();
 
@@ -134,11 +133,11 @@ public class CaptureJobRepositoryTests : RepositoryTestBase
         var contactId = Guid.NewGuid();
         var mediaId1 = Guid.NewGuid();
         var mediaId2 = Guid.NewGuid();
-        
+
         var job1 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.CardScan, mediaId1, contactId, Clock);
         var job2 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.AudioNoteTranscription, mediaId2, contactId, Clock);
         var job3 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.CardScan, Guid.NewGuid(), null, Clock);
-        
+
         await Context.CaptureJobs.AddRangeAsync(job1, job2, job3);
         await SaveChangesAsync();
 
@@ -158,11 +157,11 @@ public class CaptureJobRepositoryTests : RepositoryTestBase
         // Arrange
         var ownerUserId = Guid.NewGuid();
         var mediaId = Guid.NewGuid();
-        
+
         var job1 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.CardScan, mediaId, null, Clock);
         var job2 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.AudioNoteTranscription, mediaId, null, Clock);
         var job3 = new CaptureJob(Guid.NewGuid(), ownerUserId, JobType.CardScan, Guid.NewGuid(), null, Clock);
-        
+
         await Context.CaptureJobs.AddRangeAsync(job1, job2, job3);
         await SaveChangesAsync();
 

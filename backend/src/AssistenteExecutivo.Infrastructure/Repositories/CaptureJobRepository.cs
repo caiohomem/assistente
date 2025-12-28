@@ -53,8 +53,8 @@ public class CaptureJobRepository : ICaptureJobRepository
     public async Task<CaptureJob?> GetLatestAudioJobByContactIdAsync(Guid contactId, Guid ownerUserId, CancellationToken cancellationToken = default)
     {
         return await _context.CaptureJobs
-            .Where(j => j.ContactId == contactId 
-                && j.OwnerUserId == ownerUserId 
+            .Where(j => j.ContactId == contactId
+                && j.OwnerUserId == ownerUserId
                 && j.Type == JobType.AudioNoteTranscription)
             .OrderByDescending(j => j.RequestedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -65,8 +65,8 @@ public class CaptureJobRepository : ICaptureJobRepository
         // Buscar o CaptureJob de áudio que foi completado antes ou na mesma data da criação da nota
         // e que seja o mais próximo possível da data da nota
         return await _context.CaptureJobs
-            .Where(j => j.ContactId == contactId 
-                && j.OwnerUserId == ownerUserId 
+            .Where(j => j.ContactId == contactId
+                && j.OwnerUserId == ownerUserId
                 && j.Type == JobType.AudioNoteTranscription
                 && j.CompletedAt.HasValue
                 && j.CompletedAt.Value <= noteCreatedAt.AddSeconds(5)) // Tolerância de 5 segundos

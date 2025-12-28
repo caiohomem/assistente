@@ -35,11 +35,23 @@ public sealed class BffCsrfMiddleware
             return;
         }
 
-        // Skip public auth endpoints that don't require CSRF (register, forgot-password, reset-password)
+        // Skip public auth endpoints that don't require CSRF (register, forgot-password, reset-password, reactivate)
         if (path.Equals("/auth/register", StringComparison.OrdinalIgnoreCase) ||
             path.Equals("/auth/forgot-password", StringComparison.OrdinalIgnoreCase) ||
-            path.Equals("/auth/reset-password", StringComparison.OrdinalIgnoreCase))
+            path.Equals("/auth/reset-password", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/auth/reactivate", StringComparison.OrdinalIgnoreCase))
         {
+            await _next(context);
+            return;
+        }
+
+        // Skip CSRF validation if request has a valid Bearer token
+        // Bearer tokens are not vulnerable to CSRF attacks since they don't use cookies
+        var authHeader = context.Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authHeader) &&
+            authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            // Bearer token present - skip CSRF validation
             await _next(context);
             return;
         }

@@ -314,6 +314,20 @@
       "terms": "Termos",
       "privacy": "Privacidade"
     }
+  },
+  "login": {
+    "checkingAuth": "A verificar autenticação...",
+    "reactivateTitle": "Deseja reativar o utilizador?",
+    "reactivateDescription": "O seu utilizador foi eliminado anteriormente. Deseja reativá-lo e continuar para o painel?",
+    "reactivateButton": "Sim, reativar",
+    "reactivating": "A reativar...",
+    "goBack": "Não, voltar",
+    "errorTitle": "Não foi possível entrar",
+    "errorLabel": "Erro:",
+    "tryAgain": "Tentar novamente",
+    "back": "Voltar",
+    "reactivateError": "Erro ao reativar utilizador",
+    "reactivateErrorRetry": "Erro ao reativar utilizador. Tente novamente."
   }
 }
 

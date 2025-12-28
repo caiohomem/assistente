@@ -20,7 +20,7 @@ public class GetAgentConfigurationQueryHandler : IRequestHandler<GetAgentConfigu
     public async Task<AgentConfigurationDto?> Handle(GetAgentConfigurationQuery request, CancellationToken cancellationToken)
     {
         var configuration = await _repository.GetCurrentAsync(cancellationToken);
-        
+
         if (configuration == null)
         {
             return null;

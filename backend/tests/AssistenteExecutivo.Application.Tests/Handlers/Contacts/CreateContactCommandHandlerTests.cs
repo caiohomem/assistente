@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Application.Commands.Contacts;
-using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Queries.Contacts;
 using AssistenteExecutivo.Application.Tests.Helpers;
 using AssistenteExecutivo.Domain.Exceptions;
@@ -97,6 +96,10 @@ public class CreateContactCommandHandlerTests : HandlerTestBase
             .WithMessage("*OwnerUserIdObrigatorio*");
     }
 }
+
+
+
+
 
 
 

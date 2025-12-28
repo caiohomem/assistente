@@ -1,18 +1,15 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
-using AssistenteExecutivo.Infrastructure.HttpClients;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Infrastructure.Persistence.Repositories;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using AssistenteExecutivo.Infrastructure.Services;
 using AssistenteExecutivo.Infrastructure.Services.OpenAI;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace AssistenteExecutivo.Infrastructure;
 
@@ -52,7 +49,7 @@ public static class DependencyInjection
                         Password = uri.UserInfo.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : "",
                         SslMode = Npgsql.SslMode.Require
                     };
-                    
+
                     // Adicionar parâmetros da query string
                     if (!string.IsNullOrEmpty(uri.Query))
                     {
@@ -65,7 +62,7 @@ public static class DependencyInjection
                             {
                                 var key = parts[0].ToLowerInvariant();
                                 var value = parts[1];
-                                
+
                                 if (key == "sslmode")
                                 {
                                     if (Enum.TryParse<Npgsql.SslMode>(value, true, out var mode))
@@ -74,7 +71,7 @@ public static class DependencyInjection
                             }
                         }
                     }
-                    
+
                     finalConnectionString = builder.ConnectionString;
                     System.Diagnostics.Debug.WriteLine($"[DB] Converted URL to parameter format");
                 }
@@ -84,7 +81,7 @@ public static class DependencyInjection
                     throw new InvalidOperationException("Erro ao converter connection string de URL para formato de parâmetros. Use o formato: Host=...;Database=...;Username=...;Password=...;SSL Mode=Require;", ex);
                 }
             }
-            
+
             // PostgreSQL (Neon)
             options.UseNpgsql(finalConnectionString, npgsqlOptions =>
             {
@@ -94,19 +91,19 @@ public static class DependencyInjection
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(10),
                     errorCodesToAdd: null);
-                
+
                 // Timeout de comando aumentado para operações que podem demorar
                 npgsqlOptions.CommandTimeout(60);
             });
-            
+
             // Desabilitar detecção de concorrência otimista automática
             // (usaremos apenas quando explicitamente configurado com RowVersion/Timestamp)
             options.EnableSensitiveDataLogging(false);
             options.EnableServiceProviderCaching();
         });
-        
+
         // Register IApplicationDbContext to resolve to ApplicationDbContext
-        services.AddScoped<AssistenteExecutivo.Application.Interfaces.IApplicationDbContext>(sp => 
+        services.AddScoped<AssistenteExecutivo.Application.Interfaces.IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>());
 
         // Repositories
@@ -131,9 +128,9 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Services
-        var keycloakBaseUrl = configuration["Keycloak:BaseUrl"] 
+        var keycloakBaseUrl = configuration["Keycloak:BaseUrl"]
             ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
-        
+
         services.AddHttpClient<IKeycloakService, KeycloakService>(client =>
         {
             client.BaseAddress = new Uri(keycloakBaseUrl);
@@ -148,12 +145,20 @@ public static class DependencyInjection
         services.AddSingleton<IKeycloakAdminProvisioner>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
 
-        services.AddScoped<IEmailService, EmailService>();
+        services.AddHttpClient<EmailService>();
+        services.AddScoped<IEmailService>(sp =>
+        {
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var emailTemplateRepository = sp.GetRequiredService<IEmailTemplateRepository>();
+            var configuration = sp.GetRequiredService<IConfiguration>();
+            var logger = sp.GetRequiredService<ILogger<EmailService>>();
+            return new EmailService(emailTemplateRepository, configuration, logger, httpClientFactory);
+        });
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<AudioTrimmer>();
 
         // External service providers - OpenAI only
-        
+
         // Speech-to-Text Provider - OpenAI Whisper
         services.AddScoped<ISpeechToTextProvider>(sp =>
         {
@@ -163,7 +168,7 @@ public static class DependencyInjection
             logger.LogInformation("Usando OpenAI Speech-to-Text Provider (Whisper)");
             return new OpenAISpeechToTextProvider(config, httpClientFactory, logger);
         });
-        
+
         // OCR Provider - OpenAI Vision
         services.AddScoped<IOcrProvider>(sp =>
         {
@@ -174,7 +179,7 @@ public static class DependencyInjection
             logger.LogInformation("Usando OpenAI OCR Provider");
             return new OpenAIOcrProvider(config, httpClientFactory, logger, configurationRepository);
         });
-        
+
         // LLM Provider - OpenAI GPT
         services.AddScoped<ILLMProvider>(sp =>
         {
@@ -185,10 +190,10 @@ public static class DependencyInjection
             logger.LogInformation("Usando OpenAI LLM Provider");
             return new OpenAILLMProvider(config, httpClientFactory, logger, configurationRepository);
         });
-        
+
         // Text-to-Speech Provider - OpenAI TTS
         var textToSpeechEnabledValue = configuration["OpenAI:TextToSpeech:Enabled"];
-        var textToSpeechEnabled = string.IsNullOrWhiteSpace(textToSpeechEnabledValue) || 
+        var textToSpeechEnabled = string.IsNullOrWhiteSpace(textToSpeechEnabledValue) ||
                                   (bool.TryParse(textToSpeechEnabledValue, out var enabled) && enabled);
         if (textToSpeechEnabled)
         {

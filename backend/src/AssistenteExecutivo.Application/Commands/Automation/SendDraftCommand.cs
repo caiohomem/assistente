@@ -8,3 +8,7 @@ public class SendDraftCommand : IRequest
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

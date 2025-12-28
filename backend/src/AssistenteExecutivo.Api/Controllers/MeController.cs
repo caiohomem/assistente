@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Application.Commands.Auth;
@@ -6,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace AssistenteExecutivo.Api.Controllers;
 

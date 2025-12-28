@@ -1,19 +1,10 @@
 using AssistenteExecutivo.Domain.Entities;
-using System.IO;
-
 namespace AssistenteExecutivo.Application.DTOs;
 
 public static class ContactDtoMapper
 {
     public static ContactDto MapToDto(Contact contact)
     {
-        // #region agent log
-        var logPath = @"c:\Projects\AssistenteExecutivo\.cursor\debug.log";
-        try { 
-            var relationshipsCount = contact.Relationships?.Count ?? 0;
-            File.AppendAllText(logPath, $"{{\"location\":\"ContactDtoMapper.cs:7\",\"message\":\"MapToDto entry\",\"data\":{{\"contactId\":\"{contact.ContactId}\",\"relationshipsCount\":{relationshipsCount}}},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"B\"}}\n"); 
-        } catch { }
-        // #endregion
         return new ContactDto
         {
             ContactId = contact.ContactId,

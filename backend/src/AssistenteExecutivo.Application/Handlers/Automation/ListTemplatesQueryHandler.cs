@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Queries.Automation;
-using AssistenteExecutivo.Domain.Enums;
 using MediatR;
 
 namespace AssistenteExecutivo.Application.Handlers.Automation;
@@ -77,4 +76,8 @@ public class ListTemplatesQueryHandler : IRequestHandler<ListTemplatesQuery, Lis
         };
     }
 }
+
+
+
+
 

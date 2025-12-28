@@ -1,26 +1,19 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Infrastructure;
-using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Api.Auth;
-using AssistenteExecutivo.Api.Security;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Api.Middleware;
+using AssistenteExecutivo.Api.Security;
+using AssistenteExecutivo.Infrastructure;
+using AssistenteExecutivo.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.StackExchangeRedis;
-using StackExchange.Redis;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
-using Microsoft.OpenApi;
-using System.Text.RegularExpressions;
+using StackExchange.Redis;
+using System.IdentityModel.Tokens.Jwt;
 
 // Configurar Serilog antes de criar o builder
 var configuration = new ConfigurationBuilder()
@@ -37,7 +30,7 @@ var connectionString = configuration.GetConnectionString("DefaultConnection")
 // Detectar se é PostgreSQL ou SQL Server
 var isPostgreSQL = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
                    connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
-                   (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) && 
+                   (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) &&
                     !connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase));
 
 var loggerConfig = new LoggerConfiguration()
@@ -54,12 +47,12 @@ var loggerConfig = new LoggerConfiguration()
 
 // Logs são gravados apenas no console (em produção, usar Google Cloud Console)
 
-    Log.Logger = loggerConfig.CreateLogger();
+Log.Logger = loggerConfig.CreateLogger();
 
 try
 {
     Log.Information("Iniciando aplicação AssistenteExecutivo.Api");
-    
+
     // Helper function para obter connection string do Redis
     static string? GetRedisConnectionString(IConfiguration configuration)
     {
@@ -69,7 +62,7 @@ try
         {
             Log.Information("Redis configurado via ConnectionStrings:Redis");
             // Verificar se é uma URL que precisa ser convertida (caso alguém configure errado)
-            if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+            if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
                 connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
                 Log.Warning("ConnectionStrings:Redis está no formato URL. Convertendo...");
@@ -77,14 +70,14 @@ try
             }
             return connectionString;
         }
-        
+
         // Prioridade 2: Redis:ConnectionString
         var redisConnectionString = configuration["Redis:ConnectionString"];
         if (!string.IsNullOrWhiteSpace(redisConnectionString))
         {
             Log.Information("Redis configurado via Redis:ConnectionString");
             // Verificar se é uma URL que precisa ser convertida
-            if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+            if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
                 redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
                 Log.Warning("Redis:ConnectionString está no formato URL. Convertendo...");
@@ -92,14 +85,14 @@ try
             }
             return redisConnectionString;
         }
-        
+
         // Prioridade 3: Redis:Configuration
         var redisConfiguration = configuration["Redis:Configuration"];
         if (!string.IsNullOrWhiteSpace(redisConfiguration))
         {
             Log.Information("Redis configurado via Redis:Configuration");
             // Verificar se é uma URL que precisa ser convertida
-            if (redisConfiguration.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+            if (redisConfiguration.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
                 redisConfiguration.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
                 Log.Warning("Redis:Configuration está no formato URL. Convertendo...");
@@ -107,11 +100,11 @@ try
             }
             return redisConfiguration;
         }
-        
+
         Log.Information("Redis não configurado - usando fallback (SQL Server Cache ou Memory Cache)");
         return null;
     }
-    
+
     // Helper function para converter URL Redis (rediss:// ou redis://) para formato StackExchange.Redis
     static string ConvertRedisUrlToConnectionString(string redisUrl)
     {
@@ -120,55 +113,55 @@ try
             Log.Warning("Redis URL está vazia");
             return redisUrl;
         }
-        
+
         // Se já está no formato correto (não começa com redis:// ou rediss://), retornar como está
-        if (!redisUrl.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) && 
+        if (!redisUrl.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) &&
             !redisUrl.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
         {
             Log.Information("Redis connection string já está no formato correto (não é URL)");
             return redisUrl;
         }
-        
-        Log.Information("Convertendo Redis URL para formato StackExchange.Redis: {Url}", 
+
+        Log.Information("Convertendo Redis URL para formato StackExchange.Redis: {Url}",
             redisUrl.Contains("@") ? redisUrl.Substring(0, redisUrl.IndexOf("@")) + "@***" : redisUrl);
-        
+
         try
         {
             // Parse da URL: rediss://user:password@host:port ou redis://user:password@host:port
             var uri = new Uri(redisUrl);
             var isSsl = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase);
-            
+
             var host = uri.Host;
             if (string.IsNullOrWhiteSpace(host))
             {
                 throw new ArgumentException("Host não pode ser vazio na URL do Redis", nameof(redisUrl));
             }
-            
+
             // Porta: usar a porta da URL ou padrão baseado no esquema
             var port = uri.Port > 0 ? uri.Port : (isSsl ? 6380 : 6379);
-            
+
             // Extrair user e password do UserInfo
             string? user = null;
             string? password = null;
-            
+
             if (!string.IsNullOrWhiteSpace(uri.UserInfo))
             {
                 var userInfoParts = uri.UserInfo.Split(':', 2);
-                user = userInfoParts.Length > 0 && !string.IsNullOrWhiteSpace(userInfoParts[0]) 
-                    ? userInfoParts[0] 
+                user = userInfoParts.Length > 0 && !string.IsNullOrWhiteSpace(userInfoParts[0])
+                    ? userInfoParts[0]
                     : null;
-                password = userInfoParts.Length > 1 && !string.IsNullOrWhiteSpace(userInfoParts[1]) 
-                    ? userInfoParts[1] 
+                password = userInfoParts.Length > 1 && !string.IsNullOrWhiteSpace(userInfoParts[1])
+                    ? userInfoParts[1]
                     : null;
             }
-            
+
             // Construir connection string no formato StackExchange.Redis
             // Formato: host:port,ssl=true,password=...,user=...
             var parts = new List<string>();
-            
+
             // Adicionar host:port (sempre primeiro) - CRÍTICO: não incluir o esquema
             parts.Add($"{host}:{port}");
-            
+
             // Configurações SSL (para rediss://)
             if (isSsl)
             {
@@ -180,7 +173,7 @@ try
                 // Configurações adicionais para melhorar confiabilidade
                 parts.Add("asyncTimeout=15000");
             }
-            
+
             // Adicionar password (se existir)
             string? decodedPassword = null;
             if (!string.IsNullOrWhiteSpace(password))
@@ -190,25 +183,25 @@ try
                 // Escapar caracteres especiais no password se necessário
                 parts.Add($"password={decodedPassword}");
             }
-            
+
             // Adicionar user (se existir e não for "default")
             if (!string.IsNullOrWhiteSpace(user) && !user.Equals("default", StringComparison.OrdinalIgnoreCase))
             {
                 var decodedUser = Uri.UnescapeDataString(user);
                 parts.Add($"user={decodedUser}");
             }
-            
+
             var connectionString = string.Join(",", parts);
-            
+
             // Validar que a conversão funcionou (não deve começar com redis:// ou rediss://)
-            if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+            if (connectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
                 connectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     $"Falha na conversão: connection string ainda começa com redis:// ou rediss://. " +
                     $"Valor: {connectionString.Substring(0, Math.Min(100, connectionString.Length))}");
             }
-            
+
             // Log da conversão (sem expor senha)
             var logOriginal = redisUrl;
             if (!string.IsNullOrWhiteSpace(password))
@@ -220,15 +213,15 @@ try
             {
                 logConverted = connectionString.Replace(decodedPassword, "***");
             }
-            
-            Log.Information("Redis URL convertida com sucesso: {OriginalUrl} -> {ConnectionString}", 
+
+            Log.Information("Redis URL convertida com sucesso: {OriginalUrl} -> {ConnectionString}",
                 logOriginal, logConverted);
-            
+
             return connectionString;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "ERRO CRÍTICO ao converter REDIS_URL: {RedisUrl}. Exception: {ExceptionType}: {Message}", 
+            Log.Error(ex, "ERRO CRÍTICO ao converter REDIS_URL: {RedisUrl}. Exception: {ExceptionType}: {Message}",
                 redisUrl.Contains("@") ? redisUrl.Substring(0, redisUrl.IndexOf("@")) + "@***" : redisUrl,
                 ex.GetType().Name, ex.Message);
             // Não retornar a URL original - lançar exceção para forçar correção
@@ -240,7 +233,7 @@ try
     }
 
     var builder = WebApplication.CreateBuilder(args);
-    
+
     // Substituir o logger padrão pelo Serilog
     builder.Host.UseSerilog();
 
@@ -264,10 +257,10 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
     {
-        c.SwaggerDoc("v1", new OpenApiInfo 
-        { 
-            Title = "Assistente Executivo API", 
-            Version = "v1" 
+        c.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "Assistente Executivo API",
+            Version = "v1"
         });
     });
 
@@ -291,7 +284,7 @@ try
         _ => { })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        var keycloakBaseUrl = builder.Configuration["Keycloak:BaseUrl"] 
+        var keycloakBaseUrl = builder.Configuration["Keycloak:BaseUrl"]
             ?? throw new InvalidOperationException("Keycloak:BaseUrl deve estar configurado em appsettings");
         keycloakBaseUrl = keycloakBaseUrl.TrimEnd('/');
         var realm = builder.Configuration["Keycloak:Realm"] ?? "assistenteexecutivo";
@@ -333,16 +326,16 @@ try
                 {
                     Console.WriteLine($"[JWT] Inner Exception: {context.Exception.InnerException.GetType().Name}: {context.Exception.InnerException.Message}");
                 }
-                
+
                 var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
                 if (!string.IsNullOrEmpty(authHeader))
                 {
-                    var tokenPart = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) 
-                        ? authHeader.Substring(7) 
+                    var tokenPart = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? authHeader.Substring(7)
                         : authHeader;
                     var tokenPrefix = tokenPart.Length > 50 ? tokenPart.Substring(0, 50) : tokenPart;
                     Console.WriteLine($"[JWT] Token prefix: {tokenPrefix}...");
-                    
+
                     // Try to decode token to see issuer
                     try
                     {
@@ -388,19 +381,19 @@ try
 
     // Session (para BFF) - Usando Redis (obrigatório em produção)
     var redisConnectionString = GetRedisConnectionString(builder.Configuration);
-    
+
     if (!string.IsNullOrWhiteSpace(redisConnectionString))
     {
         // CRÍTICO: Garantir que nunca passamos uma URL diretamente para StackExchange.Redis
         // StackExchange.Redis não aceita URLs no formato rediss:// diretamente
-        if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+        if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
             redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
         {
             Log.Warning("Redis connection string ainda está no formato URL. Convertendo forçadamente...");
             redisConnectionString = ConvertRedisUrlToConnectionString(redisConnectionString);
-            
+
             // Validar que a conversão funcionou
-            if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) || 
+            if (redisConnectionString.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
                 redisConnectionString.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
             {
                 Log.Error("FALHA CRÍTICA: Conversão do Redis URL falhou! A connection string ainda está no formato URL.");
@@ -410,7 +403,7 @@ try
                     $"Configure usando o formato StackExchange.Redis: host:port,password=...,ssl=true");
             }
         }
-        
+
         // Log da connection string final (sem expor senha)
         var logConnectionString = redisConnectionString;
         if (logConnectionString.Contains("password="))
@@ -428,19 +421,19 @@ try
                 logConnectionString = beforePassword + "password=***";
             }
         }
-        
-        Log.Information("Configurando Redis para session storage. ConnectionString format: {Format}, Length: {Length}", 
+
+        Log.Information("Configurando Redis para session storage. ConnectionString format: {Format}, Length: {Length}",
             logConnectionString, redisConnectionString.Length);
-        
+
         // Validar formato antes de configurar
         if (!redisConnectionString.Contains(":") || redisConnectionString.StartsWith("redis"))
         {
-            Log.Error("Redis connection string em formato inválido: {ConnectionString}", 
+            Log.Error("Redis connection string em formato inválido: {ConnectionString}",
                 redisConnectionString.Substring(0, Math.Min(100, redisConnectionString.Length)));
             throw new InvalidOperationException(
                 "Redis connection string deve estar no formato: host:port,password=...,ssl=true");
         }
-        
+
         builder.Services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = redisConnectionString;
@@ -456,7 +449,7 @@ try
         }
         builder.Services.AddDistributedMemoryCache();
     }
-    
+
     builder.Services.AddSession(options =>
     {
         options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -470,7 +463,7 @@ try
         options.Cookie.SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax;
         options.Cookie.SecurePolicy = isHttps ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
         options.Cookie.Name = "ae.sid";
-        
+
         // Configurar Domain para funcionar entre subdomínios
         // Usar Api:PublicBaseUrl se disponível, senão usar Api:BaseUrl
         var apiPublicBaseUrl = builder.Configuration["Api:PublicBaseUrl"] ?? apiBaseUrl;
@@ -484,10 +477,10 @@ try
             if (parts.Length >= 2)
             {
                 // Pegar os últimos 2 ou 3 segmentos (ex: assistente.live ou exemplo.com.br)
-                var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3 
+                var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3
                     ? string.Join(".", parts.Skip(parts.Length - 3)) // Para .com.br, .co.uk, etc
                     : string.Join(".", parts.Skip(parts.Length - 2)); // Para .com, .live, etc
-                
+
                 // Configurar Domain com ponto inicial para funcionar em todos os subdomínios
                 options.Cookie.Domain = $".{domainBase}";
             }
@@ -532,7 +525,7 @@ try
         {
             Log.Warning("Redis não configurado para Data Protection. Chaves serão armazenadas em file system (ephemeral em Cloud Run). Configure Redis para produção.");
         }
-        
+
         var dataProtectionPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "AssistenteExecutivo",
@@ -550,7 +543,7 @@ try
         options.AddDefaultPolicy(policy =>
         {
             string[]? configuredOrigins = null;
-            
+
             // PRIORIDADE 1: Tentar ler como string separada por vírgula (variáveis de ambiente)
             // Variáveis de ambiente têm prioridade sobre appsettings.json
             var originsString = builder.Configuration["Frontend:CorsOrigins"];
@@ -562,14 +555,14 @@ try
                     .Where(o => !string.IsNullOrWhiteSpace(o))
                     .ToArray();
             }
-            
+
             // PRIORIDADE 2: Se não encontrou string, tentar ler como array (appsettings.json)
             if (configuredOrigins == null || configuredOrigins.Length == 0)
             {
                 var originsArray = builder.Configuration
                     .GetSection("Frontend:CorsOrigins")
                     .Get<string[]>();
-                
+
                 if (originsArray != null && originsArray.Length > 0)
                 {
                     configuredOrigins = originsArray;
@@ -597,7 +590,7 @@ try
         });
     });
 
-        var app = builder.Build();
+    var app = builder.Build();
 
     app.UseForwardedHeaders();
 
@@ -608,13 +601,13 @@ try
         try
         {
             var context = services.GetRequiredService<ApplicationDbContext>();
-            
+
             // Apply migrations
             await context.Database.MigrateAsync();
-            
+
             // Seed email templates
             await DatabaseSeeder.SeedEmailTemplatesAsync(context);
-            
+
             // Keycloak provisioning será feito pelo HostedService (KeycloakAdminProvisioner)
             // Não precisa chamar manualmente aqui
         }
@@ -639,16 +632,16 @@ try
     }
     app.UseRouting();
     app.UseCors();
-    
+
     // Log CORS origins na inicialização
     var corsOrigins = builder.Configuration.GetSection("Frontend:CorsOrigins").Get<string[]>();
     var corsOriginsString = builder.Configuration["Frontend:CorsOrigins"];
     var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"];
-    Log.Information("CORS - Origins Array: {OriginsArray}, Origins String: {OriginsString}, BaseUrl: {BaseUrl}", 
+    Log.Information("CORS - Origins Array: {OriginsArray}, Origins String: {OriginsString}, BaseUrl: {BaseUrl}",
         corsOrigins != null ? string.Join(", ", corsOrigins) : "null",
         corsOriginsString ?? "null",
         frontendBaseUrl ?? "null");
-    
+
     app.UseLocalizationConfiguration();
     app.UseSession();
     app.UseMiddleware<BffCsrfMiddleware>();

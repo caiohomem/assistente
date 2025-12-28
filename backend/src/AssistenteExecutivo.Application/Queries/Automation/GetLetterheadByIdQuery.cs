@@ -8,3 +8,7 @@ public class GetLetterheadByIdQuery : IRequest<LetterheadDto?>
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

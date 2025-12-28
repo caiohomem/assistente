@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using AssistenteExecutivo.Api.Security;
 using AssistenteExecutivo.Application.Queries.Auth;
 using MediatR;
+using System.Security.Claims;
 
 namespace AssistenteExecutivo.Api.Extensions;
 

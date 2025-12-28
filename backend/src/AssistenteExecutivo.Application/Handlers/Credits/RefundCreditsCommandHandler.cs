@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.Commands.Credits;
 using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
@@ -47,7 +46,7 @@ public class RefundCreditsCommandHandler : IRequestHandler<RefundCreditsCommand,
         // Verificar idempotência antes de executar
         var idempotencyKey = IdempotencyKey.Create(request.IdempotencyKey);
         var existingTransaction = wallet.Transactions
-            .FirstOrDefault(t => t.IdempotencyKey == idempotencyKey && 
+            .FirstOrDefault(t => t.IdempotencyKey == idempotencyKey &&
                                  t.Type == Domain.Enums.CreditTransactionType.Refund);
 
         bool wasIdempotent = existingTransaction != null;

@@ -436,6 +436,20 @@
       "active": "Active",
       "inactive": "Inactive"
     }
+  },
+  "login": {
+    "checkingAuth": "Checking authentication...",
+    "reactivateTitle": "Do you want to reactivate the user?",
+    "reactivateDescription": "Your user was previously deleted. Do you want to reactivate it and continue to the dashboard?",
+    "reactivateButton": "Yes, reactivate",
+    "reactivating": "Reactivating...",
+    "goBack": "No, go back",
+    "errorTitle": "Could not sign in",
+    "errorLabel": "Error:",
+    "tryAgain": "Try again",
+    "back": "Back",
+    "reactivateError": "Error reactivating user",
+    "reactivateErrorRetry": "Error reactivating user. Please try again."
   }
 }
 

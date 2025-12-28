@@ -14,7 +14,7 @@ public class CreateReminderCommandHandlerTests : HandlerTestBase
     {
         // Arrange
         var ownerUserId = Guid.NewGuid();
-        
+
         // Create a contact first
         var contactCommand = new CreateContactCommand
         {
@@ -95,7 +95,7 @@ public class CreateReminderCommandHandlerTests : HandlerTestBase
     {
         // Arrange
         var ownerUserId = Guid.NewGuid();
-        
+
         var contactCommand = new CreateContactCommand
         {
             OwnerUserId = ownerUserId,
@@ -117,4 +117,8 @@ public class CreateReminderCommandHandlerTests : HandlerTestBase
             .WithMessage("*ReminderScheduledForDeveSerFuturo*");
     }
 }
+
+
+
+
 

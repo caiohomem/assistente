@@ -1,5 +1,4 @@
 using AssistenteExecutivo.Domain.Exceptions;
-using AssistenteExecutivo.Domain.Interfaces;
 
 namespace AssistenteExecutivo.Domain.Entities;
 

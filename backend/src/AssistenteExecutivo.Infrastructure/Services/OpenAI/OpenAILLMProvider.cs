@@ -1,14 +1,12 @@
-using System.IO;
-using System.Linq;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace AssistenteExecutivo.Infrastructure.Services.OpenAI;
 
@@ -31,27 +29,27 @@ public sealed class OpenAILLMProvider : ILLMProvider
         _logger = logger;
         _configurationRepository = configurationRepository;
         _httpClient = httpClientFactory.CreateClient();
-        
+
         var baseUrl = configuration["OpenAI:BaseUrl"] ?? "https://api.openai.com/v1/";
         _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
-        
-        _apiKey = configuration["OpenAI:ApiKey"] 
+
+        _apiKey = configuration["OpenAI:ApiKey"]
             ?? throw new InvalidOperationException("OpenAI:ApiKey não configurado. Configure a variável de ambiente OpenAI__ApiKey ou a configuração OpenAI:ApiKey no appsettings.json");
-        
+
         if (string.IsNullOrWhiteSpace(_apiKey) || _apiKey.Length < 20)
         {
             throw new InvalidOperationException($"OpenAI:ApiKey inválido. A chave deve ter pelo menos 20 caracteres. Valor atual: {(string.IsNullOrWhiteSpace(_apiKey) ? "(vazio)" : $"{_apiKey.Substring(0, Math.Min(10, _apiKey.Length))}...")}");
         }
-        
+
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-        
+
         var organizationId = configuration["OpenAI:OrganizationId"];
         if (!string.IsNullOrWhiteSpace(organizationId))
         {
             _httpClient.DefaultRequestHeaders.Add("OpenAI-Organization", organizationId);
         }
-        
+
         _model = configuration["OpenAI:LLM:Model"] ?? "gpt-4o-mini";
         var temperatureValue = double.Parse(configuration["OpenAI:LLM:Temperature"] ?? "0.3");
         // OpenAI API requires temperature to be between 0 and 2
@@ -119,17 +117,17 @@ public sealed class OpenAILLMProvider : ILLMProvider
             };
 
             var json = JsonSerializer.Serialize(requestBody);
-            _logger.LogDebug("Request body size: {Size} bytes, Prompt length: {PromptLength} characters", 
+            _logger.LogDebug("Request body size: {Size} bytes, Prompt length: {PromptLength} characters",
                 json.Length, prompt.Length);
-            
+
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync("chat/completions", content, cancellationToken);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                
+
                 // Tentar extrair a mensagem de erro detalhada da resposta da OpenAI
                 string errorMessage = "Erro desconhecido da API OpenAI";
                 try
@@ -152,11 +150,11 @@ public sealed class OpenAILLMProvider : ILLMProvider
                     // Se não conseguir fazer parse, usar o conteúdo completo
                     errorMessage = errorContent;
                 }
-                
+
                 _logger.LogError(
                     "Erro ao processar com OpenAI LLM. Status: {StatusCode}, Model: {Model}, PromptLength: {PromptLength}, Error: {ErrorMessage}, FullResponse: {ErrorContent}",
                     response.StatusCode, _model, prompt.Length, errorMessage, errorContent);
-                
+
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
                     throw new UnauthorizedAccessException(
@@ -164,7 +162,7 @@ public sealed class OpenAILLMProvider : ILLMProvider
                         $"Configure a variável de ambiente OpenAI__ApiKey ou a configuração OpenAI:ApiKey no appsettings.json. " +
                         $"Status: {response.StatusCode}, Error: {errorMessage}");
                 }
-                
+
                 if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
                 {
                     throw new HttpRequestException(
@@ -173,7 +171,7 @@ public sealed class OpenAILLMProvider : ILLMProvider
                         $"Full response: {errorContent}",
                         null, response.StatusCode);
                 }
-                
+
                 throw new HttpRequestException(
                     $"Erro ao processar requisição para OpenAI API. Status: {response.StatusCode}, Error: {errorMessage}. " +
                     $"Full response: {errorContent}",
@@ -193,18 +191,18 @@ public sealed class OpenAILLMProvider : ILLMProvider
                 _logger.LogError(ex, "Erro ao ler resposta da API OpenAI");
                 throw new HttpRequestException($"Erro ao ler resposta da API OpenAI: {ex.Message}", ex);
             }
-            
+
             // Validar que a resposta não está vazia ou truncada
             if (string.IsNullOrWhiteSpace(responseJson))
             {
                 _logger.LogError("Resposta vazia da API OpenAI");
                 throw new HttpRequestException("Resposta vazia da API OpenAI");
             }
-            
-            _logger.LogDebug("Resposta completa da API OpenAI: Tamanho={Size} bytes, Preview={Preview}", 
-                responseJson.Length, 
+
+            _logger.LogDebug("Resposta completa da API OpenAI: Tamanho={Size} bytes, Preview={Preview}",
+                responseJson.Length,
                 responseJson.Length > 500 ? responseJson.Substring(0, 500) + "..." : responseJson);
-            
+
             JsonDocument jsonDoc;
             try
             {
@@ -212,15 +210,15 @@ public sealed class OpenAILLMProvider : ILLMProvider
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, 
+                _logger.LogError(ex,
                     "Erro ao fazer parse da resposta JSON da API OpenAI. Tamanho: {Size} bytes, Conteúdo: {Content}",
-                    responseJson.Length, 
+                    responseJson.Length,
                     responseJson.Length > 2000 ? responseJson.Substring(0, 2000) + "..." : responseJson);
                 throw new HttpRequestException(
                     $"Resposta JSON inválida da API OpenAI (possivelmente truncada). Tamanho: {responseJson.Length} bytes. Erro: {ex.Message}",
                     ex);
             }
-            
+
             string responseText;
             try
             {
@@ -272,14 +270,14 @@ public sealed class OpenAILLMProvider : ILLMProvider
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, 
+                _logger.LogError(ex,
                     "Erro ao extrair conteúdo da resposta da API OpenAI. Resposta: {Response}",
                     responseJson.Length > 2000 ? responseJson.Substring(0, 2000) + "..." : responseJson);
                 throw new HttpRequestException(
                     $"Erro ao extrair conteúdo da resposta da API OpenAI: {ex.Message}",
                     ex);
             }
-            
+
             if (string.IsNullOrWhiteSpace(responseText))
             {
                 _logger.LogWarning("Conteúdo vazio na resposta da API OpenAI. Usando fallback.");
@@ -292,13 +290,13 @@ public sealed class OpenAILLMProvider : ILLMProvider
                     }
                 };
             }
-            
-            _logger.LogDebug("Resposta do OpenAI LLM: Tamanho={Size} caracteres, Preview={Preview}", 
+
+            _logger.LogDebug("Resposta do OpenAI LLM: Tamanho={Size} caracteres, Preview={Preview}",
                 responseText.Length,
                 responseText.Length > 500 ? responseText.Substring(0, 500) + "..." : responseText);
 
             var result = ParseAudioProcessingResult(responseText, transcript);
-            
+
             _logger.LogInformation(
                 "Processamento concluído: Summary length={SummaryLength}, Tasks count={TasksCount}",
                 result.Summary.Length, result.Tasks.Count);
@@ -316,7 +314,7 @@ public sealed class OpenAILLMProvider : ILLMProvider
     {
         // Tentar obter o prompt de transcrição da base de dados
         var configuration = await _configurationRepository.GetCurrentAsync(cancellationToken);
-        
+
         string transcriptionPrompt;
         if (configuration != null && !string.IsNullOrWhiteSpace(configuration.TranscriptionPrompt))
         {
@@ -392,7 +390,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
             var closeBraces = cleanedText.Count(c => c == '}');
             var openBrackets = cleanedText.Count(c => c == '[');
             var closeBrackets = cleanedText.Count(c => c == ']');
-            
+
             if (openBraces != closeBraces || openBrackets != closeBrackets)
             {
                 _logger.LogWarning(
@@ -401,7 +399,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
                     openBraces, closeBraces, openBrackets, closeBrackets,
                     cleanedText.Length,
                     cleanedText.Length > 1000 ? cleanedText.Substring(0, 1000) + "..." : cleanedText);
-                
+
                 // Tentar corrigir JSON incompleto adicionando fechamentos faltantes
                 var fixedText = cleanedText;
                 if (openBraces > closeBraces)
@@ -412,7 +410,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
                 {
                     fixedText += new string(']', openBrackets - closeBrackets);
                 }
-                
+
                 _logger.LogInformation("Tentando corrigir JSON adicionando fechamentos faltantes");
                 cleanedText = fixedText;
             }
@@ -431,7 +429,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
                     "Preview (primeiros 2000 chars): {Preview}",
                     cleanedText.Length,
                     cleanedText.Length > 2000 ? cleanedText.Substring(0, 2000) + "..." : cleanedText);
-                
+
                 // Se o JSON está muito corrompido, retornar resultado básico
                 return new AudioProcessingResult
                 {
@@ -464,7 +462,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
                         {
                             // Tentar extrair data se mencionada na sugestão
                             DateTime? dueDate = ExtractDateFromText(suggestionText);
-                            
+
                             tasks.Add(new ExtractedTask(
                                 description: suggestionText,
                                 dueDate: dueDate,
@@ -491,10 +489,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
         catch (Exception ex) when (!(ex is JsonException))
         {
             // Capturar qualquer outro tipo de exceção (não apenas JsonException)
-            _logger.LogError(ex, 
+            _logger.LogError(ex,
                 "Erro inesperado ao processar resposta da OpenAI LLM. Resposta original: {Response}",
                 jsonText?.Length > 2000 ? jsonText.Substring(0, 2000) + "..." : jsonText ?? "(null)");
-            
+
             // Retornar resultado básico em vez de lançar exceção
             return new AudioProcessingResult
             {
@@ -525,17 +523,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.";
         // Exemplos: "hoje", "amanhã", "próxima semana", "15/01/2024", etc.
         // Implementação simples - pode ser melhorada
         var today = DateTime.Today;
-        
+
         if (text.Contains("hoje", StringComparison.OrdinalIgnoreCase))
         {
             return today;
         }
-        
+
         if (text.Contains("amanhã", StringComparison.OrdinalIgnoreCase))
         {
             return today.AddDays(1);
         }
-        
+
         if (text.Contains("próxima semana", StringComparison.OrdinalIgnoreCase))
         {
             return today.AddDays(7);

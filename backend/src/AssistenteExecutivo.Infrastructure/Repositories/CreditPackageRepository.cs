@@ -50,12 +50,12 @@ public class CreditPackageRepository : ICreditPackageRepository
     public async Task UpdateAsync(CreditPackage package, CancellationToken cancellationToken = default)
     {
         var entry = _context.Entry(package);
-        
+
         if (entry.State == EntityState.Detached)
         {
             _context.CreditPackages.Update(package);
         }
-        
+
         await Task.CompletedTask;
     }
 
@@ -65,5 +65,9 @@ public class CreditPackageRepository : ICreditPackageRepository
             .AnyAsync(p => p.PackageId == packageId, cancellationToken);
     }
 }
+
+
+
+
 
 

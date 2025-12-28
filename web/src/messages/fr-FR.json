@@ -269,6 +269,20 @@
       "terms": "Conditions",
       "privacy": "Confidentialité"
     }
+  },
+  "login": {
+    "checkingAuth": "Vérification de l'authentification...",
+    "reactivateTitle": "Voulez-vous réactiver l'utilisateur ?",
+    "reactivateDescription": "Votre utilisateur a été supprimé précédemment. Voulez-vous le réactiver et continuer vers le tableau de bord ?",
+    "reactivateButton": "Oui, réactiver",
+    "reactivating": "Réactivation...",
+    "goBack": "Non, retour",
+    "errorTitle": "Impossible de se connecter",
+    "errorLabel": "Erreur :",
+    "tryAgain": "Réessayer",
+    "back": "Retour",
+    "reactivateError": "Erreur lors de la réactivation de l'utilisateur",
+    "reactivateErrorRetry": "Erreur lors de la réactivation de l'utilisateur. Veuillez réessayer."
   }
 }
 

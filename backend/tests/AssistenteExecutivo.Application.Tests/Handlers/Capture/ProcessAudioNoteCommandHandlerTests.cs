@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.Commands.Capture;
 using AssistenteExecutivo.Application.Commands.Contacts;
-using AssistenteExecutivo.Application.Queries.Notes;
 using AssistenteExecutivo.Application.Tests.Helpers;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Interfaces;

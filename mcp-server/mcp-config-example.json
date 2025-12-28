@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "assistente-executivo": {
+      "command": "node",
+      "args": [
+        "C:\\Projects\\AssistenteExecutivo\\mcp-server\\dist\\index.js"
+      ],
+      "env": {
+        "API_BASE_URL": "http://localhost:5239",
+        "ACCESS_TOKEN": "seu_token_jwt_aqui"
+      }
+    }
+  }
+}
+
+
+
+
+

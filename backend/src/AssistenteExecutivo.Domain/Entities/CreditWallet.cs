@@ -54,11 +54,11 @@ public class CreditWallet
                         break;
                 }
             }
-            
+
             // Garantir que o saldo nunca seja negativo (retornar zero se for negativo)
             if (balanceValue < 0)
                 return CreditAmount.Zero;
-            
+
             return CreditAmount.Create(balanceValue);
         }
     }

@@ -1,15 +1,13 @@
-using AssistenteExecutivo.Domain.Exceptions;
 using AssistenteExecutivo.Api.Resources;
-using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Net;
-using System.Text.Json;
-using System.Diagnostics;
-using System.Security.Cryptography;
-using Serilog.Context;
+using AssistenteExecutivo.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Npgsql;
+using Serilog.Context;
+using System.Diagnostics;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace AssistenteExecutivo.Api.Middleware;
 
@@ -22,7 +20,7 @@ public class GlobalExceptionHandlingMiddleware
     private readonly IConfiguration _configuration;
 
     public GlobalExceptionHandlingMiddleware(
-        RequestDelegate next, 
+        RequestDelegate next,
         ILogger<GlobalExceptionHandlingMiddleware> logger,
         IStringLocalizer<Messages> localizer,
         IWebHostEnvironment environment,
@@ -60,8 +58,8 @@ public class GlobalExceptionHandlingMiddleware
                     using (LogContext.PushProperty("Elapsed", stopwatch.ElapsedMilliseconds))
                     {
                         // 404s em paths comuns são esperados e não precisam de warning
-                        var isCommon404 = context.Response.StatusCode == 404 && 
-                            (requestPath == "/" || 
+                        var isCommon404 = context.Response.StatusCode == 404 &&
+                            (requestPath == "/" ||
                              requestPath.StartsWith("/favicon", StringComparison.OrdinalIgnoreCase) ||
                              requestPath.StartsWith("/robots.txt", StringComparison.OrdinalIgnoreCase) ||
                              // WordPress scanner probes (common bot scans)
@@ -71,7 +69,7 @@ public class GlobalExceptionHandlingMiddleware
                              requestPath.Contains("wlwmanifest.xml", StringComparison.OrdinalIgnoreCase) ||
                              requestPath.Contains("xmlrpc.php", StringComparison.OrdinalIgnoreCase) ||
                              requestPath.Contains("/.well-known/", StringComparison.OrdinalIgnoreCase));
-                        
+
                         if (isCommon404)
                         {
                             _logger.LogDebug(
@@ -182,13 +180,13 @@ public class GlobalExceptionHandlingMiddleware
             var frontendBaseUrl = _configuration["Frontend:BaseUrl"]
                 ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
             var loginUrl = $"{frontendBaseUrl.TrimEnd('/')}/login?returnUrl={Uri.EscapeDataString(requestPath)}";
-            
+
             context.Response.Redirect(loginUrl);
         }
     }
 
     private async Task HandleDomainExceptionAsync(
-        HttpContext context, 
+        HttpContext context,
         DomainException exception,
         string requestPath,
         string requestMethod,
@@ -218,7 +216,7 @@ public class GlobalExceptionHandlingMiddleware
         }
 
         context.Response.ContentType = "application/json";
-        
+
         // Determinar status HTTP baseado no código de localização
         // Exceções de "não encontrado" devem retornar 404
         var statusCode = HttpStatusCode.BadRequest;
@@ -229,7 +227,7 @@ public class GlobalExceptionHandlingMiddleware
                 statusCode = HttpStatusCode.NotFound;
             }
         }
-        
+
         context.Response.StatusCode = (int)statusCode;
 
         // Usar código de localização se disponível, senão usar mensagem original
@@ -237,12 +235,12 @@ public class GlobalExceptionHandlingMiddleware
         if (!string.IsNullOrEmpty(exception.LocalizationCode))
         {
             var parameters = exception.LocalizationParameters ?? Array.Empty<object>();
-            
+
             // Converter "Domain:RelationshipJaExiste" para "Domain.RelationshipJaExiste"
             // para corresponder à estrutura do arquivo JSON
             var localizationKey = exception.LocalizationCode.Replace(":", ".");
             localizedMessage = _localizer[localizationKey, parameters];
-            
+
             // Se a localização falhou (retornou o código), usar mensagem padrão
             if (string.IsNullOrEmpty(localizedMessage) || localizedMessage == localizationKey)
             {
@@ -391,7 +389,7 @@ public class GlobalExceptionHandlingMiddleware
             SameSite = SameSiteMode.Lax,
             Expires = DateTimeOffset.UtcNow.AddDays(-1) // Expirar o cookie
         };
-        
+
         // Se houver um domínio configurado no cookie de sessão, usar o mesmo
         var apiPublicBaseUrl = _configuration["Api:PublicBaseUrl"] ?? _configuration["Api:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(apiPublicBaseUrl) && Uri.TryCreate(apiPublicBaseUrl, UriKind.Absolute, out var apiUri))
@@ -400,13 +398,13 @@ public class GlobalExceptionHandlingMiddleware
             var parts = host.Split('.');
             if (parts.Length >= 2)
             {
-                var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3 
+                var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3
                     ? string.Join(".", parts.Skip(parts.Length - 3))
                     : string.Join(".", parts.Skip(parts.Length - 2));
                 cookieOptions.Domain = $".{domainBase}";
             }
         }
-        
+
         context.Response.Cookies.Delete("ae.sid", cookieOptions);
 
         // Verificar se é uma requisição de API (JSON) ou web (HTML)
@@ -438,7 +436,7 @@ public class GlobalExceptionHandlingMiddleware
             var frontendBaseUrl = _configuration["Frontend:BaseUrl"]
                 ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
             var loginUrl = $"{frontendBaseUrl.TrimEnd('/')}/login?returnUrl={Uri.EscapeDataString(requestPath)}";
-            
+
             context.Response.StatusCode = (int)HttpStatusCode.Redirect;
             context.Response.Headers.Location = loginUrl;
             await context.Response.WriteAsync(string.Empty);
@@ -469,7 +467,7 @@ public class GlobalExceptionHandlingMiddleware
                 exception.GetType().FullName,
                 exception.Message,
                 exception.StackTrace ?? "N/A");
-            
+
             // Log all inner exceptions recursively
             LogInnerExceptions(exception.InnerException, 1);
         }

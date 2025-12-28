@@ -1,5 +1,3 @@
-using AssistenteExecutivo.Domain.Enums;
-
 namespace AssistenteExecutivo.Domain.DomainEvents;
 
 public record ReminderScheduled(
@@ -9,4 +7,8 @@ public record ReminderScheduled(
     string Reason,
     DateTime ScheduledFor,
     DateTime OccurredAt) : IDomainEvent;
+
+
+
+
 

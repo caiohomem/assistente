@@ -1,7 +1,6 @@
 using AssistenteExecutivo.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Text.Json;
 
 namespace AssistenteExecutivo.Infrastructure.Persistence.Configurations;
 

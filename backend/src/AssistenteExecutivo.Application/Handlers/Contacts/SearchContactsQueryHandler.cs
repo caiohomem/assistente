@@ -1,7 +1,6 @@
 using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Queries.Contacts;
-using AssistenteExecutivo.Domain.Entities;
 using MediatR;
 
 namespace AssistenteExecutivo.Application.Handlers.Contacts;
@@ -33,7 +32,7 @@ public class SearchContactsQueryHandler : IRequestHandler<SearchContactsQuery, S
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var searchTerm = request.SearchTerm.Trim().ToLowerInvariant();
-            
+
             filteredContacts = allContacts.Where(c =>
                 // Buscar por nome
                 (c.Name.FirstName.ToLowerInvariant().Contains(searchTerm) ||

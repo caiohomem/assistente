@@ -5,3 +5,7 @@ public record DraftSent(
     Guid SentBy,
     DateTime OccurredAt) : IDomainEvent;
 
+
+
+
+

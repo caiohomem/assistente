@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Application.Queries.Credits;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,6 +39,10 @@ public class ListCreditPackagesQueryHandler : IRequestHandler<ListCreditPackages
         }).ToList();
     }
 }
+
+
+
+
 
 
 

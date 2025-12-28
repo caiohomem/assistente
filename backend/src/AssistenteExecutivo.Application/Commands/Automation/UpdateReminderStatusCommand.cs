@@ -11,3 +11,7 @@ public class UpdateReminderStatusCommand : IRequest
     public DateTime? NewScheduledFor { get; set; } // Para Snoozed
 }
 
+
+
+
+

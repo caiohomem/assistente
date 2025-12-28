@@ -43,16 +43,16 @@ public class AddContactRelationshipCommandHandler : IRequestHandler<AddContactRe
         {
             // Diagnostic check: verify if contact exists but with different owner or is deleted
             var (exists, ownerUserId, isDeleted) = await _contactRepository.GetContactStatusAsync(request.TargetContactId, cancellationToken);
-            
+
             if (!exists)
                 throw new DomainException("Domain:TargetContactNaoEncontrado");
-            
+
             if (isDeleted)
                 throw new DomainException("Domain:TargetContactDeletado");
-            
+
             if (ownerUserId.HasValue && ownerUserId.Value != request.OwnerUserId)
                 throw new DomainException("Domain:TargetContactPertenceOutroUsuario");
-            
+
             // Fallback if we can't determine the exact reason
             throw new DomainException("Domain:TargetContactNaoEncontrado");
         }

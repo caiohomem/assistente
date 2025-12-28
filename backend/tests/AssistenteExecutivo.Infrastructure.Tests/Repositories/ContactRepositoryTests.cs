@@ -23,7 +23,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var contactId = Guid.NewGuid();
         var contact = new Contact(contactId, ownerUserId, PersonName.Create("João", "Silva"), Clock);
         contact.AddEmail(EmailAddress.Create("joao@example.com"));
-        
+
         await Context.Contacts.AddAsync(contact);
         await SaveChangesAsync();
 
@@ -60,7 +60,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var ownerUserId2 = Guid.NewGuid();
         var contactId = Guid.NewGuid();
         var contact = new Contact(contactId, ownerUserId1, PersonName.Create("João", "Silva"), Clock);
-        
+
         await Context.Contacts.AddAsync(contact);
         await SaveChangesAsync();
 
@@ -79,7 +79,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var contactId = Guid.NewGuid();
         var contact = new Contact(contactId, ownerUserId, PersonName.Create("João", "Silva"), Clock);
         contact.Delete();
-        
+
         await Context.Contacts.AddAsync(contact);
         await SaveChangesAsync();
 
@@ -96,11 +96,11 @@ public class ContactRepositoryTests : RepositoryTestBase
         // Arrange
         var ownerUserId1 = Guid.NewGuid();
         var ownerUserId2 = Guid.NewGuid();
-        
+
         var contact1 = new Contact(Guid.NewGuid(), ownerUserId1, PersonName.Create("João", "Silva"), Clock);
         var contact2 = new Contact(Guid.NewGuid(), ownerUserId1, PersonName.Create("Maria", "Santos"), Clock);
         var contact3 = new Contact(Guid.NewGuid(), ownerUserId2, PersonName.Create("Pedro", "Costa"), Clock);
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2, contact3);
         await SaveChangesAsync();
 
@@ -122,7 +122,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var contact1 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
         var contact2 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("Maria", "Santos"), Clock);
         contact2.Delete();
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await SaveChangesAsync();
 
@@ -140,7 +140,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var ownerUserId = Guid.NewGuid();
         var contact = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
         contact.AddEmail(EmailAddress.Create("joao@example.com"));
-        
+
         await Context.Contacts.AddAsync(contact);
         await SaveChangesAsync();
 
@@ -159,7 +159,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var ownerUserId = Guid.NewGuid();
         var contact = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
         contact.AddEmail(EmailAddress.Create("Joao@Example.com"));
-        
+
         await Context.Contacts.AddAsync(contact);
         await SaveChangesAsync();
 
@@ -177,7 +177,7 @@ public class ContactRepositoryTests : RepositoryTestBase
         var ownerUserId = Guid.NewGuid();
         var contact = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
         contact.AddPhone(PhoneNumber.Create("11987654321"));
-        
+
         await Context.Contacts.AddAsync(contact);
         await SaveChangesAsync();
 

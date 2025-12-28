@@ -8,3 +8,7 @@ public class GetDraftByIdQuery : IRequest<DraftDto?>
     public Guid OwnerUserId { get; set; }
 }
 
+
+
+
+

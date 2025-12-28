@@ -23,3 +23,7 @@ public class StubSpeechToTextProvider : ISpeechToTextProvider
 
 
 
+
+
+
+

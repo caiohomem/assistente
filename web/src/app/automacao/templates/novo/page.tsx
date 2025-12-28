@@ -6,3 +6,7 @@ export default function NovoTemplatePage() {
   return <NovoTemplateClient />;
 }
 
+
+
+
+

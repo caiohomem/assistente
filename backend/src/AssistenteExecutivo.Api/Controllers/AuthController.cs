@@ -1,14 +1,10 @@
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Security.Cryptography;
 using AssistenteExecutivo.Api.Security;
 using AssistenteExecutivo.Application.Commands.Auth;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.Queries.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
 
 namespace AssistenteExecutivo.Api.Controllers;
 
@@ -38,6 +34,7 @@ public sealed class AuthController : ControllerBase
 
     public sealed record ForgotPasswordRequest(string Email);
     public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);
+    public sealed record ReactivateUserRequest(string Email, string KeycloakSubject);
 
     /// <summary>
     /// Registra um novo usuário no sistema.
@@ -65,6 +62,53 @@ public sealed class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Reativa um usuário deletado.
+    /// </summary>
+    [HttpPost("reactivate")]
+    [ProducesResponseType(typeof(ReactivateDeletedUserResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReactivateUser([FromBody] ReactivateUserRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request == null)
+            return BadRequest(new { message = "Requisição inválida." });
+
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { message = "Email é obrigatório." });
+
+        if (string.IsNullOrWhiteSpace(request.KeycloakSubject))
+            return BadRequest(new { message = "KeycloakSubject é obrigatório." });
+
+        var command = new ReactivateDeletedUserCommand
+        {
+            Email = request.Email,
+            KeycloakSubject = request.KeycloakSubject
+        };
+
+        try
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return Ok(result);
+        }
+        catch (AssistenteExecutivo.Domain.Exceptions.DomainException ex)
+        {
+            _logger.LogWarning(ex, "Erro ao reativar usuário. Email={Email}, KeycloakSubject={KeycloakSubject}", 
+                request.Email, request.KeycloakSubject);
+
+            if (ex.LocalizationCode == "Domain:UsuarioNaoEncontrado")
+                return NotFound(new { message = "Usuário não encontrado." });
+
+            if (ex.LocalizationCode == "Domain:ApenasUsuariosDeletadosPodemSerReativados")
+                return BadRequest(new { message = "Apenas usuários deletados podem ser reativados." });
+
+            if (ex.LocalizationCode == "Domain:KeycloakSubjectNaoConfere")
+                return BadRequest(new { message = "KeycloakSubject não confere." });
+
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Starts login flow by redirecting to Keycloak authorize endpoint.
     /// </summary>
     [HttpGet("login")]
@@ -77,11 +121,11 @@ public sealed class AuthController : ControllerBase
         var state = GenerateState();
         HttpContext.Session.SetString(BffSessionKeys.OAuthState, state);
         HttpContext.Session.SetString(BffSessionKeys.ReturnPath, NormalizeReturnPath(returnUrl));
-        
+
         // IMPORTANTE: Commit explícito da sessão antes do redirect
         // Isso garante que o state seja persistido antes de redirecionar para o Keycloak
         await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
-        
+
         // Log para debug - verificar se sessão foi salva
         var sessionIdAfterCommit = HttpContext.Session.Id;
         var stateStored = HttpContext.Session.GetString(BffSessionKeys.OAuthState);
@@ -119,7 +163,7 @@ public sealed class AuthController : ControllerBase
         HttpContext.Session.SetString(BffSessionKeys.OAuthState, state);
         HttpContext.Session.SetString(BffSessionKeys.ReturnPath, NormalizeReturnPath(returnUrl));
         HttpContext.Session.SetString(BffSessionKeys.Action, "register"); // Marcar como registro
-        
+
         // IMPORTANTE: Commit explícito da sessão antes do redirect
         // Isso garante que o state seja persistido antes de redirecionar para o Keycloak
         await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
@@ -177,17 +221,17 @@ public sealed class AuthController : ControllerBase
         var hasSessionCookie = Request.Cookies.ContainsKey("ae.sid");
         var sessionId = HttpContext.Session?.Id ?? "null";
         var setCookieHeaders = Response.Headers["Set-Cookie"].ToString();
-        
+
         _logger.LogInformation(
             "OAuthCallback - SessionId: {SessionId}, HasSessionCookie: {HasSessionCookie}, CookieHeaderLength: {CookieHeaderLength}, SetCookieHeadersLength: {SetCookieHeadersLength}",
             sessionId, hasSessionCookie, cookieHeader?.Length ?? 0, setCookieHeaders?.Length ?? 0);
-        
+
         var expectedState = HttpContext.Session.GetString(BffSessionKeys.OAuthState);
         if (string.IsNullOrWhiteSpace(expectedState) || !FixedTimeEquals(expectedState, state))
         {
             _logger.LogWarning(
                 "State inválido ou não encontrado. Expected: {ExpectedState}, Received: {ReceivedState}, SessionId: {SessionId}, HasSessionCookie: {HasSessionCookie}, CookieHeader: {CookieHeader}",
-                expectedState ?? "null", state ?? "null", sessionId, hasSessionCookie, 
+                expectedState ?? "null", state ?? "null", sessionId, hasSessionCookie,
                 cookieHeader?.Substring(0, Math.Min(200, cookieHeader?.Length ?? 0)) ?? "empty");
             return BadRequest(new { error = "invalid_state", message = "State inválido." });
         }
@@ -252,7 +296,7 @@ public sealed class AuthController : ControllerBase
             // Se for registro e usuário já existe, retornar erro
             if (existingUserId != null)
             {
-                _logger.LogWarning("Tentativa de registro com email já cadastrado. KeycloakSubject={KeycloakSubject}, Email={Email}", 
+                _logger.LogWarning("Tentativa de registro com email já cadastrado. KeycloakSubject={KeycloakSubject}, Email={Email}",
                     userInfo.Sub, userInfo.Email);
                 HttpContext.Session.Remove(BffSessionKeys.Action);
                 return Redirect(BuildFrontendLoginUrlWithError("email_ja_cadastrado"));
@@ -278,9 +322,19 @@ public sealed class AuthController : ControllerBase
                 HttpContext.Session.Clear();
                 DeleteBffCookies();
 
+                // Se for usuário deletado, passar email na URL para permitir reativação
+                if (ex.LocalizationCode == "Domain:UsuarioDeletado" && !string.IsNullOrWhiteSpace(userInfo.Email))
+                {
+                    var baseUrl = (HttpContext.Session.GetString(BffSessionKeys.FrontendBaseUrl)
+                        ?? _configuration["Frontend:BaseUrl"]
+                        ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings")).TrimEnd('/');
+                    var returnPath = HttpContext.Session.GetString(BffSessionKeys.ReturnPath) ?? "/dashboard";
+                    var qs = $"authError=usuario_deletado&email={Uri.EscapeDataString(userInfo.Email)}&keycloakSubject={Uri.EscapeDataString(userInfo.Sub)}&returnUrl={Uri.EscapeDataString(NormalizeReturnPath(returnPath))}";
+                    return Redirect($"{baseUrl}/login?{qs}");
+                }
+                
                 var authError = ex.LocalizationCode switch
                 {
-                    "Domain:UsuarioDeletado" => "usuario_deletado",
                     "Domain:UsuarioSuspenso" => "usuario_suspenso",
                     _ => "usuario_nao_permitido"
                 };
@@ -296,7 +350,7 @@ public sealed class AuthController : ControllerBase
             // Isso acontece quando o usuário faz login social pela primeira vez
             if (existingUserId == null)
             {
-                _logger.LogInformation("Usuário autenticado no Keycloak mas não encontrado no banco. Criando automaticamente (auto-provisionamento). KeycloakSubject={KeycloakSubject}, Email={Email}", 
+                _logger.LogInformation("Usuário autenticado no Keycloak mas não encontrado no banco. Criando automaticamente (auto-provisionamento). KeycloakSubject={KeycloakSubject}, Email={Email}",
                     userInfo.Sub, userInfo.Email);
             }
 
@@ -320,9 +374,19 @@ public sealed class AuthController : ControllerBase
                 HttpContext.Session.Clear();
                 DeleteBffCookies();
 
+                // Se for usuário deletado, passar email na URL para permitir reativação
+                if (ex.LocalizationCode == "Domain:UsuarioDeletado" && !string.IsNullOrWhiteSpace(userInfo.Email))
+                {
+                    var baseUrl = (HttpContext.Session.GetString(BffSessionKeys.FrontendBaseUrl)
+                        ?? _configuration["Frontend:BaseUrl"]
+                        ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings")).TrimEnd('/');
+                    var returnPath = HttpContext.Session.GetString(BffSessionKeys.ReturnPath) ?? "/dashboard";
+                    var qs = $"authError=usuario_deletado&email={Uri.EscapeDataString(userInfo.Email)}&keycloakSubject={Uri.EscapeDataString(userInfo.Sub)}&returnUrl={Uri.EscapeDataString(NormalizeReturnPath(returnPath))}";
+                    return Redirect($"{baseUrl}/login?{qs}");
+                }
+                
                 var authError = ex.LocalizationCode switch
                 {
-                    "Domain:UsuarioDeletado" => "usuario_deletado",
                     "Domain:UsuarioSuspenso" => "usuario_suspenso",
                     _ => "usuario_nao_permitido"
                 };
@@ -341,13 +405,6 @@ public sealed class AuthController : ControllerBase
             }
         }
 
-        // #region agent log
-        var logPath = Path.Combine(Directory.GetCurrentDirectory(), ".cursor", "debug.log");
-        var sessionIdBefore = HttpContext.Session.Id;
-        var isAuthBefore = BffSessionStore.IsAuthenticated(HttpContext.Session);
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_A", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:281", message = "Before storing session", data = new { sessionId = sessionIdBefore, isAuthenticated = isAuthBefore, hasSession = HttpContext.Session != null, userId = provisionResult?.UserId ?? existingUserId ?? Guid.Empty }, sessionId = "debug-session", runId = "run1", hypothesisId = "A" }) + "\n"); } catch { }
-        // #endregion
-
         var ownerUserId = provisionResult?.UserId ?? existingUserId;
         if (ownerUserId.HasValue && ownerUserId.Value != Guid.Empty)
         {
@@ -358,11 +415,6 @@ public sealed class AuthController : ControllerBase
         BffSessionStore.StoreUser(HttpContext.Session, userInfo);
         BffSessionStore.SetAuthenticated(HttpContext.Session, true);
 
-        // #region agent log
-        var isAuthAfterStore = BffSessionStore.IsAuthenticated(HttpContext.Session);
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_A", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:286", message = "After storing session data", data = new { sessionId = HttpContext.Session.Id, isAuthenticated = isAuthAfterStore, hasAccessToken = !string.IsNullOrEmpty(HttpContext.Session.GetString(BffSessionKeys.AccessToken)), hasUserEmail = !string.IsNullOrEmpty(HttpContext.Session.GetString(BffSessionKeys.UserEmail)) }, sessionId = "debug-session", runId = "run1", hypothesisId = "A" }) + "\n"); } catch { }
-        // #endregion
-
         // Rotate CSRF token after login.
         BffCsrf.RotateToken(HttpContext.Session);
         SetCsrfCookie(BffCsrf.EnsureToken(HttpContext.Session));
@@ -370,7 +422,7 @@ public sealed class AuthController : ControllerBase
         // Cleanup one-time values.
         HttpContext.Session.Remove(BffSessionKeys.OAuthState);
         HttpContext.Session.Remove(BffSessionKeys.Action);
-        
+
         // Limpar código processado (já foi usado) - usar a mesma chave definida anteriormente
         HttpContext.Session.Remove(processedCodeKey);
 
@@ -378,31 +430,17 @@ public sealed class AuthController : ControllerBase
         // Isso garante que todas as mudanças sejam persistidas antes de redirecionar
         await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
 
-        // #region agent log
-        var isAuthAfterCommit = BffSessionStore.IsAuthenticated(HttpContext.Session);
-        var sessionIdAfterCommit = HttpContext.Session.Id;
-        var cookieHeaderAfterCommit = Request.Headers["Cookie"].ToString();
-        var setCookieHeadersAfterCommit = Response.Headers["Set-Cookie"].ToString();
-        var hasAeSidInSetCookie = setCookieHeadersAfterCommit.Contains("ae.sid", StringComparison.OrdinalIgnoreCase);
-        var hasAeSidInRequestCookie = Request.Cookies.ContainsKey("ae.sid");
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_B", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:298", message = "After CommitAsync", data = new { sessionId = sessionIdAfterCommit, isAuthenticated = isAuthAfterCommit, hasSetCookieHeader = !string.IsNullOrEmpty(setCookieHeadersAfterCommit), hasAeSidInSetCookie = hasAeSidInSetCookie, hasAeSidInRequestCookie = hasAeSidInRequestCookie, setCookieHeaderLength = setCookieHeadersAfterCommit?.Length ?? 0, setCookieHeader = setCookieHeadersAfterCommit?.Substring(0, Math.Min(500, setCookieHeadersAfterCommit?.Length ?? 0)), cookieHeaderLength = cookieHeaderAfterCommit?.Length ?? 0, requestHost = Request.Host.ToString(), requestScheme = Request.Scheme }, sessionId = "debug-session", runId = "run1", hypothesisId = "B" }) + "\n"); } catch { }
-        // #endregion
-
         var redirectUrl = BuildFrontendRedirectUrl();
-        
+
         // Verificar se a sessão foi realmente salva antes de redirecionar
         var sessionCheck = BffSessionStore.IsAuthenticated(HttpContext.Session);
         var sessionIdFinal = HttpContext.Session.Id;
-        
+
         // provisionResult sempre será definido (tanto no bloco if quanto no else)
         var userId = provisionResult?.UserId ?? existingUserId ?? Guid.Empty;
         _logger.LogInformation(
             "Sessão autenticada salva. UserId={UserId}, Email={Email}, Sub={Sub}, SessionId={SessionId}, IsAuthenticated={IsAuthenticated}. Redirecionando para: {RedirectUrl}",
             userId, userInfo.Email, userInfo.Sub, sessionIdFinal, sessionCheck, redirectUrl);
-
-        // #region agent log
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_A", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.OAuthCallback:316", message = "Before redirect", data = new { sessionId = sessionId, isAuthenticated = sessionCheck, redirectUrl = redirectUrl, userId = userId, email = userInfo.Email }, sessionId = "debug-session", runId = "run1", hypothesisId = "A" }) + "\n"); } catch { }
-        // #endregion
 
         // Adicionar um pequeno delay para garantir que a sessão foi persistida
         // Isso ajuda quando há problemas de timing com cookies
@@ -417,18 +455,13 @@ public sealed class AuthController : ControllerBase
     [HttpGet("session")]
     public async Task<IActionResult> Session()
     {
-        // #region agent log
-        var logPath = Path.Combine(Directory.GetCurrentDirectory(), ".cursor", "debug.log");
         var cookieHeader = Request.Headers["Cookie"].ToString();
         var sessionId = HttpContext.Session?.Id ?? "null";
-        
+
         // Verificar cookie de forma mais robusta - verificar tanto no header quanto nos cookies do request
         var hasSessionCookieInHeader = cookieHeader.Contains("ae.sid", StringComparison.OrdinalIgnoreCase);
         var hasSessionCookieInRequest = Request.Cookies.ContainsKey("ae.sid");
         var hasSessionCookie = hasSessionCookieInHeader || hasSessionCookieInRequest;
-        
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_C", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.Session:323", message = "Session endpoint called", data = new { sessionId = sessionId, hasSessionCookie = hasSessionCookie, hasSessionCookieInHeader = hasSessionCookieInHeader, hasSessionCookieInRequest = hasSessionCookieInRequest, cookieHeaderLength = cookieHeader?.Length ?? 0, cookieHeader = cookieHeader?.Substring(0, Math.Min(200, cookieHeader?.Length ?? 0)), requestHost = Request.Host.ToString(), requestScheme = Request.Scheme, userAgent = Request.Headers["User-Agent"].ToString() }, sessionId = "debug-session", runId = "run1", hypothesisId = "C" }) + "\n"); } catch { }
-        // #endregion
 
         var realm = GetRealm();
 
@@ -441,10 +474,6 @@ public sealed class AuthController : ControllerBase
         // mas sem o cookie, não há sessão persistida válida
         if (!hasSessionCookie)
         {
-            // #region agent log
-            try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_E", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.Session:noCookie", message = "No session cookie, returning unauthenticated", data = new { sessionId = sessionId, hasSessionCookie = false, hasSessionCookieInHeader = hasSessionCookieInHeader, hasSessionCookieInRequest = hasSessionCookieInRequest, cookieHeader = cookieHeader?.Substring(0, Math.Min(200, cookieHeader?.Length ?? 0)) }, sessionId = "debug-session", runId = "run1", hypothesisId = "E" }) + "\n"); } catch { }
-            // #endregion
-            
             return Ok(new
             {
                 authenticated = false,
@@ -455,10 +484,6 @@ public sealed class AuthController : ControllerBase
         var isAuthenticated = BffSessionStore.IsAuthenticated(HttpContext.Session);
         var hasAccessToken = !string.IsNullOrEmpty(HttpContext.Session.GetString(BffSessionKeys.AccessToken));
         var hasUserEmail = !string.IsNullOrEmpty(HttpContext.Session.GetString(BffSessionKeys.UserEmail));
-
-        // #region agent log
-        try { System.IO.File.AppendAllText(logPath, System.Text.Json.JsonSerializer.Serialize(new { id = $"log_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_E", timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), location = "AuthController.Session:332", message = "Session check result", data = new { sessionId = sessionId, isAuthenticated = isAuthenticated, hasAccessToken = hasAccessToken, hasUserEmail = hasUserEmail, userEmail = HttpContext.Session.GetString(BffSessionKeys.UserEmail) }, sessionId = "debug-session", runId = "run1", hypothesisId = "E" }) + "\n"); } catch { }
-        // #endregion
 
         if (!isAuthenticated)
         {
@@ -480,14 +505,14 @@ public sealed class AuthController : ControllerBase
         if (expiresAtUnix is not null && !string.IsNullOrWhiteSpace(refreshToken))
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            
+
             // Verificar se o token já expirou completamente
             if (expiresAtUnix.Value <= now)
             {
                 // Token já expirou - tentar refresh mesmo assim
                 tokenExpired = true;
                 shouldRefresh = true;
-                _logger.LogInformation("Access token já expirou. Tentando refresh. ExpiresAt: {ExpiresAt}, Now: {Now}", 
+                _logger.LogInformation("Access token já expirou. Tentando refresh. ExpiresAt: {ExpiresAt}, Now: {Now}",
                     expiresAtUnix.Value, now);
             }
             // Verificar se o token expira em menos de 3 minutos (180 segundos)
@@ -495,7 +520,7 @@ public sealed class AuthController : ControllerBase
             else if (expiresAtUnix.Value - now <= 180)
             {
                 shouldRefresh = true;
-                _logger.LogInformation("Access token expira em breve. Fazendo refresh preventivo. ExpiresAt: {ExpiresAt}, Now: {Now}, SecondsUntilExpiry: {SecondsUntilExpiry}", 
+                _logger.LogInformation("Access token expira em breve. Fazendo refresh preventivo. ExpiresAt: {ExpiresAt}, Now: {Now}, SecondsUntilExpiry: {SecondsUntilExpiry}",
                     expiresAtUnix.Value, now, expiresAtUnix.Value - now);
             }
         }
@@ -507,11 +532,11 @@ public sealed class AuthController : ControllerBase
             {
                 var refreshed = await _keycloakService.RefreshTokenAsync(realm, refreshToken!, HttpContext.RequestAborted);
                 BffSessionStore.StoreTokens(HttpContext.Session, refreshed);
-                _logger.LogInformation("Token renovado com sucesso. Novo expiresAt: {ExpiresAt}", 
+                _logger.LogInformation("Token renovado com sucesso. Novo expiresAt: {ExpiresAt}",
                     BffSessionStore.GetExpiresAtUnix(HttpContext.Session));
             }
             catch (HttpRequestException ex) when (
-                ex.Message.Contains("400") || 
+                ex.Message.Contains("400") ||
                 ex.Message.Contains("Bad Request") ||
                 ex.Message.Contains("401") ||
                 ex.Message.Contains("Unauthorized") ||
@@ -522,7 +547,7 @@ public sealed class AuthController : ControllerBase
                 _logger.LogWarning("Refresh token inválido ou expirado. Limpando sessão. Error: {Error}", ex.Message);
                 HttpContext.Session.Clear();
                 DeleteBffCookies();
-                
+
                 return Ok(new
                 {
                     authenticated = false,
@@ -533,21 +558,21 @@ public sealed class AuthController : ControllerBase
             {
                 // Outros erros ao renovar token - logar detalhadamente
                 _logger.LogError(ex, "Erro inesperado ao renovar token. Error: {Error}", ex.Message);
-                
+
                 // Se o token já expirou completamente e o refresh falhou, limpar sessão
                 if (tokenExpired)
                 {
                     _logger.LogWarning("Token expirado e refresh falhou. Limpando sessão.");
                     HttpContext.Session.Clear();
                     DeleteBffCookies();
-                    
+
                     return Ok(new
                     {
                         authenticated = false,
                         csrfToken = csrf
                     });
                 }
-                
+
                 // Se o token ainda é válido, continuar autenticado mas logar o erro
                 // O próximo request tentará refresh novamente
                 _logger.LogWarning("Erro ao renovar token, mas token atual ainda pode ser válido. Continuando autenticado.");
@@ -665,7 +690,7 @@ public sealed class AuthController : ControllerBase
 
     private string BuildResetPasswordUrl(string email, string token)
     {
-        var frontendBaseUrl = _configuration["Frontend:BaseUrl"] 
+        var frontendBaseUrl = _configuration["Frontend:BaseUrl"]
             ?? throw new InvalidOperationException("Frontend:BaseUrl não configurado em appsettings");
         var basePath = $"{frontendBaseUrl.TrimEnd('/')}/reset-senha";
         var qs = $"email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
@@ -676,7 +701,7 @@ public sealed class AuthController : ControllerBase
         => _configuration["Keycloak:Realm"] ?? "assistenteexecutivo";
 
     private string GetKeycloakBaseUrl()
-        => (_configuration["Keycloak:BaseUrl"] 
+        => (_configuration["Keycloak:BaseUrl"]
             ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings")).TrimEnd('/');
 
     private string GetClientId()
@@ -759,14 +784,14 @@ public sealed class AuthController : ControllerBase
             // Sempre usar Secure quando SameSite=None (requisito do navegador)
             Secure = useSecureCookies
         };
-        
+
         // Configurar Domain para funcionar entre subdomínios
         var domain = GetCookieDomain();
         if (!string.IsNullOrWhiteSpace(domain))
         {
             cookieOptions.Domain = domain;
         }
-        
+
         Response.Cookies.Append(BffCsrf.CookieName, token, cookieOptions);
     }
 
@@ -844,23 +869,23 @@ public sealed class AuthController : ControllerBase
         // Enviar tanto `post_logout_redirect_uri` quanto `redirect_uri` para maximizar compatibilidade entre versAµes do Keycloak.
         return $"{keycloakBaseUrl}/realms/{realm}/protocol/openid-connect/logout?client_id={cid}&post_logout_redirect_uri={redirect}&redirect_uri={redirect}";
     }
-    
+
     private string? GetCookieDomain()
     {
         var apiBaseUrl = _configuration["Api:BaseUrl"];
         if (string.IsNullOrWhiteSpace(apiBaseUrl) || !Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri))
             return null;
-        
+
         var host = apiUri.Host;
         var parts = host.Split('.');
         if (parts.Length < 2)
             return null;
-        
+
         // Pegar os últimos 2 ou 3 segmentos (ex: callback-local-cchagas.xyz ou exemplo.com.br)
-        var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3 
+        var domainBase = parts.Length >= 3 && parts[parts.Length - 2].Length <= 3
             ? string.Join(".", parts.Skip(parts.Length - 3)) // Para .com.br, .co.uk, etc
             : string.Join(".", parts.Skip(parts.Length - 2)); // Para .com, .xyz, etc
-        
+
         // Retornar com ponto inicial para funcionar em todos os subdomínios
         return $".{domainBase}";
     }

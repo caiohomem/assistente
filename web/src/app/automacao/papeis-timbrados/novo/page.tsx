@@ -6,3 +6,7 @@ export default function NovoPapelTimbradoPage() {
   return <NovoPapelTimbradoClient />;
 }
 
+
+
+
+

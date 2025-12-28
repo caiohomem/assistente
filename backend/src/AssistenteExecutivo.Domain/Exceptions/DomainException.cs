@@ -18,14 +18,14 @@ public class DomainException : Exception
     {
     }
 
-    public DomainException(string localizationCode, params object[] parameters) 
+    public DomainException(string localizationCode, params object[] parameters)
         : base(localizationCode)
     {
         LocalizationCode = localizationCode;
         LocalizationParameters = parameters;
     }
 
-    public DomainException(string localizationCode, Exception innerException, params object[] parameters) 
+    public DomainException(string localizationCode, Exception innerException, params object[] parameters)
         : base(localizationCode, innerException)
     {
         LocalizationCode = localizationCode;

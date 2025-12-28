@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.ValueObjects;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using FluentAssertions;
@@ -28,7 +27,7 @@ public class NoteRepositoryTests : RepositoryTestBase
             ownerUserId,
             "Test note content",
             Clock);
-        
+
         await Context.Contacts.AddAsync(contact);
         await Context.Notes.AddAsync(note);
         await SaveChangesAsync();
@@ -62,7 +61,7 @@ public class NoteRepositoryTests : RepositoryTestBase
         var ownerUserId = Guid.NewGuid();
         var contact1 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
         var contact2 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("Maria", "Santos"), Clock);
-        
+
         var note1 = Note.CreateTextNote(
             Guid.NewGuid(),
             contact1.ContactId,
@@ -81,7 +80,7 @@ public class NoteRepositoryTests : RepositoryTestBase
             ownerUserId,
             "Note 3",
             Clock);
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await Context.Notes.AddRangeAsync(note1, note2, note3);
         await SaveChangesAsync();
@@ -109,7 +108,7 @@ public class NoteRepositoryTests : RepositoryTestBase
             ownerUserId1,
             "Test note",
             Clock);
-        
+
         await Context.Contacts.AddAsync(contact);
         await Context.Notes.AddAsync(note);
         await SaveChangesAsync();
@@ -129,7 +128,7 @@ public class NoteRepositoryTests : RepositoryTestBase
         var authorId1 = Guid.NewGuid();
         var authorId2 = Guid.NewGuid();
         var contact = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
-        
+
         var note1 = Note.CreateTextNote(
             Guid.NewGuid(),
             contact.ContactId,
@@ -148,7 +147,7 @@ public class NoteRepositoryTests : RepositoryTestBase
             authorId2,
             "Note 3",
             Clock);
-        
+
         await Context.Contacts.AddAsync(contact);
         await Context.Notes.AddRangeAsync(note1, note2, note3);
         await SaveChangesAsync();
@@ -201,7 +200,7 @@ public class NoteRepositoryTests : RepositoryTestBase
             ownerUserId,
             "Original content",
             Clock);
-        
+
         await Context.Contacts.AddAsync(contact);
         await Context.Notes.AddAsync(note);
         await SaveChangesAsync();
@@ -229,7 +228,7 @@ public class NoteRepositoryTests : RepositoryTestBase
             ownerUserId,
             "Test note",
             Clock);
-        
+
         await Context.Contacts.AddAsync(contact);
         await Context.Notes.AddAsync(note);
         await SaveChangesAsync();

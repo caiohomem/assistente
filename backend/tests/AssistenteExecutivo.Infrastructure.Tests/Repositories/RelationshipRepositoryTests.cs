@@ -27,7 +27,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
             contact1.ContactId,
             contact2.ContactId,
             "Colleague");
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await Context.Relationships.AddAsync(relationship);
         await SaveChangesAsync();
@@ -64,7 +64,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
         var contact1 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("João", "Silva"), Clock);
         var contact2 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("Maria", "Santos"), Clock);
         var contact3 = new Contact(Guid.NewGuid(), ownerUserId, PersonName.Create("Pedro", "Costa"), Clock);
-        
+
         var relationship1 = new Relationship(
             Guid.NewGuid(),
             contact1.ContactId,
@@ -75,7 +75,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
             contact3.ContactId,
             contact1.ContactId,
             "Friend");
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2, contact3);
         await Context.Relationships.AddRangeAsync(relationship1, relationship2);
         await SaveChangesAsync();
@@ -102,7 +102,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
             contact1.ContactId,
             contact2.ContactId,
             "Colleague");
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await Context.Relationships.AddAsync(relationship);
         await SaveChangesAsync();
@@ -126,7 +126,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
             contact1.ContactId,
             contact2.ContactId,
             "Colleague");
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await Context.Relationships.AddAsync(relationship);
         await SaveChangesAsync();
@@ -191,7 +191,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
             contact1.ContactId,
             contact2.ContactId,
             "Colleague");
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await Context.Relationships.AddAsync(relationship);
         await SaveChangesAsync();
@@ -219,7 +219,7 @@ public class RelationshipRepositoryTests : RepositoryTestBase
             contact1.ContactId,
             contact2.ContactId,
             "Colleague");
-        
+
         await Context.Contacts.AddRangeAsync(contact1, contact2);
         await Context.Relationships.AddAsync(relationship);
         await SaveChangesAsync();

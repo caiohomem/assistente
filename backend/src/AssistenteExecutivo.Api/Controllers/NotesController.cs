@@ -191,7 +191,7 @@ public sealed class NotesController : ControllerBase
         var contactExists = await _mediator.Send(
             new GetNoteByIdQuery { NoteId = id, OwnerUserId = ownerUserId },
             cancellationToken);
-        
+
         if (contactExists == null)
         {
             return NotFound(new { message = "Nota não encontrada." });
@@ -237,7 +237,7 @@ public sealed class NotesController : ControllerBase
 
         // Recuperar o arquivo: primeiro tenta do banco de dados, depois do FileStore (fallback)
         byte[]? audioBytes = null;
-        
+
         if (mediaAsset.FileContent != null && mediaAsset.FileContent.Length > 0)
         {
             // Arquivo está armazenado no banco de dados
@@ -250,8 +250,9 @@ public sealed class NotesController : ControllerBase
                 "Arquivo de áudio não encontrado no banco de dados. NoteId: {NoteId}, MediaId: {MediaId}",
                 note.NoteId,
                 mediaAsset.MediaId);
-            
-            return NotFound(new { 
+
+            return NotFound(new
+            {
                 message = "Arquivo de áudio não encontrado no banco de dados.",
                 noteId = note.NoteId,
                 mediaId = mediaAsset.MediaId
@@ -261,7 +262,7 @@ public sealed class NotesController : ControllerBase
         {
             // Fallback: tentar recuperar do FileStore (para arquivos antigos)
             audioBytes = await _fileStore.GetAsync(mediaAsset.MediaRef.StorageKey, cancellationToken);
-            
+
             if (audioBytes == null || audioBytes.Length == 0)
             {
                 _logger.LogWarning(
@@ -269,8 +270,9 @@ public sealed class NotesController : ControllerBase
                     note.NoteId,
                     mediaAsset.MediaId,
                     mediaAsset.MediaRef.StorageKey);
-                
-                return NotFound(new { 
+
+                return NotFound(new
+                {
                     message = "Arquivo de áudio não encontrado no armazenamento.",
                     noteId = note.NoteId,
                     mediaId = mediaAsset.MediaId,
@@ -278,7 +280,7 @@ public sealed class NotesController : ControllerBase
                 });
             }
         }
-        
+
         if (audioBytes == null || audioBytes.Length == 0)
         {
             return NotFound(new { message = "Arquivo de áudio não encontrado." });
@@ -323,7 +325,7 @@ public sealed class NotesController : ControllerBase
 
         // Recuperar o arquivo: primeiro tenta do banco de dados, depois do FileStore (fallback)
         byte[]? fileBytes = null;
-        
+
         if (mediaAsset.FileContent != null && mediaAsset.FileContent.Length > 0)
         {
             // Arquivo está armazenado no banco de dados
@@ -335,8 +337,9 @@ public sealed class NotesController : ControllerBase
             _logger.LogWarning(
                 "Arquivo de mídia não encontrado no banco de dados. MediaId: {MediaId}",
                 mediaAsset.MediaId);
-            
-            return NotFound(new { 
+
+            return NotFound(new
+            {
                 message = "Arquivo de mídia não encontrado no banco de dados.",
                 mediaId = mediaAsset.MediaId
             });
@@ -345,22 +348,23 @@ public sealed class NotesController : ControllerBase
         {
             // Fallback: tentar recuperar do FileStore (para arquivos antigos)
             fileBytes = await _fileStore.GetAsync(mediaAsset.MediaRef.StorageKey, cancellationToken);
-            
+
             if (fileBytes == null || fileBytes.Length == 0)
             {
                 _logger.LogWarning(
                     "Arquivo de mídia não encontrado no armazenamento. MediaId: {MediaId}, StorageKey: {StorageKey}",
                     mediaAsset.MediaId,
                     mediaAsset.MediaRef.StorageKey);
-                
-                return NotFound(new { 
+
+                return NotFound(new
+                {
                     message = "Arquivo de mídia não encontrado no armazenamento.",
                     mediaId = mediaAsset.MediaId,
                     storageKey = mediaAsset.MediaRef.StorageKey
                 });
             }
         }
-        
+
         if (fileBytes == null || fileBytes.Length == 0)
         {
             return NotFound(new { message = "Arquivo de mídia não encontrado." });
@@ -369,7 +373,7 @@ public sealed class NotesController : ControllerBase
         // Retornar o arquivo
         var extension = GetFileExtension(mediaAsset.MediaRef.MimeType);
         var fileName = $"media-{mediaAsset.MediaId}.{extension}";
-        
+
         return File(
             fileBytes,
             mediaAsset.MediaRef.MimeType,

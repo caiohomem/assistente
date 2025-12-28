@@ -1,6 +1,5 @@
 using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using MediatR;
 
@@ -34,7 +33,7 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
     public async Task<AgentConfigurationDto> Handle(UpdateAgentConfigurationCommand request, CancellationToken cancellationToken)
     {
         var existing = await _repository.GetCurrentAsync(cancellationToken);
-        
+
         if (existing != null)
         {
             // Atualizar configuração existente
@@ -44,7 +43,7 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
                 request.TranscriptionPrompt);
             await _repository.UpdateAsync(existing, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
+
             return new AgentConfigurationDto
             {
                 ConfigurationId = existing.ConfigurationId,
@@ -63,10 +62,10 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
                 request.OcrPrompt,
                 _clock,
                 request.TranscriptionPrompt);
-            
+
             await _repository.AddAsync(newConfiguration, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            
+
             return new AgentConfigurationDto
             {
                 ConfigurationId = newConfiguration.ConfigurationId,

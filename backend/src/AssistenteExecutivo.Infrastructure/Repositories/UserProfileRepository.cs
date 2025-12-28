@@ -95,14 +95,18 @@ public class UserProfileRepository : IUserProfileRepository
     public async Task UpdateAsync(UserProfile userProfile, CancellationToken cancellationToken = default)
     {
         var entry = _context.Entry(userProfile);
-        
+
         if (entry.State == EntityState.Detached)
         {
             _context.UserProfiles.Update(userProfile);
         }
-        
+
         await Task.CompletedTask;
     }
 }
+
+
+
+
 
 

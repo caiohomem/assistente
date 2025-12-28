@@ -5,3 +5,7 @@ public record DraftApproved(
     Guid ApprovedBy,
     DateTime OccurredAt) : IDomainEvent;
 
+
+
+
+

@@ -21,7 +21,7 @@ public class CompanyRepositoryTests : RepositoryTestBase
         var companyId = Guid.NewGuid();
         var company = new Company(companyId, "Acme Corp", Clock);
         company.AddDomain("acme.com");
-        
+
         await Context.Companies.AddAsync(company);
         await SaveChangesAsync();
 

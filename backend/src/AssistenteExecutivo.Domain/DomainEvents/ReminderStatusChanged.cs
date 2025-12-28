@@ -8,3 +8,7 @@ public record ReminderStatusChanged(
     ReminderStatus NewStatus,
     DateTime OccurredAt) : IDomainEvent;
 
+
+
+
+

@@ -155,6 +155,36 @@ public class UserProfile
         Status = UserStatus.Active;
     }
 
+    public void Reactivate(IClock clock)
+    {
+        if (Status != UserStatus.Deleted)
+            throw new DomainException("Domain:ApenasUsuariosDeletadosPodemSerReativados");
+
+        Status = UserStatus.Active;
+        LastLoginAt = null; // Reset last login
+        PasswordResetToken = null;
+        PasswordResetTokenExpiresAt = null;
+
+        _domainEvents.Add(new UserReactivated(UserId, clock.UtcNow));
+    }
+
+    public void ReactivateWithNewKeycloakSubject(KeycloakSubject newKeycloakSubject, IClock clock)
+    {
+        if (Status != UserStatus.Deleted)
+            throw new DomainException("Domain:ApenasUsuariosDeletadosPodemSerReativados");
+
+        if (newKeycloakSubject == null)
+            throw new DomainException("Domain:KeycloakSubjectObrigatorio");
+
+        KeycloakSubject = newKeycloakSubject;
+        Status = UserStatus.Active;
+        LastLoginAt = null; // Reset last login
+        PasswordResetToken = null;
+        PasswordResetTokenExpiresAt = null;
+
+        _domainEvents.Add(new UserReactivated(UserId, clock.UtcNow));
+    }
+
     public void Delete()
     {
         Status = UserStatus.Deleted;

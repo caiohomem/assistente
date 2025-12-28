@@ -12,3 +12,7 @@ public class CreateTemplateCommand : IRequest<Guid>
     public string? PlaceholdersSchema { get; set; }
 }
 
+
+
+
+

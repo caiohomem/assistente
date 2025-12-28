@@ -1,10 +1,7 @@
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
-using AssistenteExecutivo.Domain.ValueObjects;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.IO;
-using System.Linq;
 
 namespace AssistenteExecutivo.Infrastructure.Repositories;
 
@@ -29,16 +26,12 @@ public class ContactRepository : IContactRepository
 
     public async Task<List<Contact>> GetAllAsync(Guid ownerUserId, bool includeDeleted = false, CancellationToken cancellationToken = default)
     {
-        // #region agent log
-        var logPath = @"c:\Projects\AssistenteExecutivo\.cursor\debug.log";
-        try { File.AppendAllText(logPath, $"{{\"location\":\"ContactRepository.cs:28\",\"message\":\"GetAllAsync entry\",\"data\":{{\"ownerUserId\":\"{ownerUserId}\",\"includeDeleted\":{includeDeleted.ToString().ToLower()}}},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"B\"}}\n"); } catch { }
-        // #endregion
         var query = _context.Contacts
-            .Include(c => c.Emails)
-            .Include(c => c.Phones)
-            .Include(c => c.Tags)
-            .Include(c => c.Relationships)
-            .Where(c => c.OwnerUserId == ownerUserId);
+    .Include(c => c.Emails)
+    .Include(c => c.Phones)
+    .Include(c => c.Tags)
+    .Include(c => c.Relationships)
+    .Where(c => c.OwnerUserId == ownerUserId);
 
         if (!includeDeleted)
         {
@@ -46,12 +39,6 @@ public class ContactRepository : IContactRepository
         }
 
         var contacts = await query.ToListAsync(cancellationToken);
-        // #region agent log
-        try { 
-            var relationshipsCount = contacts.Sum(c => c.Relationships.Count);
-            File.AppendAllText(logPath, $"{{\"location\":\"ContactRepository.cs:42\",\"message\":\"GetAllAsync exit\",\"data\":{{\"contactsCount\":{contacts.Count},\"relationshipsCount\":{relationshipsCount}}},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"B\"}}\n"); 
-        } catch { }
-        // #endregion
         return contacts;
     }
 
@@ -99,7 +86,7 @@ public class ContactRepository : IContactRepository
     public async Task UpdateAsync(Contact contact, CancellationToken cancellationToken = default)
     {
         var entry = _context.Entry(contact);
-        
+
         // Se a entidade não está sendo rastreada, adiciona ao contexto
         if (entry.State == EntityState.Detached)
         {
@@ -109,7 +96,7 @@ public class ContactRepository : IContactRepository
         // - Mudanças em propriedades (como UpdatedAt quando setter é chamado)
         // - Novas entidades em coleções de navegação (como Relationships adicionadas)
         // Não precisamos fazer nada adicional - o change tracker já está monitorando
-        
+
         await Task.CompletedTask;
     }
 

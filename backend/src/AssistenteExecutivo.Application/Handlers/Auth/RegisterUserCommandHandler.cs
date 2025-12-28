@@ -2,6 +2,7 @@ using AssistenteExecutivo.Application.Commands.Auth;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
+using AssistenteExecutivo.Domain.Notifications;
 using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
     private readonly IClock _clock;
     private readonly IConfiguration _configuration;
     private readonly ILogger<RegisterUserCommandHandler> _logger;
+    private readonly IEmailService _emailService;
 
     public RegisterUserCommandHandler(
         IUserProfileRepository userProfileRepository,
@@ -24,7 +26,8 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         IKeycloakService keycloakService,
         IClock clock,
         IConfiguration configuration,
-        ILogger<RegisterUserCommandHandler> logger)
+        ILogger<RegisterUserCommandHandler> logger,
+        IEmailService emailService)
     {
         _userProfileRepository = userProfileRepository;
         _unitOfWork = unitOfWork;
@@ -32,6 +35,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         _clock = clock;
         _configuration = configuration;
         _logger = logger;
+        _emailService = emailService;
     }
 
     public async Task<RegisterUserResult> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -86,6 +90,42 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
 
         _logger.LogInformation("UserProfile criado com sucesso para {Email} (UserId={UserId}, KeycloakSubject={KeycloakSubject})",
             request.Email, userId, keycloakSubject.Value);
+
+        // Enviar email de boas-vindas
+        try
+        {
+            var appUrl = _configuration["Frontend:BaseUrl"] ?? _configuration["App:BaseUrl"] ?? "https://app.assistenteexecutivo.com";
+            var supportUrl = _configuration["Frontend:SupportUrl"] ?? $"{appUrl}/suporte";
+            var privacyUrl = _configuration["Frontend:PrivacyUrl"] ?? $"{appUrl}/privacidade";
+
+            var fullName = $"{request.FirstName} {request.LastName}".Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                fullName = request.Email;
+            }
+
+            var templateValues = new Dictionary<string, object>
+            {
+                { "NomeUsuario", fullName },
+                { "AppUrl", appUrl },
+                { "SupportUrl", supportUrl },
+                { "PrivacyUrl", privacyUrl }
+            };
+
+            await _emailService.SendEmailWithTemplateAsync(
+                EmailTemplateType.UserCreated,
+                request.Email,
+                fullName,
+                templateValues,
+                cancellationToken);
+
+            _logger.LogInformation("Email de boas-vindas enviado com sucesso para {Email}", request.Email);
+        }
+        catch (Exception ex)
+        {
+            // Não falhar o registro se o email falhar, apenas logar o erro
+            _logger.LogError(ex, "Erro ao enviar email de boas-vindas para {Email}. O usuário foi criado com sucesso.", request.Email);
+        }
 
         return new RegisterUserResult
         {

@@ -1,10 +1,9 @@
-using System.Net;
-using System.Net.Mail;
 using AssistenteExecutivo.Application.Interfaces;
-using AssistenteExecutivo.Domain.Notifications;
-using AssistenteExecutivo.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using EmailTemplateType = AssistenteExecutivo.Domain.Notifications.EmailTemplateType;
 
 namespace AssistenteExecutivo.Infrastructure.Services;
@@ -14,15 +13,18 @@ public class EmailService : IEmailService
     private readonly IEmailTemplateRepository _templateRepository;
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public EmailService(
         IEmailTemplateRepository templateRepository,
         IConfiguration configuration,
-        ILogger<EmailService> logger)
+        ILogger<EmailService> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _templateRepository = templateRepository;
         _configuration = configuration;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task SendEmailWithTemplateAsync(
@@ -36,7 +38,7 @@ public class EmailService : IEmailService
         {
             // Buscar template ativo
             var template = await _templateRepository.GetByTypeAsync(templateType, cancellationToken);
-            
+
             if (template == null || !template.IsActive)
             {
                 _logger.LogWarning("Template de email {TemplateType} não encontrado ou inativo. Email não será enviado.", templateType);
@@ -47,10 +49,10 @@ public class EmailService : IEmailService
             var subject = template.ApplySubject(templateValues);
             var htmlBody = template.ApplyTemplate(templateValues);
 
-            // Enviar email via SMTP
-            await SendEmailSmtpAsync(recipientEmail, recipientName, subject, htmlBody, cancellationToken);
-            
-            _logger.LogInformation("Email enviado com sucesso - Template: {TemplateType}, Assunto: {Subject}, Destinatário: {RecipientEmail}", 
+            // Enviar email via Mailjet API
+            await SendEmailViaMailjetAsync(recipientEmail, recipientName, subject, htmlBody, cancellationToken);
+
+            _logger.LogInformation("Email enviado com sucesso - Template: {TemplateType}, Assunto: {Subject}, Destinatário: {RecipientEmail}",
                 templateType, subject, recipientEmail);
         }
         catch (Exception ex)
@@ -60,7 +62,7 @@ public class EmailService : IEmailService
         }
     }
 
-    private async Task SendEmailSmtpAsync(
+    private async Task SendEmailViaMailjetAsync(
         string recipientEmail,
         string recipientName,
         string subject,
@@ -69,56 +71,74 @@ public class EmailService : IEmailService
     {
         try
         {
-            var smtpHost = _configuration["Email:Smtp:Host"];
-            var smtpPortStr = _configuration["Email:Smtp:Port"];
-            var smtpUser = _configuration["Email:Smtp:User"];
-            var smtpPassword = _configuration["Email:Smtp:Password"];
-            var smtpFrom = _configuration["Email:Smtp:From"] ?? "noreply@assistenteexecutivo.com";
-            var smtpFromName = _configuration["Email:Smtp:FromName"] ?? "Assistente Executivo";
-            var smtpEnableSsl = _configuration.GetValue<bool>("Email:Smtp:EnableSsl", true);
+            var apiKey = _configuration["Email:Mailjet:ApiKey"];
+            var secretKey = _configuration["Email:Mailjet:SecretKey"];
+            var fromEmail = _configuration["Email:Mailjet:From"] ?? _configuration["Email:From"] ?? "noreply@assistenteexecutivo.com";
+            var fromName = _configuration["Email:Mailjet:FromName"] ?? _configuration["Email:FromName"] ?? "Assistente Executivo";
 
-            if (string.IsNullOrWhiteSpace(smtpHost) || string.IsNullOrWhiteSpace(smtpPortStr))
+            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(secretKey))
             {
-                _logger.LogWarning("Configuração SMTP não encontrada. Email não será enviado. Configure Email:Smtp:Host e Email:Smtp:Port em appsettings.json");
+                _logger.LogWarning("Configuração Mailjet não encontrada. Email não será enviado. Configure Email:Mailjet:ApiKey e Email:Mailjet:SecretKey em appsettings.json");
                 return;
             }
 
-            if (!int.TryParse(smtpPortStr, out var smtpPort))
-            {
-                _logger.LogWarning("Porta SMTP inválida: {Port}", smtpPortStr);
-                return;
-            }
+            // Criar HttpClient para esta requisição
+            using var httpClient = _httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
 
-            using var client = new SmtpClient(smtpHost, smtpPort);
-            
-            if (!string.IsNullOrWhiteSpace(smtpUser) && !string.IsNullOrWhiteSpace(smtpPassword))
-            {
-                client.Credentials = new NetworkCredential(smtpUser, smtpPassword);
-                client.EnableSsl = smtpEnableSsl;
-            }
-            else
-            {
-                // Para desenvolvimento local (smtp4dev não precisa credenciais)
-                client.EnableSsl = false;
-            }
+            // Preparar autenticação Basic Auth
+            var authValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:{secretKey}"));
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+            httpClient.DefaultRequestHeaders.Accept.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            var mailMessage = new MailMessage
+            // Preparar payload do Mailjet
+            var payload = new
             {
-                From = new MailAddress(smtpFrom, smtpFromName),
-                Subject = subject,
-                Body = htmlBody,
-                IsBodyHtml = true
+                Messages = new[]
+                {
+                    new
+                    {
+                        From = new
+                        {
+                            Email = fromEmail,
+                            Name = fromName
+                        },
+                        To = new[]
+                        {
+                            new
+                            {
+                                Email = recipientEmail,
+                                Name = recipientName ?? recipientEmail
+                            }
+                        },
+                        Subject = subject,
+                        HTMLPart = htmlBody
+                    }
+                }
             };
 
-            mailMessage.To.Add(new MailAddress(recipientEmail, recipientName ?? recipientEmail));
+            var jsonPayload = JsonSerializer.Serialize(payload);
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            await client.SendMailAsync(mailMessage, cancellationToken);
-            
-            _logger.LogInformation("Email SMTP enviado com sucesso para {RecipientEmail}", recipientEmail);
+            // Enviar requisição para API do Mailjet
+            var response = await httpClient.PostAsync("https://api.mailjet.com/v3.1/send", content, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Erro ao enviar email via Mailjet. Status: {Status}, Response: {Response}",
+                    response.StatusCode, errorContent);
+                throw new HttpRequestException($"Erro ao enviar email via Mailjet: {response.StatusCode} - {errorContent}");
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogInformation("Email Mailjet enviado com sucesso para {RecipientEmail}. Response: {Response}",
+                recipientEmail, responseContent);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao enviar email SMTP para {RecipientEmail}", recipientEmail);
+            _logger.LogError(ex, "Erro ao enviar email via Mailjet para {RecipientEmail}", recipientEmail);
             throw;
         }
     }

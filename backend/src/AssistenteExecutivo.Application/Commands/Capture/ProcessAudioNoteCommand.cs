@@ -17,7 +17,7 @@ public class ProcessAudioNoteCommandResult
     public Guid NoteId { get; set; }
     public Guid JobId { get; set; }
     public Guid MediaId { get; set; }
-    
+
     // Dados completos do job para evitar polling
     public string Status { get; set; } = string.Empty;
     public AudioTranscriptDto? AudioTranscript { get; set; }
@@ -27,7 +27,7 @@ public class ProcessAudioNoteCommandResult
     public DateTime? CompletedAt { get; set; }
     public string? ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
-    
+
     // Áudio de resposta gerado via TTS (opcional)
     public Guid? ResponseMediaId { get; set; }
 }

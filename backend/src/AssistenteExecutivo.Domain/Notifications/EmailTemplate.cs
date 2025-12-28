@@ -1,6 +1,5 @@
-using System.Text.RegularExpressions;
 using AssistenteExecutivo.Domain.Exceptions;
-using AssistenteExecutivo.Domain.ValueObjects;
+using System.Text.RegularExpressions;
 
 namespace AssistenteExecutivo.Domain.Notifications;
 

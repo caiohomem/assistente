@@ -1,5 +1,3 @@
-using AssistenteExecutivo.Domain.Exceptions;
-
 namespace AssistenteExecutivo.Domain.ValueObjects;
 
 public sealed class Address : ValueObject
@@ -51,6 +49,10 @@ public sealed class Address : ValueObject
         yield return Country ?? string.Empty;
     }
 }
+
+
+
+
 
 
 
