@@ -75,6 +75,29 @@ export interface AddContactRelationshipRequest {
   isConfirmed?: boolean;
 }
 
+export interface GraphNode {
+  contactId: string;
+  fullName: string;
+  company?: string | null;
+  jobTitle?: string | null;
+  primaryEmail?: string | null;
+}
+
+export interface GraphEdge {
+  relationshipId: string;
+  sourceContactId: string;
+  targetContactId: string;
+  type: string;
+  description?: string | null;
+  strength: number;
+  isConfirmed: boolean;
+}
+
+export interface NetworkGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
 
 
 

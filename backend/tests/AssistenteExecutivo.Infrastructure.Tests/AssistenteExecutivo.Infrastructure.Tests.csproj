@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\AssistenteExecutivo.Infrastructure\AssistenteExecutivo.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\AssistenteExecutivo.Domain\AssistenteExecutivo.Domain.csproj" />
     <ProjectReference Include="..\..\src\AssistenteExecutivo.Application\AssistenteExecutivo.Application.csproj" />
+    <ProjectReference Include="..\AssistenteExecutivo.Application.Tests\AssistenteExecutivo.Application.Tests.csproj" />
   </ItemGroup>
 
 </Project>

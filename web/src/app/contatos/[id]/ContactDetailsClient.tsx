@@ -9,6 +9,10 @@ import type { Contact, Relationship } from "@/lib/types/contact";
 import { NoteType } from "@/lib/types/note";
 import { getApiBaseUrl } from "@/lib/bff";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, Mail, Phone, Building2, MapPin, Calendar, Tag, Link as LinkIcon, Plus, Mic, ArrowLeft } from "lucide-react";
+import { NovaNotaClient } from "./notas/novo/NovaNotaClient";
+import { NovaNotaAudioClient } from "./notas-audio/NovaNotaAudioClient";
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds)) return '0:00';
@@ -27,6 +31,12 @@ interface ContactDetailsClientProps {
     structuredData?: string | null;
     createdAt: string;
   }>;
+  showNewNote?: boolean;
+  onNewNoteSuccess?: () => void;
+  onNewNoteCancel?: () => void;
+  showNewAudioNote?: boolean;
+  onNewAudioNoteSuccess?: () => void;
+  onNewAudioNoteCancel?: () => void;
 }
 
 function formatDate(dateString: string): string {
@@ -66,6 +76,12 @@ export function ContactDetailsClient({
   contactId,
   contact,
   notes,
+  showNewNote = false,
+  onNewNoteSuccess,
+  onNewNoteCancel,
+  showNewAudioNote = false,
+  onNewAudioNoteSuccess,
+  onNewAudioNoteCancel,
 }: ContactDetailsClientProps) {
   const router = useRouter();
   const [contactState, setContactState] = useState(contact);
@@ -138,31 +154,36 @@ export function ContactDetailsClient({
     <>
       {/* Header Actions */}
       <div className="mb-6 flex justify-end gap-2">
-        <Link
-          href={`/contatos/${contactId}/editar`}
-          className="rounded-md bg-zinc-900 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors"
+        <Button
+          asChild
+          variant="glow"
         >
-          Editar
-        </Link>
-        <button
+          <Link href={`/contatos/${contactId}/editar`}>
+            <Edit className="w-4 h-4 mr-2" />
+            Editar
+          </Link>
+        </Button>
+        <Button
           onClick={() => setShowConfirmDialog(true)}
           disabled={isDeleting}
-          className="rounded-md bg-red-600 dark:bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="destructive"
         >
+          <Trash2 className="w-4 h-4 mr-2" />
           {isDeleting ? "Excluindo..." : "Excluir"}
-        </button>
+        </Button>
       </div>
 
       {/* Error Message */}
       {error && !showConfirmDialog && (
-        <div className="mb-4 rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3">
-          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          <button
+        <div className="mb-4 glass-card border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-sm text-destructive mb-2">{error}</p>
+          <Button
             onClick={() => setError(null)}
-            className="mt-2 text-xs text-red-600 dark:text-red-400 hover:underline"
+            variant="ghost"
+            size="sm"
           >
             Fechar
-          </button>
+          </Button>
         </div>
       )}
 
@@ -209,50 +230,52 @@ export function ContactDetailsClient({
       />
 
       {/* Contact Information */}
-      <div className="mb-8 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6">
-        <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+      <div className="mb-8 glass-card p-6">
+        <h2 className="mb-6 text-lg font-semibold">
           Informações do Contato
         </h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
               Nome Completo
             </label>
-            <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+            <p className="text-sm font-medium">
               {contactState.fullName}
             </p>
           </div>
           {contactState.jobTitle && (
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
                 Cargo
               </label>
-              <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+              <p className="text-sm">
                 {contactState.jobTitle}
               </p>
             </div>
           )}
           {contactState.company && (
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+                <Building2 className="w-3 h-3" />
                 Empresa
               </label>
-              <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+              <p className="text-sm">
                 {contactState.company}
               </p>
             </div>
           )}
           {contactState.emails.length > 0 && (
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+                <Mail className="w-3 h-3" />
                 E-mails
               </label>
-              <ul className="mt-1 space-y-1">
+              <ul className="space-y-1">
                 {contactState.emails.map((email, index) => (
                   <li key={index} className="text-sm">
                     <a
                       href={`mailto:${email}`}
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      className="text-primary hover:underline flex items-center gap-1"
                     >
                       {email}
                     </a>
@@ -263,15 +286,16 @@ export function ContactDetailsClient({
           )}
           {contactState.phones.length > 0 && (
             <div>
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+                <Phone className="w-3 h-3" />
                 Telefones
               </label>
-              <ul className="mt-1 space-y-1">
+              <ul className="space-y-1">
                 {contactState.phones.map((phone, index) => (
                   <li key={index} className="text-sm">
                     <a
                       href={`tel:${phone}`}
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                      className="text-primary hover:underline flex items-center gap-1"
                     >
                       {phone}
                     </a>
@@ -282,24 +306,26 @@ export function ContactDetailsClient({
           )}
           {contactState.address && (
             <div className="md:col-span-2">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+                <MapPin className="w-3 h-3" />
                 Endereço
               </label>
-              <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+              <p className="text-sm">
                 {formatAddress(contactState.address)}
               </p>
             </div>
           )}
           {contactState.tags.length > 0 && (
             <div className="md:col-span-2">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+                <Tag className="w-3 h-3" />
                 Tags
               </label>
-              <div className="mt-1 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {contactState.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="rounded-full bg-zinc-100 dark:bg-zinc-700 px-3 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300"
+                    className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-medium"
                   >
                     {tag}
                   </span>
@@ -308,18 +334,20 @@ export function ContactDetailsClient({
             </div>
           )}
           <div>
-            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+              <Calendar className="w-3 h-3" />
               Criado em
             </label>
-            <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+            <p className="text-sm">
               {formatDate(contactState.createdAt)}
             </p>
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-2">
+              <Calendar className="w-3 h-3" />
               Atualizado em
             </label>
-            <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+            <p className="text-sm">
               {formatDate(contactState.updatedAt)}
             </p>
           </div>
@@ -327,20 +355,21 @@ export function ContactDetailsClient({
       </div>
 
       {/* Relationships */}
-      <div className="mb-8 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6">
+      <div className="mb-8 glass-card p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <LinkIcon className="w-5 h-5" />
             Relacionamentos
           </h2>
-          <Link
-            href={`/contatos/${contactId}/relacionamentos/novo`}
-            className="rounded-md bg-zinc-900 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:hover:bg-zinc-700"
-          >
-            Adicionar Relacionamento
-          </Link>
+          <Button asChild variant="glow" size="sm">
+            <Link href={`/contatos/${contactId}/relacionamentos/novo`}>
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Relacionamento
+            </Link>
+          </Button>
         </div>
         {contactState.relationships.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             Nenhum relacionamento cadastrado.
           </p>
         ) : (
@@ -348,45 +377,46 @@ export function ContactDetailsClient({
             {contactState.relationships.map((relationship: Relationship) => (
               <div
                 key={relationship.relationshipId}
-                className="rounded-md border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700 p-4"
+                className="glass-card border-border/50 p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-blue-100 dark:bg-blue-900/30 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-400">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-medium">
                         {relationship.type}
                       </span>
                       {relationship.isConfirmed && (
-                        <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
+                        <span className="rounded-full bg-success/10 text-success px-3 py-1 text-xs font-medium">
                           Confirmado
                         </span>
                       )}
                       {relationship.strength > 0 && (
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="text-xs text-muted-foreground">
                           Força: {Math.round(relationship.strength * 100)}%
                         </span>
                       )}
                     </div>
                     {relationship.description && (
-                      <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+                      <p className="mt-2 text-sm">
                         {relationship.description}
                       </p>
                     )}
                     <Link
                       href={`/contatos/${relationship.targetContactId}`}
-                      className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                      className="mt-2 text-sm text-primary hover:underline inline-flex items-center gap-1"
                     >
                       Ver contato relacionado →
                     </Link>
                   </div>
-                  <button
+                  <Button
                     onClick={() => setConfirmDeleteRelationship(relationship.relationshipId)}
                     disabled={deletingRelationshipId === relationship.relationshipId}
-                    className="ml-4 rounded-md bg-red-600 dark:bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="destructive"
+                    size="sm"
                     title="Excluir relacionamento"
                   >
                     {deletingRelationshipId === relationship.relationshipId ? "Excluindo..." : "Excluir"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -394,29 +424,73 @@ export function ContactDetailsClient({
         )}
       </div>
 
+      {/* Formulário de Nova Nota - aparece quando ?novo=true */}
+      {showNewNote && (
+        <div className="glass-card p-6 animate-slide-up mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold">Nova Nota</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onNewNoteCancel}
+              className="rounded-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </div>
+          <NovaNotaClient 
+            contactId={contactId} 
+            onSuccess={onNewNoteSuccess} 
+            onCancel={onNewNoteCancel} 
+          />
+        </div>
+      )}
+
+      {/* Formulário de Nova Nota de Áudio - aparece quando ?audio=true */}
+      {showNewAudioNote && (
+        <div className="glass-card p-6 animate-slide-up mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold">Nova Nota de Áudio</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onNewAudioNoteCancel}
+              className="rounded-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </div>
+          <NovaNotaAudioClient 
+            contactId={contactId} 
+            onSuccess={onNewAudioNoteSuccess} 
+            onCancel={onNewAudioNoteCancel} 
+          />
+        </div>
+      )}
+
       {/* Notes */}
-      <div className="rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+      <div className="glass-card p-6">
+        <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-lg font-semibold">
             Notas
           </h2>
           <div className="flex gap-2">
-            <Link
-              href={`/contatos/${contactId}/notas/novo`}
-              className="rounded-md bg-zinc-900 dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:hover:bg-zinc-700"
-            >
-              Adicionar Nota
-            </Link>
-            <Link
-              href={`/contatos/${contactId}/notas-audio`}
-              className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700"
-            >
-              Nota de Áudio
-            </Link>
+            <Button asChild variant="glow" size="sm">
+              <Link href={`/contatos/${contactId}?novo=true`}>
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Nota
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/contatos/${contactId}?audio=true`}>
+                <Mic className="w-4 h-4 mr-2" />
+                Nota de Áudio
+              </Link>
+            </Button>
           </div>
         </div>
         {notes.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             Nenhuma nota cadastrada.
           </p>
         ) : (
@@ -424,56 +498,45 @@ export function ContactDetailsClient({
             {notesState.map((note) => (
               <div
                 key={note.noteId}
-                className="rounded-md border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700 p-4"
+                className="glass-card border-border/50 p-4"
               >
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-purple-100 dark:bg-purple-900/30 px-3 py-1 text-xs font-medium text-purple-700 dark:text-purple-400">
+                <div className="mb-2 flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="rounded-full bg-accent/10 text-accent px-3 py-1 text-xs font-medium">
                       {getNoteTypeLabel(note.type)}
                     </span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="text-xs text-muted-foreground">
                       {formatDate(note.createdAt)}
                     </span>
                   </div>
-                  <button
+                  <Button
                     onClick={() => setConfirmDeleteNote(note.noteId)}
                     disabled={deletingNoteId === note.noteId}
-                    className="rounded-md bg-red-600 dark:bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="destructive"
+                    size="sm"
                     title="Excluir nota"
                   >
                     {deletingNoteId === note.noteId ? "Excluindo..." : "Excluir"}
-                  </button>
+                  </Button>
                 </div>
                 {note.type === NoteType.Audio && (
                   <AudioPlayer noteId={note.noteId} />
                 )}
                 {note.type === NoteType.Audio && note.rawContent && (
-                  <div className="mb-3 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
+                  <div className="mb-3 glass-card border-primary/20 bg-primary/5 p-3">
                     <div className="mb-2 flex items-center gap-2">
-                      <svg
-                        className="h-4 w-4 text-blue-600 dark:text-blue-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                        />
-                      </svg>
-                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                      <Mic className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-medium text-primary">
                         Transcrição de Áudio
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
                       {note.rawContent}
                     </p>
                   </div>
                 )}
                 {note.type === NoteType.Text && (
-                  <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+                  <p className="whitespace-pre-wrap text-sm">
                     {note.rawContent}
                   </p>
                 )}
@@ -485,11 +548,11 @@ export function ContactDetailsClient({
                 )}
                 {note.structuredData && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300">
+                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
                       Ver dados estruturados
                     </summary>
                     <div className="mt-2">
-                      <pre className="overflow-auto rounded bg-zinc-100 dark:bg-zinc-800 p-2 text-xs text-zinc-900 dark:text-zinc-100">
+                      <pre className="overflow-auto rounded-lg glass-card p-3 text-xs font-mono">
                         {JSON.stringify(JSON.parse(note.structuredData), null, 2)}
                       </pre>
                     </div>
@@ -796,12 +859,12 @@ function AudioPlayer({ noteId }: { noteId: string }) {
   }, [audioBlobUrl]);
 
   return (
-    <div className="mb-3 rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 p-3">
+    <div className="mb-3 glass-card border-border/50 p-3">
       <div className="flex items-center gap-3 mb-2">
         <button
           onClick={handlePlay}
           disabled={isLoading}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
         >
           {isLoading ? (
@@ -853,10 +916,10 @@ function AudioPlayer({ noteId }: { noteId: string }) {
         </button>
         <div className="flex-1 min-w-0">
           {error ? (
-            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-xs text-destructive">{error}</p>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-600 dark:text-zinc-400 font-mono">
+              <span className="text-xs text-muted-foreground font-mono">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
@@ -873,7 +936,7 @@ function AudioPlayer({ noteId }: { noteId: string }) {
         <div className="mb-2">
           <canvas
             ref={canvasRef}
-            className="w-full h-16 rounded bg-zinc-900 dark:bg-zinc-950"
+            className="w-full h-16 rounded-lg bg-secondary/50"
           />
         </div>
       )}
@@ -882,11 +945,11 @@ function AudioPlayer({ noteId }: { noteId: string }) {
       {duration > 0 && (
         <div className="relative">
           <div
-            className="h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full cursor-pointer"
+            className="h-2 bg-secondary/50 rounded-full cursor-pointer"
             onClick={handleSeek}
           >
             <div
-              className="h-full bg-purple-600 dark:bg-purple-500 rounded-full transition-all duration-100"
+              className="h-full bg-accent rounded-full transition-all duration-100"
               style={{ width: `${(currentTime / duration) * 100}%` }}
             />
           </div>
@@ -917,7 +980,7 @@ function PlaybackRateControl({
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-2 py-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-600 transition-colors"
+        className="flex items-center gap-1 rounded-lg border border-border bg-secondary/50 px-2 py-1 text-xs font-medium hover:bg-secondary transition-colors"
         title="Velocidade de reprodução"
       >
         <svg
@@ -941,7 +1004,7 @@ function PlaybackRateControl({
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full mt-1 z-20 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg py-1 min-w-[120px]">
+          <div className="absolute right-0 top-full mt-1 z-20 rounded-lg glass-card border border-border shadow-lg py-1 min-w-[120px]">
             {rates.map((rate) => (
               <button
                 key={rate}
@@ -949,10 +1012,10 @@ function PlaybackRateControl({
                   onChange(rate);
                   setIsOpen(false);
                 }}
-                className={`w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors ${
+                className={`w-full px-3 py-1.5 text-left text-xs hover:bg-secondary/50 transition-colors ${
                   playbackRate === rate
-                    ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium"
-                    : "text-zinc-700 dark:text-zinc-300"
+                    ? "bg-accent/10 text-accent font-medium"
+                    : "text-foreground"
                 }`}
               >
                 {rate}x
@@ -1356,7 +1419,7 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
         <button
           onClick={handlePlay}
           disabled={isLoading}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 dark:bg-purple-700 text-white hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           aria-label={isPlaying ? "Pausar áudio" : "Reproduzir resumo e tarefas em áudio"}
           title={isPlaying ? "Pausar áudio" : "Reproduzir resumo e tarefas em áudio"}
         >
@@ -1409,13 +1472,13 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
         </button>
         <div className="flex-1 min-w-0">
           {error ? (
-            <span className="text-xs text-red-600 dark:text-red-400">{error}</span>
+            <span className="text-xs text-destructive">{error}</span>
           ) : parsedData?.responseMediaId ? (
-            <span className="text-xs text-zinc-600 dark:text-zinc-400 font-mono">
+            <span className="text-xs text-muted-foreground font-mono">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           ) : (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs text-muted-foreground">
               {isPlaying ? "Reproduzindo..." : "Reproduzir resumo e tarefas"}
             </span>
           )}
@@ -1431,7 +1494,7 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
         <div className="mb-2">
           <canvas
             ref={canvasRef}
-            className="w-full h-12 rounded bg-zinc-900 dark:bg-zinc-950"
+            className="w-full h-12 rounded-lg bg-secondary/50"
           />
         </div>
       )}
@@ -1440,7 +1503,7 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
       {parsedData?.responseMediaId && duration > 0 && (
         <div className="relative">
           <div
-            className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full cursor-pointer"
+            className="h-1.5 bg-secondary/50 rounded-full cursor-pointer"
             onClick={(e) => {
               if (!audioRef.current || !duration || !parsedData?.responseMediaId) return;
               const rect = e.currentTarget.getBoundingClientRect();
@@ -1452,7 +1515,7 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
             }}
           >
             <div
-              className="h-full bg-purple-600 dark:bg-purple-500 rounded-full transition-all duration-100"
+              className="h-full bg-accent rounded-full transition-all duration-100"
               style={{ width: `${(currentTime / duration) * 100}%` }}
             />
           </div>

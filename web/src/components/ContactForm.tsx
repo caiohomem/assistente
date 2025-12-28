@@ -202,18 +202,9 @@ export function ContactForm({
 
       {/* Emails */}
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Emails</label>
-          <button
-            type="button"
-            onClick={addEmail}
-            className="text-sm text-black dark:text-zinc-300 hover:underline"
-          >
-            + Adicionar email
-          </button>
-        </div>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Emails</label>
         {formData.emails.map((email, index) => (
-          <div key={index} className="flex gap-2 mb-2">
+          <div key={index} className="flex gap-2 mb-2 items-center">
             <input
               type="email"
               value={email}
@@ -225,7 +216,16 @@ export function ContactForm({
                   : "border-zinc-300 dark:border-zinc-600"
               } focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400`}
             />
-            {formData.emails.length > 1 && (
+            {index === formData.emails.length - 1 && (
+              <button
+                type="button"
+                onClick={addEmail}
+                className="text-sm text-black dark:text-zinc-300 hover:underline whitespace-nowrap"
+              >
+                + Adicionar email
+              </button>
+            )}
+            {formData.emails.length > 1 && index < formData.emails.length - 1 && (
               <button
                 type="button"
                 onClick={() => removeEmail(index)}
@@ -240,18 +240,9 @@ export function ContactForm({
 
       {/* Telefones */}
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Telefones</label>
-          <button
-            type="button"
-            onClick={addPhone}
-            className="text-sm text-black dark:text-zinc-300 hover:underline"
-          >
-            + Adicionar telefone
-          </button>
-        </div>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Telefones</label>
         {formData.phones.map((phone, index) => (
-          <div key={index} className="flex gap-2 mb-2">
+          <div key={index} className="flex gap-2 mb-2 items-center">
             <input
               type="tel"
               value={phone}
@@ -263,7 +254,16 @@ export function ContactForm({
                   : "border-zinc-300 dark:border-zinc-600"
               } focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400`}
             />
-            {formData.phones.length > 1 && (
+            {index === formData.phones.length - 1 && (
+              <button
+                type="button"
+                onClick={addPhone}
+                className="text-sm text-black dark:text-zinc-300 hover:underline whitespace-nowrap"
+              >
+                + Adicionar telefone
+              </button>
+            )}
+            {formData.phones.length > 1 && index < formData.phones.length - 1 && (
               <button
                 type="button"
                 onClick={() => removePhone(index)}

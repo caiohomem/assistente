@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
 import { SearchableContactSelect } from "@/components/SearchableContactSelect";
 import { createReminderClient } from "@/lib/api/automationApiClient";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
 import type { Contact } from "@/lib/types/contact";
 
-export function NovoLembreteClient() {
-  const router = useRouter();
+interface NovoLembreteClientProps {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function NovoLembreteClient({ onSuccess, onCancel }: NovoLembreteClientProps) {
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
@@ -76,8 +78,9 @@ export function NovoLembreteClient() {
         scheduledFor: new Date(formData.scheduledFor).toISOString(),
       });
 
-      router.push("/automacao/lembretes");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Erro ao criar lembrete:", error);
       setErrors({
@@ -89,17 +92,16 @@ export function NovoLembreteClient() {
   };
 
   const handleCancel = () => {
-    router.push("/automacao/lembretes");
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   // Get minimum date (today)
   const minDate = new Date().toISOString().slice(0, 16);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Novo Lembrete" showBackButton backHref="/automacao/lembretes" />
-      <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
           {/* Contato */}
           <div>
             <label htmlFor="contactId" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -200,9 +202,7 @@ export function NovoLembreteClient() {
               {loading ? "Criando..." : "Criar Lembrete"}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+    </form>
   );
 }
 

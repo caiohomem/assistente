@@ -54,9 +54,9 @@ export default function EditarContatoPage() {
       <TopBar title="Editar Contato" showBackButton backHref={`/contatos/${contactId}`} />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm p-6">
+          <div className="bg-zinc-800 dark:bg-zinc-800 rounded-lg border border-zinc-700 dark:border-zinc-700 shadow-sm p-6">
             {loading ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">Carregando...</p>
+              <p className="text-sm text-zinc-400 dark:text-zinc-400">Carregando...</p>
             ) : error || !contact ? (
               <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
                 <p className="text-sm text-red-700 dark:text-red-400">{error ?? "Contato não encontrado."}</p>

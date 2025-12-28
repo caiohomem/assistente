@@ -1,6 +1,6 @@
 "use client";
 
-import { Contact, CreateContactRequest, UpdateContactRequest, AddContactRelationshipRequest, Relationship } from "@/lib/types/contact";
+import { Contact, CreateContactRequest, UpdateContactRequest, AddContactRelationshipRequest, Relationship, NetworkGraph } from "@/lib/types/contact";
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 
 export interface ListContactsResult {
@@ -490,11 +490,13 @@ export async function addRelationshipClient(
     throw new Error("ID do contato de destino inválido");
   }
 
-  // Enviar apenas os campos que o backend espera
+  // Enviar todos os campos do request
   const backendRequest = {
     targetContactId: request.targetContactId,
     type: request.type,
     description: request.description || null,
+    strength: request.strength ?? null,
+    isConfirmed: request.isConfirmed ?? null,
   };
 
   const apiBase = getApiBaseUrl();
@@ -608,4 +610,61 @@ export async function deleteContactClient(contactId: string): Promise<void> {
       `Request failed: ${res.status}`;
     throw new Error(message);
   }
+}
+
+/**
+ * Obtém o grafo de relacionamentos entre contatos (client-side).
+ */
+export async function getNetworkGraphClient(maxDepth: number = 2): Promise<NetworkGraph> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.csrfToken) {
+    throw new Error("Não autenticado");
+  }
+
+  const apiBase = getApiBaseUrl();
+  const queryParams = new URLSearchParams();
+  if (maxDepth) queryParams.set("maxDepth", maxDepth.toString());
+
+  const url = `${apiBase}/api/contacts/network/graph${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  
+  const res = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": session.csrfToken,
+    },
+  });
+
+  if (!res.ok) {
+    const contentType = res.headers.get("content-type") ?? "";
+    const maybeJson = contentType.includes("application/json");
+    const data = maybeJson ? await res.json() : undefined;
+    const message =
+      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
+      `Request failed: ${res.status}`;
+    throw new Error(message);
+  }
+
+  const data = await res.json();
+  
+  // Normalize response to camelCase
+  return {
+    nodes: (data.nodes || data.Nodes || []).map((n: any) => ({
+      contactId: n.contactId || n.ContactId,
+      fullName: n.fullName || n.FullName,
+      company: n.company || n.Company,
+      jobTitle: n.jobTitle || n.JobTitle,
+      primaryEmail: n.primaryEmail || n.PrimaryEmail,
+    })),
+    edges: (data.edges || data.Edges || []).map((e: any) => ({
+      relationshipId: e.relationshipId || e.RelationshipId,
+      sourceContactId: e.sourceContactId || e.SourceContactId,
+      targetContactId: e.targetContactId || e.TargetContactId,
+      type: e.type || e.Type,
+      description: e.description || e.Description,
+      strength: e.strength ?? e.Strength ?? 0,
+      isConfirmed: e.isConfirmed ?? e.IsConfirmed ?? false,
+    })),
+  };
 }

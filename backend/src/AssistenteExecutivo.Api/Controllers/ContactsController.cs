@@ -310,7 +310,9 @@ public sealed class ContactsController : ControllerBase
             OwnerUserId = ownerUserId,
             TargetContactId = request.TargetContactId,
             Type = request.Type,
-            Description = request.Description
+            Description = request.Description,
+            Strength = request.Strength,
+            IsConfirmed = request.IsConfirmed
         };
 
         await _mediator.Send(command, cancellationToken);
@@ -338,6 +340,28 @@ public sealed class ContactsController : ControllerBase
 
         await _mediator.Send(command, cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Obtém o grafo de relacionamentos entre contatos do usuário.
+    /// </summary>
+    [HttpGet("network/graph")]
+    [ProducesResponseType(typeof(NetworkGraphDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetNetworkGraph(
+        [FromQuery] int maxDepth = 2,
+        CancellationToken cancellationToken = default)
+    {
+        var ownerUserId = await HttpContext.GetRequiredOwnerUserIdAsync(_mediator, cancellationToken);
+
+        var query = new GetNetworkGraphQuery
+        {
+            OwnerUserId = ownerUserId,
+            MaxDepth = maxDepth
+        };
+
+        var result = await _mediator.Send(query, cancellationToken);
+        return Ok(result);
     }
 
     // Request DTOs
@@ -370,6 +394,8 @@ public sealed class ContactsController : ControllerBase
     public sealed record AddRelationshipRequest(
         [Required] Guid TargetContactId,
         [Required] string Type,
-        string? Description);
+        string? Description,
+        float? Strength = null,
+        bool? IsConfirmed = null);
 }
 

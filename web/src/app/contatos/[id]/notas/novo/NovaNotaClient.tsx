@@ -8,9 +8,11 @@ import { CreateTextNoteRequest } from "@/lib/types/note";
 
 interface NovaNotaClientProps {
   contactId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function NovaNotaClient({ contactId }: NovaNotaClientProps) {
+export function NovaNotaClient({ contactId, onSuccess, onCancel }: NovaNotaClientProps) {
   const router = useRouter();
   const t = useTranslations();
   const tNotes = useTranslations("notes");
@@ -62,8 +64,13 @@ export function NovaNotaClient({ contactId }: NovaNotaClientProps) {
       };
 
       await createTextNoteClient(contactId, request);
-      router.push(`/contatos/${contactId}`);
-      router.refresh();
+      
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push(`/contatos/${contactId}`);
+        router.refresh();
+      }
     } catch (err: any) {
       setError(err.message || tNotes("errorCreating"));
     } finally {
@@ -72,7 +79,11 @@ export function NovaNotaClient({ contactId }: NovaNotaClientProps) {
   };
 
   const handleCancel = () => {
-    router.push(`/contatos/${contactId}`);
+    if (onCancel) {
+      onCancel();
+    } else {
+      router.push(`/contatos/${contactId}`);
+    }
   };
 
   return (

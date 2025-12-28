@@ -2,14 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
+import { useRouter, useSearchParams } from "next/navigation";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { listTemplatesClient, deleteTemplateClient, type Template, type ListTemplatesResult } from "@/lib/api/automationApiClient";
+import { listTemplatesClient, deleteTemplateClient, createTemplateClient, type Template, type ListTemplatesResult } from "@/lib/api/automationApiClient";
 import { TemplateType } from "@/lib/types/automation";
+import { NovoTemplateClient } from "./novo/NovoTemplateClient";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function TemplatesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showNewTemplate = searchParams.get("novo") === "true";
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [total, setTotal] = useState(0);
@@ -102,31 +107,49 @@ export default function TemplatesPage() {
     setDeleteDialog({ isOpen: false, templateId: null, templateName: "" });
   };
 
+  const handleNewTemplateCancel = () => {
+    router.push("/automacao/templates");
+  };
+
+  const handleNewTemplateSuccess = async () => {
+    router.push("/automacao/templates");
+    router.refresh();
+    await loadTemplates();
+  };
+
   if (loading && templates.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <TopBar title="Templates" showBackButton backHref="/dashboard" />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Carregando templates...</p>
-          </div>
+      <LayoutWrapper title="Templates" subtitle="Gerencie seus templates de documentos" activeTab="documents">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Carregando templates...</p>
         </div>
-      </div>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Templates" showBackButton backHref="/dashboard">
-        <Link
-          href="/automacao/templates/novo"
-          className="inline-flex items-center justify-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          Novo Template
-        </Link>
-      </TopBar>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <LayoutWrapper title="Templates" subtitle="Gerencie seus templates de documentos" activeTab="documents">
+      <div className="space-y-6">
+        {/* Formulário de Novo Template - aparece quando ?novo=true */}
+        {showNewTemplate && (
+          <div className="glass-card p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold">Novo Template</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleNewTemplateCancel}
+                className="rounded-lg"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </div>
+            <NovoTemplateClient onSuccess={handleNewTemplateSuccess} onCancel={handleNewTemplateCancel} />
+          </div>
+        )}
+
+        {/* Lista de Templates - sempre visível */}
+        <div>
         {error && (
           <div className="mb-4 rounded-md bg-red-50 dark:bg-red-900/20 p-4">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
@@ -143,8 +166,8 @@ export default function TemplatesPage() {
           <div className="rounded-lg bg-white dark:bg-zinc-800 p-8 text-center shadow">
             <p className="text-zinc-600 dark:text-zinc-400">Nenhum template encontrado.</p>
             <Link
-              href="/automacao/templates/novo"
-              className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+              href="/automacao/templates?novo=true"
+              className="mt-4 inline-block text-primary hover:underline"
             >
               Criar primeiro template
             </Link>
@@ -240,8 +263,9 @@ export default function TemplatesPage() {
             )}
           </>
         )}
+        </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
 

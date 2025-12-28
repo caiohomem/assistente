@@ -1,3 +1,4 @@
+using AssistenteExecutivo.Application.Tests.Helpers;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ namespace AssistenteExecutivo.Infrastructure.Tests.Repositories;
 public abstract class RepositoryTestBase : IDisposable
 {
     protected ApplicationDbContext Context { get; }
-    protected IClock Clock { get; }
+    protected TestClock Clock { get; }
 
     protected RepositoryTestBase()
     {
@@ -27,11 +28,6 @@ public abstract class RepositoryTestBase : IDisposable
     public void Dispose()
     {
         Context.Dispose();
-    }
-
-    private class TestClock : IClock
-    {
-        public DateTime UtcNow => DateTime.UtcNow;
     }
 }
 

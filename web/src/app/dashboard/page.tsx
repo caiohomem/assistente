@@ -2,34 +2,40 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLocale } from 'next-intl'
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
 import { getCreditBalance, listCreditTransactions } from '@/lib/api/creditsApi'
 import { listContactsClient } from '@/lib/api/contactsApiClient'
 import { getBffSession } from '@/lib/bff'
-import type { CreditBalance, CreditTransaction } from '@/lib/types/credit'
-import { CreditTransactionType } from '@/lib/types/credit'
-import { TopBar } from '@/components/TopBar'
+import type { CreditBalance } from '@/lib/types/credit'
+import type { Contact } from '@/lib/types/contact'
+import { LayoutWrapper } from '@/components/LayoutWrapper'
+import { StatsCard } from '@/components/StatsCard'
+import { ContactCard } from '@/components/ContactCard'
+import { BusinessCardScanner } from '@/components/BusinessCardScanner'
+import { NetworkGraph } from '@/components/NetworkGraph'
+import { RecentActivity } from '@/components/RecentActivity'
+import { Users, CreditCard, Mic, Network } from 'lucide-react'
 
 interface DashboardStats {
   totalContacts: number
   creditBalance: CreditBalance | null
-  recentTransactions: CreditTransaction[]
-  firstContactId: string | null
+  recentContacts: Contact[]
+  scannedCards: number
+  audioNotes: number
+  connections: number
 }
 
 export default function DashboardPage() {
   const router = useRouter()
-  const locale = useLocale()
   const t = useTranslations('dashboard')
-  const tCommon = useTranslations('common')
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     totalContacts: 0,
     creditBalance: null,
-    recentTransactions: [],
-    firstContactId: null
+    recentContacts: [],
+    scannedCards: 0,
+    audioNotes: 0,
+    connections: 0
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -53,7 +59,6 @@ export default function DashboardPage() {
           console.log('[Dashboard] Não autenticado, redirecionando para login');
           
           // Verificar se já estamos em um loop de redirect
-          const urlParams = new URLSearchParams(window.location.search);
           const redirectCount = parseInt(sessionStorage.getItem('redirectCount') || '0');
           
           if (redirectCount > 3) {
@@ -77,17 +82,18 @@ export default function DashboardPage() {
         console.log('[Dashboard] Autenticado, carregando dados...');
 
         // Carregar dados em paralelo
-        const [balanceResult, transactionsResult, contactsResult] = await Promise.allSettled([
+        const [balanceResult, contactsResult] = await Promise.allSettled([
           getCreditBalance(),
-          listCreditTransactions(),
-          listContactsClient({ page: 1, pageSize: 1 }) // Para obter o total e o primeiro contato
+          listContactsClient({ page: 1, pageSize: 4 }) // Para obter os 4 contatos recentes
         ])
 
         const newStats: DashboardStats = {
           totalContacts: 0,
           creditBalance: null,
-          recentTransactions: [],
-          firstContactId: null
+          recentContacts: [],
+          scannedCards: 0,
+          audioNotes: 0,
+          connections: 0
         }
 
         // Processar saldo
@@ -95,21 +101,22 @@ export default function DashboardPage() {
           newStats.creditBalance = balanceResult.value
         }
 
-        // Processar transações (últimas 5)
-        if (transactionsResult.status === 'fulfilled') {
-          newStats.recentTransactions = transactionsResult.value
-            .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-            .slice(0, 5)
-        }
-
-        // Processar total de contatos e primeiro contato
+        // Processar contatos
         if (contactsResult.status === 'fulfilled') {
           newStats.totalContacts = contactsResult.value.total
-          // Se houver contatos, pegar o ID do primeiro
-          if (contactsResult.value.contacts.length > 0) {
-            newStats.firstContactId = contactsResult.value.contacts[0].contactId
-          }
+          newStats.recentContacts = contactsResult.value.contacts
+          
+          // Calcular conexões (soma de todos os relacionamentos)
+          newStats.connections = contactsResult.value.contacts.reduce(
+            (acc, contact) => acc + (contact.relationships?.length || 0),
+            0
+          )
         }
+
+        // TODO: Carregar dados reais de cartões escaneados e notas de áudio
+        // Por enquanto, valores mockados baseados nos contatos
+        newStats.scannedCards = Math.floor(newStats.totalContacts * 0.36) // ~36% dos contatos
+        newStats.audioNotes = Math.floor(newStats.totalContacts * 0.63) // ~63% dos contatos
 
         setStats(newStats)
       } catch (err) {
@@ -125,14 +132,14 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [router])
+  }, [router, t])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">{t('loading')}</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     )
@@ -140,332 +147,97 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          <p className="text-destructive mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
-            {tCommon('tryAgain')}
+            Tentar novamente
           </button>
         </div>
       </div>
     )
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: locale === 'pt-BR' || locale === 'pt-PT' ? 'BRL' : 
-                locale === 'en-US' ? 'USD' :
-                locale === 'es-ES' ? 'EUR' :
-                locale === 'fr-FR' ? 'EUR' :
-                locale === 'it-IT' ? 'EUR' : 'BRL'
-    }).format(value)
-  }
+  // Calcular mudanças (mockado por enquanto)
+  const contactsThisMonth = Math.floor(stats.totalContacts * 0.05) // ~5% do total
+  const cardsThisWeek = Math.floor(stats.scannedCards * 0.06) // ~6% dos cartões
+  const newConnections = Math.floor(stats.connections * 0.065) // ~6.5% das conexões
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <TopBar title={t('title')} showBackButton={false} />
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Welcome Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {t('welcome')}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              {t('welcomeDescription')}
-            </p>
+    <LayoutWrapper title="Dashboard" subtitle="Visão geral dos seus relacionamentos" activeTab="dashboard">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatsCard 
+          title="Total de Contatos" 
+          value={stats.totalContacts} 
+          change={`+${contactsThisMonth} este mês`} 
+          changeType="positive" 
+          icon={Users}
+          delay={0}
+        />
+        <StatsCard 
+          title="Cartões Escaneados" 
+          value={stats.scannedCards} 
+          change={`+${cardsThisWeek} esta semana`} 
+          changeType="positive" 
+          icon={CreditCard}
+          delay={50}
+        />
+        <StatsCard 
+          title="Notas de Áudio" 
+          value={stats.audioNotes} 
+          change="3h gravadas" 
+          changeType="neutral" 
+          icon={Mic}
+          delay={100}
+        />
+        <StatsCard 
+          title="Conexões Mapeadas" 
+          value={stats.connections} 
+          change={`+${newConnections} novas`} 
+          changeType="positive" 
+          icon={Network}
+          delay={150}
+        />
+      </div>
+      
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column */}
+        <div className="lg:col-span-2 space-y-6">
+          <NetworkGraph 
+            height={400}
+            maxDepth={2}
+            showControls={false}
+            showNodeDetails={false}
+            showFullPageLink={true}
+          />
+          
+          <div>
+            <h2 className="font-semibold mb-4 text-lg">Contatos Recentes</h2>
+            {stats.recentContacts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stats.recentContacts.map((contact, i) => (
+                  <ContactCard key={contact.contactId} contact={contact} delay={i * 50} />
+                ))}
+              </div>
+            ) : (
+              <div className="glass-card p-8 text-center">
+                <p className="text-muted-foreground">Nenhum contato encontrado. Comece adicionando seu primeiro contato!</p>
+              </div>
+            )}
           </div>
-
-          {/* Credit Balance Card */}
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 dark:from-indigo-700 dark:to-indigo-800 rounded-2xl shadow-xl p-6 text-white mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t('creditBalance')}</h3>
-              <div className="text-3xl">💰</div>
-            </div>
-            <div className="text-4xl font-bold mb-2">
-              {stats.creditBalance ? formatCurrency(stats.creditBalance.balance) : formatCurrency(0)}
-            </div>
-            <div className="text-indigo-100 text-sm">
-              {stats.creditBalance?.transactionCount || 0} {t('transactionsPerformed')}
-            </div>
-          </div>
-
-          {/* Functionality Cards Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Contatos */}
-            <Link
-              href="/contatos"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">👥</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t('contacts')}
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('contactsDescription')}
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-              {stats.totalContacts > 0 && (
-                <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                  {stats.totalContacts} {stats.totalContacts !== 1 ? t('contactsPlural') : t('contact')} {stats.totalContacts !== 1 ? t('registeredPlural') : t('registered')}
-                </div>
-              )}
-            </Link>
-
-            {/* Créditos */}
-            <Link
-              href="/creditos"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">💳</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t('credits')}
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('creditsDescription')}
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-              {stats.creditBalance && (
-                <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                  {t('balance')}: {formatCurrency(stats.creditBalance.balance)}
-                </div>
-              )}
-            </Link>
-
-            {/* Upload de Mídia */}
-            <Link
-              href="/contatos/upload-cartao"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">📸</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t('uploadMedia')}
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('uploadMediaDescription')}
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            {/* Configurações do Agente */}
-            <Link
-              href="/configuracoes-agente"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">🤖</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t('agentSettings')}
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('agentSettingsDescription')}
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            {/* Lembretes */}
-            <Link
-              href="/automacao/lembretes"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">⏰</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  Lembretes
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Gerencie seus lembretes e agendamentos
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            {/* Rascunhos */}
-            <Link
-              href="/automacao/rascunhos"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">📝</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  Rascunhos
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Crie e gerencie rascunhos de documentos
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            {/* Templates */}
-            <Link
-              href="/automacao/templates"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">📄</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  Templates
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Gerencie seus templates reutilizáveis
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            {/* Papéis Timbrados */}
-            <Link
-              href="/automacao/papeis-timbrados"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">✉️</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  Papéis Timbrados
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Gerencie seus papéis timbrados personalizados
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-
-            {/* Templates de Email */}
-            <Link
-              href="/email-templates"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow group"
-            >
-              <div className="flex items-center mb-4">
-                <div className="text-4xl mr-4">📧</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  Templates de Email
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Gerencie templates de email do sistema (boas-vindas, recuperação de senha, etc.)
-              </p>
-              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
-                {tCommon('access')}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-          </div>
-
-          {/* Recent Activities */}
-          {stats.recentTransactions.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                {t('recentActivities')}
-              </h3>
-              <div className="space-y-3">
-                {stats.recentTransactions.slice(0, 5).map((transaction) => {
-                  const isPositive = transaction.type === CreditTransactionType.Grant || 
-                                    transaction.type === CreditTransactionType.Purchase || 
-                                    transaction.type === CreditTransactionType.Refund
-                  
-                  return (
-                    <div
-                      key={transaction.transactionId}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`text-2xl ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {isPositive ? '↑' : '↓'}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              {transaction.type === CreditTransactionType.Grant ? t('transactionTypes.grant') :
-                               transaction.type === CreditTransactionType.Purchase ? t('transactionTypes.purchase') :
-                               transaction.type === CreditTransactionType.Consume ? t('transactionTypes.consume') :
-                               transaction.type === CreditTransactionType.Refund ? t('transactionTypes.refund') :
-                               transaction.type === CreditTransactionType.Expire ? t('transactionTypes.expire') : t('transactionTypes.reserve')}
-                            </span>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              {formatCurrency(transaction.amount)}
-                            </span>
-                          </div>
-                          {transaction.reason && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {transaction.reason}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            {new Date(transaction.occurredAt).toLocaleDateString(locale, {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
         </div>
-      </main>
-    </div>
+        
+        {/* Right Column */}
+        <div className="space-y-6">
+          <BusinessCardScanner />
+          <RecentActivity />
+        </div>
+      </div>
+    </LayoutWrapper>
   )
 }
-

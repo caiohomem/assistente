@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
 import { createTemplateClient } from "@/lib/api/automationApiClient";
 import { TemplateType } from "@/lib/types/automation";
 
-export function NovoTemplateClient() {
-  const router = useRouter();
+interface NovoTemplateClientProps {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function NovoTemplateClient({ onSuccess, onCancel }: NovoTemplateClientProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -57,8 +59,9 @@ export function NovoTemplateClient() {
         placeholdersSchema: formData.placeholdersSchema.trim() || null,
       });
 
-      router.push("/automacao/templates");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Erro ao criar template:", error);
       setErrors({
@@ -70,14 +73,13 @@ export function NovoTemplateClient() {
   };
 
   const handleCancel = () => {
-    router.push("/automacao/templates");
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Novo Template" showBackButton backHref="/automacao/templates" />
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nome */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -190,9 +192,7 @@ export function NovoTemplateClient() {
               {loading ? "Criando..." : "Criar Template"}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+    </form>
   );
 }
 

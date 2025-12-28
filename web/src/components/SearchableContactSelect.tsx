@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { Contact } from "@/lib/types/contact";
 
 interface SearchableContactSelectProps {
@@ -25,6 +26,7 @@ export function SearchableContactSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -43,13 +45,39 @@ export function SearchableContactSelect({
     );
   });
 
+  // Calcular posição do dropdown quando abrir ou quando a janela mudar
+  useEffect(() => {
+    const updatePosition = () => {
+      if (isOpen && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener("scroll", updatePosition, true);
+      window.addEventListener("resize", updatePosition);
+      return () => {
+        window.removeEventListener("scroll", updatePosition, true);
+        window.removeEventListener("resize", updatePosition);
+      };
+    }
+  }, [isOpen]);
+
   // Fechar quando clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchTerm("");
-        setHighlightedIndex(-1);
+        if (listRef.current && !listRef.current.contains(event.target as Node)) {
+          setIsOpen(false);
+          setSearchTerm("");
+          setHighlightedIndex(-1);
+        }
       }
     };
 
@@ -130,15 +158,7 @@ export function SearchableContactSelect({
         {loading ? (
           <div className="text-sm text-zinc-500 dark:text-zinc-400">Carregando contatos...</div>
         ) : (
-          <div
-            className="flex items-center justify-between cursor-pointer"
-            onClick={() => {
-              setIsOpen(!isOpen);
-              if (!isOpen) {
-                setTimeout(() => inputRef.current?.focus(), 0);
-              }
-            }}
-          >
+          <div className="flex items-center justify-between cursor-pointer">
             <input
               ref={inputRef}
               type="text"
@@ -150,33 +170,60 @@ export function SearchableContactSelect({
               }}
               onKeyDown={handleKeyDown}
               onFocus={() => {
-                setIsOpen(true);
-                setSearchTerm("");
+                if (!isOpen) {
+                  setIsOpen(true);
+                  setSearchTerm("");
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isOpen) {
+                  setIsOpen(true);
+                  setSearchTerm("");
+                }
               }}
               placeholder={placeholder}
-              className="flex-1 bg-transparent border-none outline-none text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
+              className="flex-1 bg-transparent border-none outline-none text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 cursor-pointer"
             />
-            <svg
-              className={`w-5 h-5 text-zinc-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(!isOpen);
+                if (!isOpen) {
+                  setTimeout(() => inputRef.current?.focus(), 0);
+                }
+              }}
+              className="flex items-center justify-center p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded transition-colors"
+              aria-label="Toggle dropdown"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+              <svg
+                className={`w-5 h-5 text-zinc-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
           </div>
         )}
       </div>
 
-      {isOpen && !loading && (
+      {isOpen && !loading && typeof window !== "undefined" && createPortal(
         <ul
           ref={listRef}
-          className="absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg"
+          className="fixed z-[99999] max-h-60 overflow-auto rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+          }}
         >
           {filteredContacts.length === 0 ? (
             <li className="px-4 py-2 text-sm text-zinc-500 dark:text-zinc-400">
@@ -210,7 +257,8 @@ export function SearchableContactSelect({
               </li>
             ))
           )}
-        </ul>
+        </ul>,
+        document.body
       )}
 
       {error && (

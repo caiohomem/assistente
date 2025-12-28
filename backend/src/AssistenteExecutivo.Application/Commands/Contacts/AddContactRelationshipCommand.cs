@@ -9,6 +9,8 @@ public class AddContactRelationshipCommand : IRequest<Unit>
     public Guid TargetContactId { get; set; }
     public string Type { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public float? Strength { get; set; }
+    public bool? IsConfirmed { get; set; }
 }
 
 

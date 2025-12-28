@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
 import { createLetterheadClient } from "@/lib/api/automationApiClient";
 
-export function NovoPapelTimbradoClient() {
-  const router = useRouter();
+interface NovoPapelTimbradoClientProps {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function NovoPapelTimbradoClient({ onSuccess, onCancel }: NovoPapelTimbradoClientProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -50,8 +52,9 @@ export function NovoPapelTimbradoClient() {
         designData: formData.designData.trim(),
       });
 
-      router.push("/automacao/papeis-timbrados");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Erro ao criar papel timbrado:", error);
       setErrors({
@@ -63,14 +66,13 @@ export function NovoPapelTimbradoClient() {
   };
 
   const handleCancel = () => {
-    router.push("/automacao/papeis-timbrados");
+    if (onCancel) {
+      onCancel();
+    }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Novo Papel Timbrado" showBackButton backHref="/automacao/papeis-timbrados" />
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nome */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -143,9 +145,7 @@ export function NovoPapelTimbradoClient() {
               {loading ? "Criando..." : "Criar Papel Timbrado"}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+    </form>
   );
 }
 

@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { getAgentConfiguration, updateAgentConfiguration, type AgentConfiguration } from '@/lib/api/agentConfigurationApi'
-import { TopBar } from '@/components/TopBar'
+import { LayoutWrapper } from '@/components/LayoutWrapper'
+import { Button } from '@/components/ui/button'
+import { Bot, Save, X, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
 
 export default function AgentConfigurationPage() {
   const router = useRouter()
@@ -75,110 +77,115 @@ export default function AgentConfigurationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">{t('loading')}</p>
+      <LayoutWrapper title={t('title')} activeTab="settings">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">{t('loading')}</p>
+          </div>
         </div>
-      </div>
+      </LayoutWrapper>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <TopBar title={t('title')} showBackButton={true} />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {t('title')}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              {t('description')}
+    <LayoutWrapper 
+      title={t('title')} 
+      subtitle={t('description')}
+      activeTab="settings"
+    >
+      <div className="max-w-4xl space-y-6">
+        {/* Form */}
+        <div className="glass-card p-6">
+          <div className="mb-6">
+            <label htmlFor="ocrPrompt" className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              {t('ocrPromptLabel')}
+            </label>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t('ocrPromptHint')}
             </p>
+            <textarea
+              id="ocrPrompt"
+              value={ocrPrompt}
+              onChange={(e) => setOcrPrompt(e.target.value)}
+              rows={20}
+              className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 font-mono text-sm transition-all"
+              placeholder={t('ocrPromptPlaceholder')}
+            />
           </div>
 
-          {/* Form */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-            <div className="mb-6">
-              <label htmlFor="ocrPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('ocrPromptLabel')}
-              </label>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {t('ocrPromptHint')}
-              </p>
-              <textarea
-                id="ocrPrompt"
-                value={ocrPrompt}
-                onChange={(e) => setOcrPrompt(e.target.value)}
-                rows={20}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 font-mono text-sm"
-                placeholder={t('ocrPromptPlaceholder')}
-              />
-            </div>
-
-            <div className="mb-6">
-              <label htmlFor="transcriptionPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('transcriptionPromptLabel')}
-              </label>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                {t('transcriptionPromptHint')}
-              </p>
-              <textarea
-                id="transcriptionPrompt"
-                value={transcriptionPrompt}
-                onChange={(e) => setTranscriptionPrompt(e.target.value)}
-                rows={20}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 font-mono text-sm"
-                placeholder={t('transcriptionPromptPlaceholder')}
-              />
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <p className="text-sm text-green-800 dark:text-green-200">{t('saveSuccess')}</p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-4">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
-              >
-                {saving ? t('saving') : t('save')}
-              </button>
-              <button
-                onClick={() => router.back()}
-                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold transition-colors"
-              >
-                {tCommon('cancel')}
-              </button>
-            </div>
-
-            {/* Info */}
-            {configuration && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('lastUpdated')}: {new Date(configuration.updatedAt).toLocaleString()}
-                </p>
-              </div>
-            )}
+          <div className="mb-6">
+            <label htmlFor="transcriptionPrompt" className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              {t('transcriptionPromptLabel')}
+            </label>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t('transcriptionPromptHint')}
+            </p>
+            <textarea
+              id="transcriptionPrompt"
+              value={transcriptionPrompt}
+              onChange={(e) => setTranscriptionPrompt(e.target.value)}
+              rows={20}
+              className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 font-mono text-sm transition-all"
+              placeholder={t('transcriptionPromptPlaceholder')}
+            />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 glass-card border-destructive/50 bg-destructive/10 p-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-6 glass-card border-success/50 bg-success/10 p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success" />
+                <p className="text-sm text-success">{t('saveSuccess')}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-4">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              variant="glow"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? t('saving') : t('save')}
+            </Button>
+            <Button
+              onClick={() => router.back()}
+              variant="ghost"
+            >
+              <X className="w-4 h-4 mr-2" />
+              {tCommon('cancel')}
+            </Button>
+          </div>
+
+          {/* Info */}
+          {configuration && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                <span>
+                  {t('lastUpdated')}: {new Date(configuration.updatedAt).toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
-      </main>
-    </div>
+      </div>
+    </LayoutWrapper>
   )
 }
 

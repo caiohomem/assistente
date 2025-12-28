@@ -144,21 +144,21 @@ export function UserMenu() {
   const corAvatar = obterCorAvatar(textoParaCor)
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-[9999]" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary/50 backdrop-blur-sm border border-border/50 rounded-2xl hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-300 hover:scale-105"
         aria-label="Menu do usuário"
         disabled={logoutLoading}
       >
         <div className={`h-8 w-8 rounded-full ${corAvatar} flex items-center justify-center text-white text-sm font-semibold`}>
           {iniciais}
         </div>
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline max-w-[120px] truncate">
+        <span className="text-sm font-medium text-foreground hidden sm:inline max-w-[120px] truncate">
           {nomeExibido}
         </span>
         <svg
-          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -168,19 +168,19 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-56 bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg shadow-primary/10 z-[9999] overflow-hidden animate-blur-in">
           {/* Header do menu com informações do usuário */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-3 border-b border-border/50">
             <div className="flex items-center gap-3">
               <div className={`h-10 w-10 rounded-full ${corAvatar} flex items-center justify-center text-white text-sm font-semibold`}>
                 {iniciais}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                <p className="text-sm font-semibold text-foreground truncate">
                   {nomeExibido}
                 </p>
                 {user.email && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {user.email}
                   </p>
                 )}
@@ -192,7 +192,7 @@ export function UserMenu() {
           <div className="py-1">
             <button
               onClick={handlePerfil}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/80 transition-all duration-300 text-foreground"
             >
               <svg
                 className="w-5 h-5"
@@ -210,22 +210,22 @@ export function UserMenu() {
               <span className="text-sm font-medium">Perfil</span>
             </button>
             {showDeleteConfirm ? (
-              <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+              <div className="px-4 py-3 border-t border-border/50">
+                <p className="text-xs text-muted-foreground mb-2">
                   Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={handleDeleteProfile}
                     disabled={deleteLoading}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                   >
                     {deleteLoading ? 'Excluindo...' : 'Confirmar'}
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
                     disabled={deleteLoading}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 px-3 py-1.5 text-xs font-medium bg-secondary text-foreground rounded-xl hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                   >
                     Cancelar
                   </button>
@@ -235,7 +235,7 @@ export function UserMenu() {
               <button
                 onClick={handleDeleteProfile}
                 disabled={deleteLoading || logoutLoading}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-500/10 transition-all duration-300 text-red-600 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg
                   className="w-5 h-5"
@@ -256,7 +256,7 @@ export function UserMenu() {
             <button
               onClick={handleLogout}
               disabled={logoutLoading || deleteLoading}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-red-500/10 transition-all duration-300 text-red-600 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg
                 className="w-5 h-5"

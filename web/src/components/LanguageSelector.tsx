@@ -56,18 +56,18 @@ export function LanguageSelector() {
   }, [])
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-[9999]" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary/50 backdrop-blur-sm border border-border/50 rounded-2xl hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-300 hover:scale-105"
         aria-label="Selecionar idioma"
       >
         <span className="text-xl">{currentLanguage.flag}</span>
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline">
+        <span className="text-sm font-medium text-foreground hidden sm:inline">
           {currentLanguage.name}
         </span>
         <svg
-          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -77,22 +77,22 @@ export function LanguageSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg shadow-primary/10 z-[9999] overflow-hidden animate-blur-in">
           {languages.map((lang) => (
             <button
               key={lang.code}
               onClick={() => changeLanguage(lang.code)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/80 transition-all duration-300 ${
                 currentLocale === lang.code 
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-                  : 'text-gray-700 dark:text-gray-300'
+                  ? 'bg-primary/20 text-primary' 
+                  : 'text-foreground'
               }`}
             >
               <span className="text-xl">{lang.flag}</span>
               <span className="text-sm font-medium">{lang.name}</span>
               {currentLocale === lang.code && (
                 <svg 
-                  className="ml-auto h-4 w-4 text-indigo-600 dark:text-indigo-400" 
+                  className="ml-auto h-4 w-4 text-primary" 
                   fill="currentColor" 
                   viewBox="0 0 20 20"
                 >

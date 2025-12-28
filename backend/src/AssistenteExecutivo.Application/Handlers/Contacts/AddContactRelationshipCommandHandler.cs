@@ -63,7 +63,9 @@ public class AddContactRelationshipCommandHandler : IRequestHandler<AddContactRe
             request.TargetContactId,
             request.Type,
             request.Description,
-            _clock);
+            _clock,
+            request.Strength,
+            request.IsConfirmed);
 
         // Garanta que o EF trate o relacionamento como nova entidade (INSERT), mesmo com PK preenchida.
         await _relationshipRepository.AddAsync(relationship, cancellationToken);

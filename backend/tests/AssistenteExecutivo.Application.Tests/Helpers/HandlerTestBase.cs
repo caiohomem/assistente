@@ -2,20 +2,20 @@ using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
 using AssistenteExecutivo.Infrastructure.Persistence;
+using AssistenteExecutivo.Infrastructure.Persistence.Repositories;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 using System.Security.Cryptography;
 
 namespace AssistenteExecutivo.Application.Tests.Helpers;
 
 public abstract class HandlerTestBase : IDisposable
 {
-    protected readonly ServiceProvider ServiceProvider;
-    protected readonly TestClock Clock;
+    protected ServiceProvider ServiceProvider { get; }
+    protected TestClock Clock { get; }
     private readonly string _databaseName;
 
     protected HandlerTestBase()
@@ -25,15 +25,31 @@ public abstract class HandlerTestBase : IDisposable
 
         var services = new ServiceCollection();
 
-        // Database - In-Memory para testes
+        ConfigureDatabase(services);
+        ConfigureRepositories(services);
+        ConfigureDomainServices(services);
+        ConfigureInfrastructure(services);
+        ConfigureExternalServices(services);
+        ConfigureMediatR(services);
+
+        ConfigureServices(services);
+
+        ServiceProvider = services.BuildServiceProvider();
+
+        InitializeDatabase();
+    }
+
+    private void ConfigureDatabase(IServiceCollection services)
+    {
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: _databaseName));
 
-        // Register IApplicationDbContext to resolve to ApplicationDbContext
-        services.AddScoped<AssistenteExecutivo.Application.Interfaces.IApplicationDbContext>(sp =>
+        services.AddScoped<IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>());
+    }
 
-        // Repositories
+    private void ConfigureRepositories(IServiceCollection services)
+    {
         services.AddScoped<IContactRepository, ContactRepository>();
         services.AddScoped<IRelationshipRepository, RelationshipRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
@@ -41,33 +57,34 @@ public abstract class HandlerTestBase : IDisposable
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
         services.AddScoped<ICaptureJobRepository, CaptureJobRepository>();
         services.AddScoped<ICreditWalletRepository, CreditWalletRepository>();
-        services.AddScoped<IReminderRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.ReminderRepository>();
-        services.AddScoped<IDraftDocumentRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.DraftDocumentRepository>();
-        services.AddScoped<ITemplateRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.TemplateRepository>();
-        services.AddScoped<ILetterheadRepository, AssistenteExecutivo.Infrastructure.Persistence.Repositories.LetterheadRepository>();
+        services.AddScoped<IReminderRepository, ReminderRepository>();
+        services.AddScoped<IDraftDocumentRepository, DraftDocumentRepository>();
+        services.AddScoped<ITemplateRepository, TemplateRepository>();
+        services.AddScoped<ILetterheadRepository, LetterheadRepository>();
+    }
 
-        // Unit of Work
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-        // Clock
+    private void ConfigureDomainServices(IServiceCollection services)
+    {
         services.AddSingleton<IClock>(Clock);
-
-        // IdGenerator
         services.AddSingleton<IIdGenerator, MockIdGenerator>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+    }
 
-        // Configuration
+    private void ConfigureInfrastructure(IServiceCollection services)
+    {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 { "OpenAI:TextToSpeech:Enabled", "false" }
             })
             .Build();
-        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(configuration);
+        services.AddSingleton<IConfiguration>(configuration);
 
-        // Logging
         services.AddLogging();
+    }
 
-        // Mock external services
+    private void ConfigureExternalServices(IServiceCollection services)
+    {
         services.AddScoped<IKeycloakService, MockKeycloakService>();
         services.AddScoped<IEmailService, MockEmailService>();
         services.AddScoped<IOcrProvider, MockOcrProvider>();
@@ -75,17 +92,17 @@ public abstract class HandlerTestBase : IDisposable
         services.AddScoped<ISpeechToTextProvider, MockSpeechToTextProvider>();
         services.AddScoped<ITextToSpeechProvider, MockTextToSpeechProvider>();
         services.AddScoped<ILLMProvider, MockLLMProvider>();
-
-        // Mock IPublisher for domain events (no-op in tests)
         services.AddScoped<IPublisher, MockPublisher>();
+    }
 
-        ConfigureServices(services);
+    private void ConfigureMediatR(IServiceCollection services)
+    {
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(
+            typeof(AssistenteExecutivo.Application.Commands.Auth.RegisterUserCommand).Assembly));
+    }
 
-        // Register all handlers from Application assembly
-        RegisterHandlers(services, typeof(AssistenteExecutivo.Application.Commands.Auth.RegisterUserCommand).Assembly);
-
-        ServiceProvider = services.BuildServiceProvider();
-
+    private void InitializeDatabase()
+    {
         using var scope = ServiceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         dbContext.Database.EnsureCreated();
@@ -98,97 +115,15 @@ public abstract class HandlerTestBase : IDisposable
     protected async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
         using var scope = ServiceProvider.CreateScope();
-
-        // Get the handler type from the request type
-        var requestType = request.GetType();
-        var responseType = typeof(TResponse);
-
-        // Find handler interface: IRequestHandler<TRequest, TResponse>
-        var handlerInterfaceType = typeof(IRequestHandler<,>).MakeGenericType(requestType, responseType);
-
-        // Get handler implementation from service provider
-        var handler = scope.ServiceProvider.GetRequiredService(handlerInterfaceType);
-
-        // Call Handle method using reflection
-        var handleMethod = handlerInterfaceType.GetMethod("Handle")
-            ?? throw new InvalidOperationException($"Handler for {requestType.Name} does not implement Handle method");
-
-        var result = handleMethod.Invoke(handler, new object[] { request, cancellationToken });
-
-        // If result is Task<TResponse>, await it
-        if (result is Task<TResponse> task)
-        {
-            return await task;
-        }
-
-        return (TResponse)result!;
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        return await mediator.Send(request, cancellationToken);
     }
 
     protected async Task SendAsync(IRequest request, CancellationToken cancellationToken = default)
     {
         using var scope = ServiceProvider.CreateScope();
-
-        // Get the handler type from the request type
-        var requestType = request.GetType();
-
-        // Find handler interface: IRequestHandler<TRequest>
-        var handlerInterfaceType = typeof(IRequestHandler<>).MakeGenericType(requestType);
-
-        // Get handler implementation from service provider
-        var handler = scope.ServiceProvider.GetRequiredService(handlerInterfaceType);
-
-        // Call Handle method using reflection
-        var handleMethod = handlerInterfaceType.GetMethod("Handle")
-            ?? throw new InvalidOperationException($"Handler for {requestType.Name} does not implement Handle method");
-
-        var result = handleMethod.Invoke(handler, new object[] { request, cancellationToken });
-
-        // If result is Task, await it
-        if (result is Task task)
-        {
-            await task;
-        }
-    }
-
-    private static void RegisterHandlers(IServiceCollection services, Assembly assembly)
-    {
-        // Register handlers with response (IRequestHandler<TRequest, TResponse>)
-        var handlerTypesWithResponse = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract)
-            .Where(t => t.GetInterfaces()
-                .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
-            .ToList();
-
-        foreach (var handlerType in handlerTypesWithResponse)
-        {
-            var interfaces = handlerType.GetInterfaces()
-                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>))
-                .ToList();
-
-            foreach (var interfaceType in interfaces)
-            {
-                services.AddScoped(interfaceType, handlerType);
-            }
-        }
-
-        // Register handlers without response (IRequestHandler<TRequest>)
-        var handlerTypesWithoutResponse = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract)
-            .Where(t => t.GetInterfaces()
-                .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<>)))
-            .ToList();
-
-        foreach (var handlerType in handlerTypesWithoutResponse)
-        {
-            var interfaces = handlerType.GetInterfaces()
-                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<>))
-                .ToList();
-
-            foreach (var interfaceType in interfaces)
-            {
-                services.AddScoped(interfaceType, handlerType);
-            }
-        }
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.Send(request, cancellationToken);
     }
 
     public void Dispose()

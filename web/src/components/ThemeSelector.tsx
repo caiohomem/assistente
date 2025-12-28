@@ -86,14 +86,16 @@ export function ThemeSelector() {
     <div className="relative">
       <button
         onClick={toggleTheme}
-        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary/50 backdrop-blur-sm border border-border/50 rounded-2xl hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all duration-300 hover:scale-105"
         aria-label={`Alternar tema. Tema atual: ${getThemeLabel()}`}
         title={`Tema: ${getThemeLabel()} (clique para alternar)`}
         suppressHydrationWarning
       >
-        {getThemeIcon()}
+        <div className="w-4 h-4 lg:w-5 lg:h-5 text-foreground">
+          {getThemeIcon()}
+        </div>
         <span 
-          className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline"
+          className="text-sm font-medium text-foreground hidden sm:inline"
           suppressHydrationWarning
         >
           {getThemeLabel()}

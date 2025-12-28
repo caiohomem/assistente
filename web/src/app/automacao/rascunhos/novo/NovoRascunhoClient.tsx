@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
 import { createDraftClient, listTemplatesClient, listLetterheadsClient } from "@/lib/api/automationApiClient";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
 import type { Contact } from "@/lib/types/contact";
 import type { Template, Letterhead } from "@/lib/types/automation";
 import { DocumentType } from "@/lib/types/automation";
 
-export function NovoRascunhoClient() {
-  const router = useRouter();
+interface NovoRascunhoClientProps {
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function NovoRascunhoClient({ onSuccess, onCancel }: NovoRascunhoClientProps) {
   const [loading, setLoading] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -74,8 +76,9 @@ export function NovoRascunhoClient() {
         letterheadId: formData.letterheadId || null,
       });
 
-      router.push("/automacao/rascunhos");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Erro ao criar rascunho:", error);
       setErrors({
@@ -87,15 +90,13 @@ export function NovoRascunhoClient() {
   };
 
   const handleCancel = () => {
-    router.push("/automacao/rascunhos");
+    if (onCancel) {
+      onCancel();
+    }
   };
 
-
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Novo Rascunho" showBackButton backHref="/automacao/rascunhos" />
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
           {/* Tipo de Documento */}
           <div>
             <label htmlFor="documentType" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -231,9 +232,7 @@ export function NovoRascunhoClient() {
               {loading ? "Criando..." : "Criar Rascunho"}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+    </form>
   );
 }
 

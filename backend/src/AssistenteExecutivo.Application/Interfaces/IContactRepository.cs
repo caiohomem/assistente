@@ -1,3 +1,4 @@
+using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Domain.Entities;
 
 namespace AssistenteExecutivo.Application.Interfaces;
@@ -18,5 +19,10 @@ public interface IContactRepository
     /// Retorna informações sobre o status do contato.
     /// </summary>
     Task<(bool Exists, Guid? OwnerUserId, bool IsDeleted)> GetContactStatusAsync(Guid contactId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Busca o grafo de relacionamentos entre contatos do usuário até uma profundidade especificada.
+    /// </summary>
+    Task<NetworkGraphDto> GetNetworkGraphAsync(Guid ownerUserId, int maxDepth, CancellationToken cancellationToken = default);
 }
 

@@ -7,7 +7,9 @@ import { uploadCard, getCaptureJobById, type UploadCardResponse } from "@/lib/ap
 import { updateContactClient, getContactByIdClient } from "@/lib/api/contactsApiClient";
 import type { CaptureJob, CardScanResult } from "@/lib/types/capture";
 import type { Contact } from "@/lib/types/contact";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Button } from "@/components/ui/button";
+import { BusinessCardScanner } from "@/components/BusinessCardScanner";
 
 export default function UploadCartaoPage() {
   const router = useRouter();
@@ -174,102 +176,90 @@ export default function UploadCartaoPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-      <TopBar title="Upload de Cartão de Visita" showBackButton backHref="/dashboard" />
-      <div className="mx-auto max-w-4xl px-6 py-12">
-        <div className="mb-8">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Faça upload de uma imagem do cartão de visita para extrair automaticamente as informações usando OCR.
-          </p>
-        </div>
+  // Integrar com BusinessCardScanner
+  const handleFileFromScanner = async (file: File) => {
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      setError("Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.")
+      return
+    }
 
+    // Validate file size (10MB)
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      setError("Arquivo muito grande. Tamanho máximo: 10MB.")
+      return
+    }
+
+    setSelectedFile(file)
+    setError(null)
+    setSuccess(null)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <LayoutWrapper title="Cartões de Visita" subtitle="Escaneie e gerencie cartões com IA" activeTab="cards">
+      <div className="max-w-4xl space-y-6">
         {/* Error/Success Messages */}
         {error && (
-          <div className="mb-6 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
-            <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          <div className="glass-card border-destructive/50 bg-destructive/10 p-4">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
-            <p className="text-sm text-green-800 dark:text-green-400">{success}</p>
+          <div className="glass-card border-success/50 bg-success/10 p-4">
+            <p className="text-sm text-success">{success}</p>
           </div>
         )}
 
-        {/* Upload Section */}
+        {/* Upload Section - Usando BusinessCardScanner */}
         {!uploadResult && (
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 dark:text-zinc-100">Selecionar Imagem</h2>
-            
-            <div className="space-y-4">
-              {/* File Input */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Arquivo de Imagem
-                </label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleFileSelect}
-                  className="block w-full text-sm text-zinc-500 dark:text-zinc-400
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-zinc-100 file:text-zinc-700
-                    dark:file:bg-zinc-700 dark:file:text-zinc-200
-                    hover:file:bg-zinc-200 dark:hover:file:bg-zinc-600
-                    cursor-pointer"
-                />
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Formatos aceitos: JPEG, PNG, WebP. Tamanho máximo: 10MB.
-                </p>
-              </div>
+          <BusinessCardScanner onFileSelect={handleFileFromScanner} />
+        )}
 
-              {/* Preview */}
-              {previewUrl && (
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Preview
-                  </label>
-                  <div className="border border-zinc-200 dark:border-zinc-700 rounded-md p-4 bg-zinc-50 dark:bg-zinc-900">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="max-w-full h-auto max-h-64 mx-auto rounded"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Upload Button */}
-              <div className="flex gap-4">
-                <button
-                  onClick={handleUpload}
-                  disabled={!selectedFile || uploading || processing}
-                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploading ? "Enviando..." : processing ? "Processando OCR..." : "Enviar e Processar"}
-                </button>
-                {previewUrl && (
-                  <button
-                    onClick={handleReset}
-                    disabled={uploading || processing}
-                    className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Limpar
-                  </button>
-                )}
-              </div>
+        {/* Preview quando arquivo selecionado */}
+        {previewUrl && selectedFile && !uploadResult && (
+          <div className="glass-card p-6">
+            <h3 className="text-lg font-semibold mb-4">Preview</h3>
+            <div className="border border-border rounded-xl p-4 bg-secondary/20">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="max-w-full h-auto max-h-64 mx-auto rounded"
+              />
+            </div>
+            <div className="mt-4 flex gap-4">
+              <Button
+                onClick={handleUpload}
+                disabled={uploading || processing}
+                variant="glow"
+                className="flex-1"
+              >
+                {uploading ? "Enviando..." : processing ? "Processando OCR..." : "Processar Cartão"}
+              </Button>
+              <Button
+                onClick={handleReset}
+                disabled={uploading || processing}
+                variant="ghost"
+              >
+                Limpar
+              </Button>
             </div>
           </div>
         )}
 
         {/* OCR Results and Edit Form */}
         {uploadResult && ocrResult && (
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 dark:text-zinc-100">Resultado do OCR</h2>
+          <div className="glass-card p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Resultado do OCR</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
               Revise e edite as informações extraídas antes de salvar o contato.
             </p>
@@ -415,33 +405,35 @@ export default function UploadCartaoPage() {
 
             {/* Action Buttons */}
             <div className="mt-6 flex gap-4">
-              <button
+              <Button
                 onClick={handleSave}
                 disabled={!formData.firstName.trim() || uploading}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="glow"
               >
                 {uploading ? "Salvando..." : "Salvar Contato"}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleReset}
                 disabled={uploading}
-                className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="ghost"
               >
                 Processar Outro Cartão
-              </button>
+              </Button>
               {contact && (
-                <Link
-                  href={`/contatos/${contact.contactId}`}
-                  className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-700 inline-block"
+                <Button
+                  asChild
+                  variant="ghost"
                 >
-                  Ver Contato
-                </Link>
+                  <Link href={`/contatos/${contact.contactId}`}>
+                    Ver Contato
+                  </Link>
+                </Button>
               )}
             </div>
           </div>
         )}
 
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }

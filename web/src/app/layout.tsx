@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from '@/components/Providers';
 import "./globals.css";
@@ -12,6 +12,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -30,6 +36,19 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        {/* A-Frame stub to prevent errors when react-force-graph loads VR dependency */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Create stub AFRAME object to prevent ReferenceError
+              if (typeof window !== 'undefined' && !window.AFRAME) {
+                window.AFRAME = { registerComponent: function() {}, registerSystem: function() {} };
+              }
+            `,
+          }}
+        />
+        {/* A-Frame script required by react-force-graph's VR dependency */}
+        <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -101,7 +120,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} antialiased`}
         suppressHydrationWarning
       >
         <Providers messages={messages} locale={locale}>

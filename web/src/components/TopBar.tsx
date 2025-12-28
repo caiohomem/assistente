@@ -25,7 +25,7 @@ export function TopBar({ title, children, showBackButton, backHref }: TopBarProp
   }
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 shadow-sm">
+    <header className="bg-slate-800 dark:bg-slate-900 border-b border-slate-700 dark:border-slate-800 sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
@@ -33,7 +33,7 @@ export function TopBar({ title, children, showBackButton, backHref }: TopBarProp
             {showBackButton && (
               <button
                 onClick={handleBack}
-                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-800 transition-colors text-slate-300 dark:text-slate-400 hover:text-slate-100 dark:hover:text-slate-200"
                 aria-label="Voltar"
               >
                 <svg
@@ -55,21 +55,21 @@ export function TopBar({ title, children, showBackButton, backHref }: TopBarProp
             {/* Logo/Title */}
             <Link 
               href="/" 
-              className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              className="flex items-center gap-2 text-indigo-400 dark:text-indigo-400 hover:text-indigo-300 dark:hover:text-indigo-300 transition-colors"
             >
               {/* Icon - always visible */}
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0" />
               {/* Text - hidden on mobile, visible on desktop */}
-              <span className="text-2xl font-bold hidden md:inline">
-                AssistenteExecutivo
+              <span className="text-xl font-bold text-white dark:text-white hidden md:inline">
+                Assistente Executivo
               </span>
             </Link>
 
             {/* Custom Title */}
             {title && (
               <>
-                <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1 sm:mx-2 hidden sm:block" />
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">{title}</h1>
+                <div className="h-6 w-px bg-slate-600 dark:bg-slate-700 mx-1 sm:mx-2 hidden sm:block" />
+                <h1 className="text-lg sm:text-xl font-semibold text-white dark:text-slate-100 truncate">{title}</h1>
               </>
             )}
 

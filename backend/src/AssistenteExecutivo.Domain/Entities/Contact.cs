@@ -163,7 +163,9 @@ public class Contact
         Guid targetContactId,
         string type,
         string? description,
-        IClock clock)
+        IClock clock,
+        float? strength = null,
+        bool? isConfirmed = null)
     {
         if (IsDeleted)
             throw new DomainException("Domain:ContatoDeletadoNaoPodeTerRelacionamentos");
@@ -172,6 +174,17 @@ public class Contact
             throw new DomainException("Domain:RelationshipJaExiste");
 
         var relationship = new Relationship(relationshipId, ContactId, targetContactId, type, description);
+        
+        if (strength.HasValue)
+        {
+            relationship.UpdateStrength(strength.Value);
+        }
+        
+        if (isConfirmed == true)
+        {
+            relationship.Confirm();
+        }
+        
         _relationships.Add(relationship);
         UpdatedAt = clock.UtcNow;
         return relationship;

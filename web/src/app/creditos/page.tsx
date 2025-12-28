@@ -7,8 +7,11 @@ import { getBffSession } from '@/lib/bff'
 import type { CreditBalance, CreditTransaction } from '@/lib/types/credit'
 import { CreditTransactionType } from '@/lib/types/credit'
 import type { CreditPackage } from '@/lib/types/plan'
-import { TopBar } from '@/components/TopBar'
+import { LayoutWrapper } from '@/components/LayoutWrapper'
 import { SelectCreditPackageModal } from '@/components/SelectCreditPackageModal'
+import { Button } from '@/components/ui/button'
+import { Coins, Plus, TrendingUp, TrendingDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function CreditosPage() {
   const router = useRouter()
@@ -25,28 +28,32 @@ export default function CreditosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Carregando créditos...</p>
+      <LayoutWrapper title="Créditos" subtitle="Gerencie seu saldo de créditos" activeTab="credits">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando créditos...</p>
+          </div>
         </div>
-      </div>
+      </LayoutWrapper>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Tentar novamente
-          </button>
+      <LayoutWrapper title="Créditos" subtitle="Gerencie seu saldo de créditos" activeTab="credits">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Tentar novamente
+            </button>
+          </div>
         </div>
-      </div>
+      </LayoutWrapper>
     )
   }
 
@@ -142,103 +149,149 @@ export default function CreditosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <TopBar title="Créditos" showBackButton={true} />
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Balance Card */}
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 dark:from-indigo-700 dark:to-indigo-800 rounded-2xl shadow-xl p-8 text-white mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Saldo de Créditos</h2>
-              <div className="text-5xl">💰</div>
-            </div>
-            <div className="text-5xl font-bold mb-4">
-              {balance ? formatCurrency(balance.balance) : formatCurrency(0)}
-            </div>
-            <div className="text-indigo-100 text-sm mb-6">
-              {balance?.transactionCount || 0} transação{balance?.transactionCount !== 1 ? 'ões' : ''} realizada{balance?.transactionCount !== 1 ? 's' : ''}
-            </div>
-            <button
-              onClick={() => setShowPackageModal(true)}
-              className="w-full sm:w-auto px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              + Adicionar Saldo
-            </button>
-          </div>
-
-          {/* Transactions Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
-              Histórico de Transações
-            </h3>
-            
-            {transactions.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-4">📋</div>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Nenhuma transação encontrada
+    <LayoutWrapper title="Créditos" subtitle="Gerencie seu saldo de créditos" activeTab="credits">
+      <div className="space-y-6">
+        {/* Balance Card - Hero Section */}
+        <div className="glass-card p-8 relative overflow-hidden animate-slide-up">
+          {/* Background gradient effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Coins className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-muted-foreground">Saldo Disponível</h2>
+                    <div className="text-4xl lg:text-5xl font-bold mt-1">
+                      {balance ? formatCurrency(balance.balance) : formatCurrency(0)}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {balance?.transactionCount || 0} transação{balance?.transactionCount !== 1 ? 'ões' : ''} realizada{balance?.transactionCount !== 1 ? 's' : ''}
                 </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {transactions.map((transaction) => {
-                  const isPositive = transaction.type === CreditTransactionType.Grant || 
-                                    transaction.type === CreditTransactionType.Purchase || 
-                                    transaction.type === CreditTransactionType.Refund
-                  
-                  return (
-                    <div
-                      key={transaction.transactionId}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`text-2xl ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {isPositive ? '↑' : '↓'}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              {getTransactionTypeLabel(transaction.type)}
-                            </span>
-                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                              {formatCurrency(transaction.amount)}
-                            </span>
-                          </div>
-                          {transaction.reason && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                              {transaction.reason}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            {new Date(transaction.occurredAt).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            </div>
+            
+            <Button
+              variant="glow"
+              size="lg"
+              onClick={() => setShowPackageModal(true)}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Saldo
+            </Button>
           </div>
         </div>
-      </main>
 
-      {/* Package Selection Modal */}
-      <SelectCreditPackageModal
-        isOpen={showPackageModal}
-        onClose={() => setShowPackageModal(false)}
-        onSelectPackage={handleSelectPackage}
-        purchasing={purchasing}
-      />
-    </div>
+        {/* Transactions Section */}
+        <div className="glass-card p-6 animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold">
+              Histórico de Transações
+            </h3>
+          </div>
+          
+          {transactions.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-4">
+                <Coins className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground font-medium">
+                Nenhuma transação encontrada
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Suas transações de créditos aparecerão aqui
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map((transaction, index) => {
+                const isPositive = transaction.type === CreditTransactionType.Grant || 
+                                  transaction.type === CreditTransactionType.Purchase || 
+                                  transaction.type === CreditTransactionType.Refund
+                
+                return (
+                  <div
+                    key={transaction.transactionId}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-xl transition-all duration-200",
+                      "bg-secondary/30 hover:bg-secondary/50 border border-border/50",
+                      "animate-slide-up"
+                    )}
+                    style={{ animationDelay: `${(index + 1) * 50}ms` }}
+                  >
+                    {/* Icon */}
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                      isPositive 
+                        ? "bg-green-500/10 text-green-600 dark:text-green-400" 
+                        : "bg-red-500/10 text-red-600 dark:text-red-400"
+                    )}>
+                      {isPositive ? (
+                        <TrendingUp className="w-5 h-5" />
+                      ) : (
+                        <TrendingDown className="w-5 h-5" />
+                      )}
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-4 mb-1">
+                        <span className={cn(
+                          "font-semibold text-sm",
+                          isPositive 
+                            ? "text-green-600 dark:text-green-400" 
+                            : "text-red-600 dark:text-red-400"
+                        )}>
+                          {getTransactionTypeLabel(transaction.type)}
+                        </span>
+                        <span className={cn(
+                          "text-lg font-bold whitespace-nowrap",
+                          isPositive 
+                            ? "text-green-600 dark:text-green-400" 
+                            : "text-red-600 dark:text-red-400"
+                        )}>
+                          {isPositive ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                        </span>
+                      </div>
+                      
+                      {transaction.reason && (
+                        <p className="text-sm text-muted-foreground mb-1 line-clamp-1">
+                          {transaction.reason}
+                        </p>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(transaction.occurredAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Package Selection Modal */}
+        <SelectCreditPackageModal
+          isOpen={showPackageModal}
+          onClose={() => setShowPackageModal(false)}
+          onSelectPackage={handleSelectPackage}
+          purchasing={purchasing}
+        />
+      </div>
+    </LayoutWrapper>
   )
 }
 

@@ -1,3 +1,4 @@
+using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Infrastructure.Persistence;
@@ -125,6 +126,73 @@ public class ContactRepository : IContactRepository
             return (false, null, false);
 
         return (true, contact.OwnerUserId, contact.IsDeleted);
+    }
+
+    public async Task<NetworkGraphDto> GetNetworkGraphAsync(Guid ownerUserId, int maxDepth, CancellationToken cancellationToken = default)
+    {
+        // Buscar todos os contatos do usuário (nós do grafo)
+        var contacts = await _context.Contacts
+            .Where(c => c.OwnerUserId == ownerUserId && !c.IsDeleted)
+            .Include(c => c.Emails)
+            .ToListAsync(cancellationToken);
+
+        var allContacts = contacts.Select(c => new
+        {
+            c.ContactId,
+            FirstName = c.Name.FirstName,
+            LastName = c.Name.LastName,
+            c.JobTitle,
+            c.Company,
+            PrimaryEmail = c.Emails.OrderBy(e => e.Value).FirstOrDefault()?.Value
+        }).ToList();
+
+        // Buscar todos os relacionamentos entre os contatos do usuário
+        var contactIds = allContacts.Select(c => c.ContactId).ToList();
+        
+        var relationships = await _context.Relationships
+            .Where(r => contactIds.Contains(r.SourceContactId) && contactIds.Contains(r.TargetContactId))
+            .Select(r => new
+            {
+                r.RelationshipId,
+                r.SourceContactId,
+                r.TargetContactId,
+                r.Type,
+                r.Description,
+                r.Strength,
+                r.IsConfirmed
+            })
+            .ToListAsync(cancellationToken);
+
+        // Se maxDepth > 1, buscar relacionamentos indiretos (através de outros contatos)
+        // Por enquanto, vamos retornar todos os contatos e relacionamentos diretos
+        // Uma otimização futura seria usar CTE recursiva para buscar até maxDepth níveis
+
+        // Mapear para DTOs
+        var nodes = allContacts.Select(c => new GraphNodeDto
+        {
+            ContactId = c.ContactId,
+            FullName = $"{c.FirstName} {c.LastName}".Trim(),
+            Company = c.Company,
+            JobTitle = c.JobTitle,
+            PrimaryEmail = c.PrimaryEmail
+        }).ToList();
+
+        var edges = relationships.Select(r => new GraphEdgeDto
+        {
+            RelationshipId = r.RelationshipId,
+            SourceContactId = r.SourceContactId,
+            TargetContactId = r.TargetContactId,
+            Type = r.Type,
+            Description = r.Description,
+            Strength = r.Strength,
+            IsConfirmed = r.IsConfirmed
+        }).ToList();
+
+        return new NetworkGraphDto
+        {
+            Nodes = nodes,
+            Edges = edges
+        };
     }
 }
 

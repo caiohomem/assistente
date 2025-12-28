@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { listLetterheadsClient, deleteLetterheadClient, type Letterhead, type ListLetterheadsResult } from "@/lib/api/automationApiClient";
+import { NovoPapelTimbradoClient } from "./novo/NovoPapelTimbradoClient";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function LetterheadsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showNewLetterhead = searchParams.get("novo") === "true";
   const [loading, setLoading] = useState(true);
   const [letterheads, setLetterheads] = useState<Letterhead[]>([]);
   const [total, setTotal] = useState(0);
@@ -86,31 +91,49 @@ export default function LetterheadsPage() {
     setDeleteDialog({ isOpen: false, letterheadId: null, letterheadName: "" });
   };
 
+  const handleNewLetterheadCancel = () => {
+    router.push("/automacao/papeis-timbrados");
+  };
+
+  const handleNewLetterheadSuccess = async () => {
+    router.push("/automacao/papeis-timbrados");
+    router.refresh();
+    await loadLetterheads();
+  };
+
   if (loading && letterheads.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <TopBar title="Papéis Timbrados" showBackButton backHref="/dashboard" />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Carregando papéis timbrados...</p>
-          </div>
+      <LayoutWrapper title="Papéis Timbrados" subtitle="Gerencie seus papéis timbrados personalizados" activeTab="documents">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Carregando papéis timbrados...</p>
         </div>
-      </div>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Papéis Timbrados" showBackButton backHref="/dashboard">
-        <Link
-          href="/automacao/papeis-timbrados/novo"
-          className="inline-flex items-center justify-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          Novo Papel Timbrado
-        </Link>
-      </TopBar>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <LayoutWrapper title="Papéis Timbrados" subtitle="Gerencie seus papéis timbrados personalizados" activeTab="documents">
+      <div className="space-y-6">
+        {/* Formulário de Novo Papel Timbrado - aparece quando ?novo=true */}
+        {showNewLetterhead && (
+          <div className="glass-card p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold">Novo Papel Timbrado</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleNewLetterheadCancel}
+                className="rounded-lg"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </div>
+            <NovoPapelTimbradoClient onSuccess={handleNewLetterheadSuccess} onCancel={handleNewLetterheadCancel} />
+          </div>
+        )}
+
+        {/* Lista de Papéis Timbrados - sempre visível */}
+        <div>
         {error && (
           <div className="mb-4 rounded-md bg-red-50 dark:bg-red-900/20 p-4">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
@@ -127,8 +150,8 @@ export default function LetterheadsPage() {
           <div className="rounded-lg bg-white dark:bg-zinc-800 p-8 text-center shadow">
             <p className="text-zinc-600 dark:text-zinc-400">Nenhum papel timbrado encontrado.</p>
             <Link
-              href="/automacao/papeis-timbrados/novo"
-              className="mt-4 inline-block text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+              href="/automacao/papeis-timbrados?novo=true"
+              className="mt-4 inline-block text-primary hover:underline"
             >
               Criar primeiro papel timbrado
             </Link>
@@ -218,8 +241,9 @@ export default function LetterheadsPage() {
             )}
           </>
         )}
+        </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
 

@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getBffSession } from "@/lib/bff";
 import type { Contact } from "@/lib/types/contact";
 import { getContactByIdClient } from "@/lib/api/contactsApiClient";
 import { listNotesByContactClient } from "@/lib/api/notesApiClient";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ContactDetailsClient } from "./ContactDetailsClient";
 
 export default function ContactDetailsPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const contactId = params?.id;
+  const showNewNote = searchParams.get("novo") === "true";
+  const showNewAudioNote = searchParams.get("audio") === "true";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,47 +76,92 @@ export default function ContactDetailsPage() {
     };
   }, [contactId]);
 
+  const loadNotes = async () => {
+    if (!contactId) return;
+    try {
+      const n = await listNotesByContactClient(contactId);
+      setNotes(
+        n.map((note) => ({
+          noteId: note.noteId,
+          type: note.type,
+          rawContent: note.rawContent,
+          structuredData: note.structuredData,
+          createdAt: note.createdAt,
+        })),
+      );
+    } catch (e) {
+      console.error("Erro ao carregar notas:", e);
+    }
+  };
+
+  const handleNewNoteSuccess = async () => {
+    router.push(`/contatos/${contactId}`);
+    router.refresh();
+    await loadNotes();
+  };
+
+  const handleNewNoteCancel = () => {
+    router.push(`/contatos/${contactId}`);
+  };
+
+  const handleNewAudioNoteSuccess = async () => {
+    router.push(`/contatos/${contactId}`);
+    router.refresh();
+    await loadNotes();
+  };
+
+  const handleNewAudioNoteCancel = () => {
+    router.push(`/contatos/${contactId}`);
+  };
+
   if (!contactId) return null;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-        <TopBar title="Carregando..." showBackButton backHref="/contatos" />
-        <main className="container mx-auto px-4 py-8">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Carregando...</p>
-        </main>
-      </div>
+      <LayoutWrapper title="Carregando..." activeTab="contacts">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </LayoutWrapper>
     );
   }
 
   if (error || !contact) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-        <TopBar title="Erro" showBackButton backHref="/contatos" />
-        <main className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
-              <h2 className="text-lg font-semibold text-red-900 dark:text-red-400">Erro ao carregar contato</h2>
-              <p className="mt-2 text-sm text-red-700 dark:text-red-400">{error ?? "Erro desconhecido"}</p>
-              <Link href="/contatos" className="mt-4 inline-block text-sm text-red-700 dark:text-red-400 underline">
-                Voltar para lista de contatos
-              </Link>
-            </div>
+      <LayoutWrapper title="Erro" activeTab="contacts">
+        <div className="max-w-4xl">
+          <div className="glass-card border-destructive/50 bg-destructive/10 p-6">
+            <h2 className="text-lg font-semibold text-destructive mb-2">Erro ao carregar contato</h2>
+            <p className="text-sm text-destructive/80 mb-4">{error ?? "Erro desconhecido"}</p>
+            <Link href="/contatos" className="text-sm text-primary hover:underline">
+              Voltar para lista de contatos
+            </Link>
           </div>
-        </main>
-      </div>
+        </div>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-      <TopBar title={contact.fullName} showBackButton backHref="/contatos" />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <ContactDetailsClient contactId={contactId} contact={contact} notes={notes} />
-        </div>
-      </main>
-    </div>
+    <LayoutWrapper 
+      title={contact.fullName} 
+      subtitle="Detalhes do contato" 
+      activeTab="contacts"
+    >
+      <div className="max-w-4xl">
+        <ContactDetailsClient 
+          contactId={contactId} 
+          contact={contact} 
+          notes={notes}
+          showNewNote={showNewNote}
+          onNewNoteSuccess={handleNewNoteSuccess}
+          onNewNoteCancel={handleNewNoteCancel}
+          showNewAudioNote={showNewAudioNote}
+          onNewAudioNoteSuccess={handleNewAudioNoteSuccess}
+          onNewAudioNoteCancel={handleNewAudioNoteCancel}
+        />
+      </div>
+    </LayoutWrapper>
   );
 }
 
