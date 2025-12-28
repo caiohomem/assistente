@@ -5,6 +5,7 @@ using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -54,12 +55,25 @@ public abstract class HandlerTestBase : IDisposable
         // IdGenerator
         services.AddSingleton<IIdGenerator, MockIdGenerator>();
 
+        // Configuration
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "OpenAI:TextToSpeech:Enabled", "false" }
+            })
+            .Build();
+        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(configuration);
+
+        // Logging
+        services.AddLogging();
+
         // Mock external services
         services.AddScoped<IKeycloakService, MockKeycloakService>();
         services.AddScoped<IEmailService, MockEmailService>();
         services.AddScoped<IOcrProvider, MockOcrProvider>();
         services.AddScoped<IFileStore, MockFileStore>();
         services.AddScoped<ISpeechToTextProvider, MockSpeechToTextProvider>();
+        services.AddScoped<ITextToSpeechProvider, MockTextToSpeechProvider>();
         services.AddScoped<ILLMProvider, MockLLMProvider>();
 
         // Mock IPublisher for domain events (no-op in tests)
@@ -138,16 +152,36 @@ public abstract class HandlerTestBase : IDisposable
 
     private static void RegisterHandlers(IServiceCollection services, Assembly assembly)
     {
-        var handlerTypes = assembly.GetTypes()
+        // Register handlers with response (IRequestHandler<TRequest, TResponse>)
+        var handlerTypesWithResponse = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
             .Where(t => t.GetInterfaces()
                 .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
             .ToList();
 
-        foreach (var handlerType in handlerTypes)
+        foreach (var handlerType in handlerTypesWithResponse)
         {
             var interfaces = handlerType.GetInterfaces()
                 .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>))
+                .ToList();
+
+            foreach (var interfaceType in interfaces)
+            {
+                services.AddScoped(interfaceType, handlerType);
+            }
+        }
+
+        // Register handlers without response (IRequestHandler<TRequest>)
+        var handlerTypesWithoutResponse = assembly.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract)
+            .Where(t => t.GetInterfaces()
+                .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<>)))
+            .ToList();
+
+        foreach (var handlerType in handlerTypesWithoutResponse)
+        {
+            var interfaces = handlerType.GetInterfaces()
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<>))
                 .ToList();
 
             foreach (var interfaceType in interfaces)
@@ -291,6 +325,15 @@ internal class MockSpeechToTextProvider : ISpeechToTextProvider
     public Task<Transcript> TranscribeAsync(byte[] audioBytes, string mimeType, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new Transcript("This is a mock transcript from audio processing."));
+    }
+}
+
+internal class MockTextToSpeechProvider : ITextToSpeechProvider
+{
+    public Task<byte[]> SynthesizeAsync(string text, string voice, string format, CancellationToken cancellationToken = default)
+    {
+        // Return mock audio bytes
+        return Task.FromResult(new byte[] { 1, 2, 3, 4, 5 });
     }
 }
 

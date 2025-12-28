@@ -1,14 +1,22 @@
 # syntax=docker/dockerfile:1
 
-FROM quay.io/keycloak/keycloak:latest
+# ---- build stage (Keycloak Quarkus build) ----
+FROM quay.io/keycloak/keycloak:26.0.0 as builder
 
-USER root
+# Copia themes para dentro da imagem
+COPY themes/ /opt/keycloak/themes/
 
-# Embed the custom theme in the image so it survives container re-creation.
-COPY ./themes/assistenteexecutivo /opt/keycloak/themes/assistenteexecutivo
+# Compila a distribuição do Keycloak com o conteúdo adicionado
+RUN /opt/keycloak/bin/kc.sh build
 
-# Keycloak image typically runs as UID 1000 (keycloak). Keep permissions compatible.
-RUN chown -R 1000:0 /opt/keycloak/themes/assistenteexecutivo && chmod -R g+rwX /opt/keycloak/themes/assistenteexecutivo
+# ---- runtime stage ----
+FROM quay.io/keycloak/keycloak:26.0.0
 
+# Copia a distribuição compilada do builder
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+
+# Keycloak image typically runs as UID 1000 (keycloak)
 USER 1000
+
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 

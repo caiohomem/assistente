@@ -148,6 +148,7 @@ public class ReminderTests
     {
         // Arrange
         var reminder = CreateReminder();
+        reminder.ClearDomainEvents(); // Clear the ReminderScheduled event from creation
 
         // Act
         reminder.MarkAsSent(_clock);
@@ -193,6 +194,7 @@ public class ReminderTests
     {
         // Arrange
         var reminder = CreateReminder();
+        reminder.ClearDomainEvents(); // Clear the ReminderScheduled event from creation
 
         // Act
         reminder.Dismiss(_clock);
@@ -200,6 +202,7 @@ public class ReminderTests
         // Assert
         reminder.Status.Should().Be(ReminderStatus.Dismissed);
         reminder.DomainEvents.Should().HaveCount(1);
+        reminder.DomainEvents.First().Should().BeOfType<Domain.DomainEvents.ReminderStatusChanged>();
     }
 
     [Fact]

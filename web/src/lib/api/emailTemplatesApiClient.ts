@@ -10,6 +10,9 @@ import type {
   EmailTemplateType,
 } from "@/lib/types/emailTemplates";
 
+// Re-export types for convenience
+export type { EmailTemplate, ListEmailTemplatesResult };
+
 export async function listEmailTemplatesClient(
   params: ListEmailTemplatesParams = {},
 ): Promise<ListEmailTemplatesResult> {
