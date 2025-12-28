@@ -1,6 +1,6 @@
 "use client"
 
-import { Send, Sparkles, Mic, Paperclip } from "lucide-react";
+import { Send, Sparkles, Mic, Paperclip, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 
@@ -13,6 +13,7 @@ interface Message {
 
 export function AIAssistant() {
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -22,29 +23,97 @@ export function AIAssistant() {
     }
   ]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const formatTimestamp = () => {
+    return new Date().toLocaleTimeString("pt-BR", { 
+      hour: "2-digit", 
+      minute: "2-digit" 
+    });
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
     
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input,
-      timestamp: "Agora"
+      timestamp: formatTimestamp()
     };
     
+    const userInput = input;
     setMessages(prev => [...prev, userMessage]);
     setInput("");
+    setLoading(true);
+
+    // Adicionar mensagem de carregamento
+    const loadingMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      role: "assistant",
+      content: "Processando...",
+      timestamp: formatTimestamp()
+    };
+    setMessages(prev => [...prev, loadingMessage]);
     
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Preparar histórico de mensagens para enviar
+      const chatMessages = messages
+        .filter(m => m.role !== "assistant" || !m.content.includes("Processando"))
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+        }));
+      
+      chatMessages.push({
+        role: "user",
+        content: userInput,
+      });
+
+      const response = await fetch("/api/assistant/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: chatMessages,
+          model: "gpt-4o",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao processar mensagem");
+      }
+
+      const data = await response.json();
+      
+      // Remover mensagem de carregamento
+      setMessages(prev => prev.filter(m => m.id !== loadingMessage.id));
+      
+      // Adicionar resposta do assistente
+      // Aceitar tanto camelCase quanto PascalCase
+      const messageContent = data.message || data.Message || "Não foi possível gerar uma resposta.";
       const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (Date.now() + 2).toString(),
         role: "assistant",
-        content: "Entendi! Vou processar sua solicitação e buscar as informações relevantes em seus contatos e notas. Um momento...",
-        timestamp: "Agora"
+        content: messageContent,
+        timestamp: formatTimestamp()
       };
       setMessages(prev => [...prev, aiMessage]);
-    }, 1000);
+    } catch (error) {
+      // Remover mensagem de carregamento
+      setMessages(prev => prev.filter(m => m.id !== loadingMessage.id));
+      
+      // Adicionar mensagem de erro
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        role: "assistant",
+        content: `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+        timestamp: formatTimestamp()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -98,8 +167,17 @@ export function AIAssistant() {
             placeholder="Digite sua mensagem..."
             className="flex-1 bg-secondary rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
-          <Button variant="glow" size="icon" onClick={handleSend}>
-            <Send className="w-5 h-5" />
+          <Button 
+            variant="glow" 
+            size="icon" 
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
           </Button>
         </div>
       </div>
