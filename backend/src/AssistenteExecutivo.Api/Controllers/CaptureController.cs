@@ -2,6 +2,7 @@ using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Application.Commands.Capture;
 using AssistenteExecutivo.Application.Queries.Capture;
+using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Infrastructure.Services;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,11 +18,13 @@ public sealed class CaptureController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly AudioTrimmer _audioTrimmer;
+    private readonly ISpeechToTextProvider _speechToTextProvider;
 
-    public CaptureController(IMediator mediator, AudioTrimmer audioTrimmer)
+    public CaptureController(IMediator mediator, AudioTrimmer audioTrimmer, ISpeechToTextProvider speechToTextProvider)
     {
         _mediator = mediator;
         _audioTrimmer = audioTrimmer;
+        _speechToTextProvider = speechToTextProvider;
     }
 
     /// <summary>
@@ -82,6 +85,89 @@ public sealed class CaptureController : ControllerBase
             mediaId = result.MediaId,
             message = "Cartão enviado com sucesso. Processamento iniciado."
         });
+    }
+
+    /// <summary>
+    /// Transcrever áudio para texto (sem criar nota)
+    /// </summary>
+    [HttpPost("transcribe-audio")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> TranscribeAudio(
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Arquivo de áudio é obrigatório." });
+        }
+
+        // Validar tipo de arquivo (áudio)
+        var contentType = file.ContentType ?? string.Empty;
+        var allowedMimeTypes = new[] {
+            "audio/mpeg", "audio/mp3", "audio/mp4", "audio/mpeg", "audio/mpga",
+            "audio/m4a", "audio/wav", "audio/webm", "audio/ogg"
+        };
+        if (string.IsNullOrWhiteSpace(contentType) || !allowedMimeTypes.Contains(contentType.ToLowerInvariant()))
+        {
+            return BadRequest(new
+            {
+                message = "Tipo de arquivo não suportado. Use MP3, MP4, WAV, WebM, M4A ou OGG."
+            });
+        }
+
+        // Ler bytes do arquivo
+        byte[] originalAudioBytes;
+        try
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream, cancellationToken);
+                originalAudioBytes = memoryStream.ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"Erro ao ler arquivo de áudio: {ex.Message}" });
+        }
+
+        // Validar que o arquivo não está vazio
+        if (originalAudioBytes == null || originalAudioBytes.Length == 0)
+        {
+            return BadRequest(new { message = "Arquivo de áudio está vazio ou não pôde ser lido." });
+        }
+
+        // Cortar áudio automaticamente se exceder 25MB (limite da API OpenAI Whisper)
+        byte[] audioBytes;
+        bool wasTrimmed;
+        string trimmedMessage;
+        try
+        {
+            (audioBytes, wasTrimmed) = _audioTrimmer.TrimToMaxSize(originalAudioBytes, contentType);
+            trimmedMessage = _audioTrimmer.GetTrimmedMessage(originalAudioBytes, wasTrimmed);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"Erro ao processar arquivo de áudio: {ex.Message}" });
+        }
+
+        // Transcrever áudio
+        try
+        {
+            var transcript = await _speechToTextProvider.TranscribeAsync(audioBytes, contentType, cancellationToken);
+            
+            var response = new
+            {
+                text = transcript.Text,
+                wasTrimmed = wasTrimmed,
+                trimmedMessage = wasTrimmed ? trimmedMessage : null
+            };
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = $"Erro ao transcrever áudio: {ex.Message}" });
+        }
     }
 
     /// <summary>

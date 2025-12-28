@@ -86,7 +86,7 @@ export function EditarLembreteClient({ reminderId, initialData }: EditarLembrete
         newScheduledFor: formData.newScheduledFor ? new Date(formData.newScheduledFor).toISOString() : null,
       });
 
-      router.push(`/automacao/lembretes/${reminderId}`);
+      router.push(`/automacao/lembretes`);
       router.refresh();
     } catch (error) {
       console.error("Erro ao atualizar lembrete:", error);
@@ -99,7 +99,7 @@ export function EditarLembreteClient({ reminderId, initialData }: EditarLembrete
   };
 
   const handleCancel = () => {
-    router.push(`/automacao/lembretes/${reminderId}`);
+    router.push(`/automacao/lembretes`);
   };
 
   const minDate = new Date().toISOString().slice(0, 16);

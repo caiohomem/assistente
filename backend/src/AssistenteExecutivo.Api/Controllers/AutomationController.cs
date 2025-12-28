@@ -86,9 +86,10 @@ public sealed class AutomationController : ControllerBase
     /// <summary>
     /// Obtém um lembrete específico por ID.
     /// </summary>
-    [HttpGet("reminders/{id}")]
+    [HttpGet("reminders/{id:guid}")]
     [ProducesResponseType(typeof(ReminderDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetReminderById(
         [FromRoute] Guid id,
@@ -112,7 +113,7 @@ public sealed class AutomationController : ControllerBase
     /// <summary>
     /// Atualiza o status de um lembrete.
     /// </summary>
-    [HttpPut("reminders/{id}/status")]
+    [HttpPut("reminders/{id:guid}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -139,9 +140,10 @@ public sealed class AutomationController : ControllerBase
     /// <summary>
     /// Deleta um lembrete.
     /// </summary>
-    [HttpDelete("reminders/{id}")]
+    [HttpDelete("reminders/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> DeleteReminder(
         [FromRoute] Guid id,

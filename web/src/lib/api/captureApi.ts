@@ -137,3 +137,45 @@ export async function listCaptureJobs(): Promise<CaptureJob[]> {
   return bffGetJson<CaptureJob[]>("/api/capture/jobs", csrfToken);
 }
 
+export interface TranscribeAudioResponse {
+  text: string;
+  wasTrimmed?: boolean;
+  trimmedMessage?: string;
+}
+
+export async function transcribeAudio(file: File): Promise<TranscribeAudioResponse> {
+  const csrfToken = await getCsrfToken();
+  const apiBase = getApiBaseUrl();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${apiBase}/api/capture/transcribe-audio`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "X-CSRF-TOKEN": csrfToken,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      const currentPath = window.location.pathname;
+      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+      window.location.href = loginUrl;
+      return {} as TranscribeAudioResponse;
+    }
+
+    const contentType = res.headers.get("content-type") ?? "";
+    const maybeJson = contentType.includes("application/json");
+    const data = maybeJson ? await res.json() : undefined;
+    const message =
+      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
+      `Request failed: ${res.status}`;
+    throw new Error(message);
+  }
+
+  return (await res.json()) as TranscribeAudioResponse;
+}
+
