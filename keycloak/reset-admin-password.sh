@@ -66,3 +66,5 @@ echo "Senha resetada com sucesso!"
 echo "Usuário: admin"
 echo "Senha: admin"
 
+
+

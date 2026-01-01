@@ -74,3 +74,5 @@ SET session_replication_role = 'origin';
 
 SELECT 'Banco de dados do Keycloak limpo! Reinicie o Keycloak para recriar tudo do zero.' as status;
 
+
+

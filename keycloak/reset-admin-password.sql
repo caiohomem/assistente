@@ -34,3 +34,5 @@ WHERE user_id IN (SELECT id FROM user_entity WHERE username = 'admin');
 -- sudo docker exec -it keycloak /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password <senha_atual>
 -- sudo docker exec -it keycloak /opt/keycloak/bin/kcadm.sh set-password -r master --username admin --new-password admin
 
+
+

@@ -86,3 +86,5 @@ SELECT id, username, enabled, email_verified
 FROM user_entity 
 WHERE username = 'admin';
 
+
+

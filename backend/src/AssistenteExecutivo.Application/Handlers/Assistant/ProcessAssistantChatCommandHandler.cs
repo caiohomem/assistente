@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 
 namespace AssistenteExecutivo.Application.Handlers.Assistant;
 
@@ -48,131 +49,239 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
     public async Task<ProcessAssistantChatResult> Handle(ProcessAssistantChatCommand request, CancellationToken cancellationToken)
     {
-        //try
-        //{
-            var model = request.Model ?? _model;
-            var tools = GetFunctionDefinitions();
+        var model = request.Model ?? _model;
+        var tools = GetFunctionDefinitions();
 
-            // Preparar mensagens
-            var inputMessages = request.Messages.Select(m => (object)new
-            {
-                role = m.Role,
-                content = m.Content
-            }).ToList();
+        // Preparar input items (Responses API usa input em vez de messages)
+        var inputItems = request.Messages.Select(m => (object)new InputMessage
+        {
+            Role = m.Role,
+            Content = m.Content
+        }).ToList();
 
-            // Primeira chamada ao OpenAI
-            var openaiResponse = await CallOpenAIAsync(model, inputMessages, tools, cancellationToken);
+        // Primeira chamada ao OpenAI
+        var openaiResponse = await CallOpenAIAsync(model, inputItems, tools, cancellationToken);
 
-            if (openaiResponse.Choices == null || openaiResponse.Choices.Count == 0)
-            {
-                return new ProcessAssistantChatResult
-                {
-                    Message = "Não foi possível gerar uma resposta.",
-                    FunctionCalls = new List<FunctionCallInfo>()
-                };
-            }
-
-            var message = openaiResponse.Choices[0].Message;
-            var toolCalls = message?.ToolCalls ?? new List<ToolCall>();
-
-            // Se houver function calls, executá-las
-            if (toolCalls.Count > 0)
-            {
-                var functionCalls = new List<FunctionCallInfo>();
-                var functionResults = new List<object>();
-
-                foreach (var toolCall in toolCalls)
-                {
-                    if (toolCall.Function?.Name != null && toolCall.Function?.Arguments != null)
-                    {
-                        functionCalls.Add(new FunctionCallInfo
-                        {
-                            Name = toolCall.Function.Name,
-                            Arguments = toolCall.Function.Arguments
-                        });
-
-                        // Executar função
-                        var result = await ExecuteFunctionAsync(
-                            request.OwnerUserId,
-                            toolCall.Function.Name,
-                            toolCall.Function.Arguments,
-                            cancellationToken);
-
-                        functionResults.Add(new
-                        {
-                            role = "tool",
-                            tool_call_id = toolCall.Id,
-                            content = JsonSerializer.Serialize(result)
-                        });
-                    }
-                }
-
-                // Adicionar mensagem do assistente com tool calls
-                inputMessages.Add((object)new Dictionary<string, object>
-                {
-                    ["role"] = "assistant",
-                    ["content"] = message?.Content ?? (object?)null!,
-                    ["tool_calls"] = toolCalls.Select(tc => new Dictionary<string, object>
-                    {
-                        ["id"] = tc.Id,
-                        ["type"] = "function",
-                        ["function"] = new Dictionary<string, object?>
-                        {
-                            ["name"] = tc.Function?.Name,
-                            ["arguments"] = tc.Function?.Arguments
-                        }
-                    }).ToList()
-                });
-
-                // Adicionar resultados das funções
-                inputMessages.AddRange(functionResults);
-
-                // Segunda chamada ao OpenAI com os resultados
-                var finalResponse = await CallOpenAIAsync(model, inputMessages, tools, cancellationToken);
-
-                if (finalResponse.Choices != null && finalResponse.Choices.Count > 0)
-                {
-                    var finalMessage = finalResponse.Choices[0].Message?.Content ?? "Resposta processada com sucesso.";
-                    return new ProcessAssistantChatResult
-                    {
-                        Message = finalMessage,
-                        FunctionCalls = functionCalls
-                    };
-                }
-            }
-
-            // Se não houver function calls, retornar resposta direta
+        if (openaiResponse.Output == null || openaiResponse.Output.Count == 0)
+        {
             return new ProcessAssistantChatResult
             {
-                Message = message?.Content ?? "Não foi possível gerar uma resposta.",
+                Message = "Não foi possível gerar uma resposta.",
                 FunctionCalls = new List<FunctionCallInfo>()
             };
-        //}
-        //catch (Exception ex)
-        //{
-        //    _logger.LogError(ex, "Erro ao processar chat do assistente");
-        //    throw;
-        //}
+        }
+
+        var functionCalls = new List<FunctionCallInfo>();
+        var hasFunctionCalls = false;
+        var finalTextContent = "";
+
+        // Processar output items
+        foreach (var outputItem in openaiResponse.Output)
+        {
+            // Verificar se é function_call (campos diretos na Responses API)
+            if (outputItem.Type == "function_call" && !string.IsNullOrEmpty(outputItem.Name))
+            {
+                hasFunctionCalls = true;
+
+                functionCalls.Add(new FunctionCallInfo
+                {
+                    Name = outputItem.Name,
+                    Arguments = outputItem.Arguments ?? ""
+                });
+
+                // Executar função
+                var result = await ExecuteFunctionAsync(
+                    request.OwnerUserId,
+                    outputItem.Name,
+                    outputItem.Arguments ?? "",
+                    cancellationToken);
+
+                // Adicionar o function_call original ao input (Responses API requer isso)
+                inputItems.Add(new InputFunctionCall
+                {
+                    CallId = outputItem.CallId ?? "",
+                    Name = outputItem.Name,
+                    Arguments = outputItem.Arguments ?? ""
+                });
+
+                // Adicionar resultado ao input para próxima chamada
+                inputItems.Add(new InputFunctionCallOutput
+                {
+                    CallId = outputItem.CallId ?? "",
+                    Output = JsonSerializer.Serialize(result)
+                });
+            }
+            // Verificar se é text direto
+            else if (outputItem.Type == "text" && outputItem.Text != null)
+            {
+                finalTextContent = outputItem.Text;
+            }
+            // Verificar se é message (Responses API retorna assim)
+            else if (outputItem.Type == "message" && outputItem.Content != null)
+            {
+                var textPart = outputItem.Content.FirstOrDefault(c => c.Type == "output_text" && !string.IsNullOrEmpty(c.Text));
+                if (textPart != null)
+                {
+                    finalTextContent = textPart.Text!;
+                }
+            }
+        }
+
+        // Se houver function calls, continuar chamando até resolver (limite de segurança de 3 iterações)
+        var safetyIterations = 0;
+        while (hasFunctionCalls && safetyIterations < 5)
+        {
+            hasFunctionCalls = false;
+            var followUpResponse = await CallOpenAIAsync(model, inputItems, tools, cancellationToken);
+
+            if (followUpResponse.Output == null || followUpResponse.Output.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var outputItem in followUpResponse.Output)
+            {
+                if (outputItem.Type == "function_call" && !string.IsNullOrEmpty(outputItem.Name))
+                {
+                    hasFunctionCalls = true;
+
+                    functionCalls.Add(new FunctionCallInfo
+                    {
+                        Name = outputItem.Name,
+                        Arguments = outputItem.Arguments ?? ""
+                    });
+
+                    var result = await ExecuteFunctionAsync(
+                        request.OwnerUserId,
+                        outputItem.Name,
+                        outputItem.Arguments ?? "",
+                        cancellationToken);
+
+                    inputItems.Add(new InputFunctionCall
+                    {
+                        CallId = outputItem.CallId ?? "",
+                        Name = outputItem.Name,
+                        Arguments = outputItem.Arguments ?? ""
+                    });
+
+                    inputItems.Add(new InputFunctionCallOutput
+                    {
+                        CallId = outputItem.CallId ?? "",
+                        Output = JsonSerializer.Serialize(result)
+                    });
+                }
+                else if (outputItem.Type == "text" && outputItem.Text != null)
+                {
+                    finalTextContent = outputItem.Text;
+                }
+                else if (outputItem.Type == "message" && outputItem.Content != null)
+                {
+                    var textPart = outputItem.Content.FirstOrDefault(c => c.Type == "output_text" && !string.IsNullOrEmpty(c.Text));
+                    if (textPart != null)
+                    {
+                        finalTextContent = textPart.Text!;
+                    }
+                }
+            }
+
+            safetyIterations++;
+            if (!hasFunctionCalls)
+            {
+                break;
+            }
+        }
+
+        if (finalTextContent != "")
+        {
+            return new ProcessAssistantChatResult
+            {
+                Message = finalTextContent,
+                FunctionCalls = functionCalls
+            };
+        }
+
+        // Se não houver function calls, retornar resposta direta
+        return new ProcessAssistantChatResult
+        {
+            Message = finalTextContent != "" ? finalTextContent : "Não foi possível gerar uma resposta.",
+            FunctionCalls = functionCalls
+        };
     }
 
     private async Task<OpenAIResponse> CallOpenAIAsync(
         string model,
-        List<object> messages,
+        List<object> inputItems,
         List<object> tools,
         CancellationToken cancellationToken)
     {
+        // Configurar opções de serialização para garantir formato correto
+        // Não usar PropertyNamingPolicy para manter snake_case (tool_choice) e camelCase conforme necessário
+        var serializeOptions = new JsonSerializerOptions
+        {
+            WriteIndented = false,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
+        // Serializar tools primeiro para verificar estrutura
+        var toolsJson = JsonSerializer.Serialize(tools, serializeOptions);
+        _logger.LogDebug("Tools JSON (first 500 chars): {ToolsJson}",
+            toolsJson.Length > 500 ? toolsJson.Substring(0, 500) + "..." : toolsJson);
+
+        // Deserializar tools para garantir que a estrutura está correta
+        using var toolsDoc = JsonDocument.Parse(toolsJson);
+        var toolsArray = toolsDoc.RootElement.Clone();
+
+        // Construir request body usando objeto anônimo - JsonSerializer lida melhor com isso
         var requestBody = new
         {
-            model,
-            messages,
-            tools,
+            model = model,
+            input = inputItems,
+            tools = tools, // Usar tools original, não o serializado
             tool_choice = "auto"
         };
 
-        var json = JsonSerializer.Serialize(requestBody);
+        var json = JsonSerializer.Serialize(requestBody, serializeOptions);
+
+        // Log detalhado do JSON para debug
+        _logger.LogDebug("Request JSON completo (length: {Length}): {Json}", json.Length, json);
+
+        // Verificar estrutura dos tools no JSON gerado
+        try
+        {
+            using var jsonDoc = JsonDocument.Parse(json);
+            if (jsonDoc.RootElement.TryGetProperty("tools", out var toolsElement))
+            {
+                if (toolsElement.ValueKind == JsonValueKind.Array && toolsElement.GetArrayLength() > 0)
+                {
+                    var firstTool = toolsElement[0];
+                    _logger.LogDebug("Primeiro tool no JSON: {ToolJson}", firstTool.GetRawText());
+
+                    if (firstTool.TryGetProperty("type", out var typeProp) &&
+                        firstTool.TryGetProperty("name", out var nameProp))
+                    {
+                        _logger.LogDebug("Tool tem estrutura correta: type={Type}, name={Name}",
+                            typeProp.GetString(), nameProp.GetString());
+                    }
+                    else
+                    {
+                        _logger.LogError("Tool NAO tem 'type' ou 'name' no nA-vel raiz! Estrutura: {ToolJson}", firstTool.GetRawText());
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Tools array estA? vazio ou invA?lido");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao analisar JSON gerado");
+        }
+
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync("chat/completions", content, cancellationToken);
+        var response = await _httpClient.PostAsync("responses", content, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -182,26 +291,36 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         }
 
         var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
-        
+
         // Log para debug
         _logger.LogDebug("OpenAI Response JSON: {Response}", responseJson);
-        
+
         // Configurar opções de deserialização para aceitar camelCase do OpenAI
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         };
-        
+
         var openaiResponse = JsonSerializer.Deserialize<OpenAIResponse>(responseJson, options) ?? new OpenAIResponse();
-        
+
         // Log para debug
-        _logger.LogDebug("Deserialized OpenAI Response - Choices count: {Count}", openaiResponse.Choices?.Count ?? 0);
-        if (openaiResponse.Choices != null && openaiResponse.Choices.Count > 0)
+        _logger.LogDebug("Deserialized OpenAI Response - Output count: {Count}", openaiResponse.Output?.Count ?? 0);
+        if (openaiResponse.Output != null && openaiResponse.Output.Count > 0)
         {
-            _logger.LogDebug("First choice message content: {Content}", openaiResponse.Choices[0].Message?.Content);
-            _logger.LogDebug("First choice tool calls count: {Count}", openaiResponse.Choices[0].Message?.ToolCalls?.Count ?? 0);
+            foreach (var outputItem in openaiResponse.Output)
+            {
+                _logger.LogDebug("Output item type: {Type}", outputItem.Type);
+                if (outputItem.Type == "text")
+                {
+                    _logger.LogDebug("Text content: {Content}", outputItem.Text);
+                }
+                else if (outputItem.Type == "function_call")
+                {
+                    _logger.LogDebug("Function call: {Name}", outputItem.Name);
+                }
+            }
         }
-        
+
         return openaiResponse;
     }
 
@@ -262,6 +381,14 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                 "get_letterhead" => await ExecuteGetLetterheadAsync(ownerUserId, args, cancellationToken),
                 "update_letterhead" => await ExecuteUpdateLetterheadAsync(ownerUserId, args, cancellationToken),
                 "delete_letterhead" => await ExecuteDeleteLetterheadAsync(ownerUserId, args, cancellationToken),
+                // Workflows
+                "create_workflow" => await ExecuteCreateWorkflowAsync(ownerUserId, args, cancellationToken),
+                "list_workflows" => await ExecuteListWorkflowsAsync(ownerUserId, args, cancellationToken),
+                "get_workflow" => await ExecuteGetWorkflowAsync(ownerUserId, args, cancellationToken),
+                "run_workflow" => await ExecuteRunWorkflowAsync(ownerUserId, args, cancellationToken),
+                "approve_workflow_step" => await ExecuteApproveWorkflowStepAsync(ownerUserId, args, cancellationToken),
+                "list_workflow_executions" => await ExecuteListWorkflowExecutionsAsync(ownerUserId, args, cancellationToken),
+                "get_pending_approvals" => await ExecuteGetPendingApprovalsAsync(ownerUserId, cancellationToken),
                 _ => throw new NotSupportedException($"Função não suportada: {functionName}")
             };
         }
@@ -327,7 +454,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
             throw new InvalidOperationException("Contato não encontrado");
-        
+
         return result;
     }
 
@@ -360,7 +487,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             !args.TryGetProperty("reason", out var reasonProp) ||
             !args.TryGetProperty("scheduledFor", out var scheduledForProp))
             throw new ArgumentException("contactId, reason e scheduledFor são obrigatórios");
-        
+
         // suggestedMessage é opcional, não precisa validar aqui
 
         var contactIdString = contactIdProp.GetString();
@@ -378,8 +505,9 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         if (string.IsNullOrWhiteSpace(scheduledForString))
             throw new ArgumentException("scheduledFor não pode ser vazio");
 
-        if (!DateTime.TryParse(scheduledForString, out var scheduledFor))
+        if (!DateTimeOffset.TryParse(scheduledForString, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var scheduledForDto))
             throw new ArgumentException($"scheduledFor inválido: '{scheduledForString}'. Deve estar no formato ISO 8601 (ex: 2024-12-25T10:00:00Z)");
+        var scheduledFor = scheduledForDto.UtcDateTime;
 
         var command = new CreateReminderCommand
         {
@@ -430,12 +558,12 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
             throw new InvalidOperationException("Lembrete não encontrado");
-        
+
         return result;
     }
 
     // ========== Funções de Contatos Adicionais ==========
-    
+
     private async Task<object> ExecuteUpdateContactAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
@@ -588,7 +716,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             OwnerUserId = ownerUserId,
             NewStatus = status,
             NewScheduledFor = args.TryGetProperty("newScheduledFor", out var dateProp) && dateProp.ValueKind != JsonValueKind.Null
-                ? DateTime.Parse(dateProp.GetString() ?? "")
+                ? ParseOptionalUtc(dateProp.GetString())
                 : null
         };
 
@@ -642,7 +770,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
             throw new InvalidOperationException("Nota não encontrada");
-        
+
         return result;
     }
 
@@ -780,7 +908,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
             throw new InvalidOperationException("Draft não encontrado");
-        
+
         return result;
     }
 
@@ -911,7 +1039,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
             throw new InvalidOperationException("Template não encontrado");
-        
+
         return result;
     }
 
@@ -995,7 +1123,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
             throw new InvalidOperationException("Letterhead não encontrado");
-        
+
         return result;
     }
 
@@ -1032,916 +1160,959 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         return new { success = true };
     }
 
+    // ========== Workflow Functions ==========
+
+    private async Task<object> ExecuteCreateWorkflowAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
+    {
+        if (!args.TryGetProperty("specJson", out var specJsonProp))
+            throw new ArgumentException("specJson é obrigatório");
+
+        var activateImmediately = args.TryGetProperty("activateImmediately", out var activateProp) && activateProp.ValueKind == JsonValueKind.True;
+
+        var command = new Commands.Workflow.CreateWorkflowFromSpecCommand
+        {
+            OwnerUserId = ownerUserId,
+            SpecJson = specJsonProp.GetString() ?? "",
+            ActivateImmediately = activateImmediately
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        // Return a clear response format for the LLM
+        if (!result.Success)
+        {
+            _logger.LogWarning("Workflow creation failed: {Errors}", string.Join(", ", result.Errors));
+            return new
+            {
+                success = false,
+                error = string.Join("; ", result.Errors),
+                message = "Falha ao criar o workflow. Verifique os erros acima."
+            };
+        }
+
+        return new
+        {
+            success = true,
+            workflowId = result.WorkflowId,
+            n8nWorkflowId = result.N8nWorkflowId,
+            message = "Workflow criado com sucesso!"
+        };
+    }
+
+    private async Task<object> ExecuteListWorkflowsAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
+    {
+        Domain.Enums.WorkflowStatus? status = null;
+        if (args.TryGetProperty("status", out var statusProp) && statusProp.ValueKind == JsonValueKind.String)
+        {
+            if (Enum.TryParse<Domain.Enums.WorkflowStatus>(statusProp.GetString(), out var parsedStatus))
+                status = parsedStatus;
+        }
+
+        var query = new Queries.Workflow.ListWorkflowsQuery
+        {
+            OwnerUserId = ownerUserId,
+            FilterByStatus = status
+        };
+
+        return await _mediator.Send(query, cancellationToken);
+    }
+
+    private async Task<object> ExecuteGetWorkflowAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
+    {
+        if (!args.TryGetProperty("id", out var idProp))
+            throw new ArgumentException("id é obrigatório");
+
+        var query = new Queries.Workflow.GetWorkflowByIdQuery
+        {
+            WorkflowId = Guid.Parse(idProp.GetString() ?? ""),
+            OwnerUserId = ownerUserId
+        };
+
+        var result = await _mediator.Send(query, cancellationToken);
+        if (result == null)
+            return new { error = "Workflow não encontrado" };
+        return result;
+    }
+
+    private async Task<object> ExecuteRunWorkflowAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
+    {
+        if (!args.TryGetProperty("id", out var idProp))
+            throw new ArgumentException("id é obrigatório");
+
+        string? inputJson = null;
+        if (args.TryGetProperty("inputJson", out var inputProp) && inputProp.ValueKind == JsonValueKind.String)
+            inputJson = inputProp.GetString();
+
+        var command = new Commands.Workflow.ExecuteWorkflowCommand
+        {
+            WorkflowId = Guid.Parse(idProp.GetString() ?? ""),
+            OwnerUserId = ownerUserId,
+            InputJson = inputJson
+        };
+
+        return await _mediator.Send(command, cancellationToken);
+    }
+
+    private async Task<object> ExecuteApproveWorkflowStepAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
+    {
+        if (!args.TryGetProperty("executionId", out var idProp))
+            throw new ArgumentException("executionId é obrigatório");
+
+        var command = new Commands.Workflow.ApproveWorkflowStepCommand
+        {
+            ExecutionId = Guid.Parse(idProp.GetString() ?? ""),
+            ApprovedByUserId = ownerUserId
+        };
+
+        return await _mediator.Send(command, cancellationToken);
+    }
+
+    private async Task<object> ExecuteListWorkflowExecutionsAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
+    {
+        Guid? workflowId = null;
+        if (args.TryGetProperty("workflowId", out var workflowIdProp) && workflowIdProp.ValueKind == JsonValueKind.String)
+            workflowId = Guid.Parse(workflowIdProp.GetString() ?? "");
+
+        var limit = args.TryGetProperty("limit", out var limitProp) && limitProp.ValueKind == JsonValueKind.Number
+            ? limitProp.GetInt32()
+            : 50;
+
+        var query = new Queries.Workflow.ListWorkflowExecutionsQuery
+        {
+            OwnerUserId = ownerUserId,
+            WorkflowId = workflowId,
+            Limit = limit
+        };
+
+        return await _mediator.Send(query, cancellationToken);
+    }
+
+    private async Task<object> ExecuteGetPendingApprovalsAsync(Guid ownerUserId, CancellationToken cancellationToken)
+    {
+        var query = new Queries.Workflow.GetPendingApprovalsQuery
+        {
+            OwnerUserId = ownerUserId
+        };
+
+        return await _mediator.Send(query, cancellationToken);
+    }
+
     private List<object> GetFunctionDefinitions()
     {
-        // Estrutura correta para OpenAI API: cada tool deve ter um objeto "function" dentro
         return new List<object>
         {
+            // ========= Contatos =========
             new
             {
                 type = "function",
-                function = new
+                name = "list_contacts",
+                description = "Lista todos os contatos do usuário autenticado. Suporta paginação e filtros.",
+                parameters = new
                 {
-                    name = "list_contacts",
-                    description = "Lista todos os contatos do usuário autenticado. Suporta paginação e filtros.",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
-                            pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" },
-                            includeDeleted = new { type = new[] { "boolean", "null" }, description = "Incluir contatos deletados (padrão: false)" }
-                        },
-                        required = new[] { "page", "pageSize", "includeDeleted" },
-                        additionalProperties = false
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" },
+                        includeDeleted = new { type = new[] { "boolean", "null" }, description = "Incluir contatos deletados (padrão: false)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "page", "pageSize", "includeDeleted" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "search_contacts",
+                description = "Busca contatos com filtro de texto. Útil para encontrar contatos por nome, empresa, email, etc.",
+                parameters = new
                 {
-                    name = "search_contacts",
-                    description = "Busca contatos com filtro de texto. Útil para encontrar contatos por nome, empresa, email, etc.",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            searchTerm = new { type = "string", description = "Termo de busca (nome, empresa, email, etc)" },
-                            page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
-                            pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
-                        },
-                        required = new[] { "searchTerm", "page", "pageSize" },
-                        additionalProperties = false
+                        searchTerm = new { type = "string", description = "Termo de busca (nome, empresa, email, etc)" },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "searchTerm", "page", "pageSize" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_contact",
+                description = "Obtém um contato específico por ID",
+                parameters = new
                 {
-                    name = "get_contact",
-                    description = "Obtém um contato específico por ID",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do contato (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do contato (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "create_contact",
+                description = "Cria um novo contato. Primeiro nome é obrigatório, outros campos são opcionais.",
+                parameters = new
                 {
-                    name = "create_contact",
-                    description = "Cria um novo contato. Primeiro nome é obrigatório, outros campos são opcionais.",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            firstName = new { type = "string", description = "Primeiro nome (obrigatório)" },
-                            lastName = new { type = new[] { "string", "null" }, description = "Sobrenome" },
-                            jobTitle = new { type = new[] { "string", "null" }, description = "Cargo" },
-                            company = new { type = new[] { "string", "null" }, description = "Empresa" },
-                            street = new { type = new[] { "string", "null" }, description = "Endereço (rua)" },
-                            city = new { type = new[] { "string", "null" }, description = "Cidade" },
-                            state = new { type = new[] { "string", "null" }, description = "Estado" },
-                            zipCode = new { type = new[] { "string", "null" }, description = "CEP" },
-                            country = new { type = new[] { "string", "null" }, description = "País" }
-                        },
-                        required = new[] { "firstName", "lastName", "jobTitle", "company", "street", "city", "state", "zipCode", "country" },
-                        additionalProperties = false
+                        firstName = new { type = "string", description = "Primeiro nome (obrigatório)" },
+                        lastName = new { type = new[] { "string", "null" }, description = "Sobrenome" },
+                        jobTitle = new { type = new[] { "string", "null" }, description = "Cargo" },
+                        company = new { type = new[] { "string", "null" }, description = "Empresa" },
+                        street = new { type = new[] { "string", "null" }, description = "Endereço (rua)" },
+                        city = new { type = new[] { "string", "null" }, description = "Cidade" },
+                        state = new { type = new[] { "string", "null" }, description = "Estado" },
+                        zipCode = new { type = new[] { "string", "null" }, description = "CEP" },
+                        country = new { type = new[] { "string", "null" }, description = "País" }
                     },
-                    strict = true
-                }
+                    required = new[] { "firstName", "lastName", "jobTitle", "company", "street", "city", "state", "zipCode", "country" },
+                    additionalProperties = false
+                },
+                strict = true
+            },
+            // ========= Lembretes =========
+            new
+            {
+                type = "function",
+                name = "create_reminder",
+                description = "Cria um novo lembrete para um contato. Útil para agendar follow-ups ou tarefas. IMPORTANTE: Se você não tiver o contactId (GUID) do contato, use primeiro a função search_contacts para encontrar o contato pelo nome e obter seu ID.",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        contactId = new { type = "string", description = "ID do contato (GUID válido). Se você não tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
+                        reason = new { type = "string", description = "Motivo do lembrete (máximo 500 caracteres)" },
+                        suggestedMessage = new { type = new[] { "string", "null" }, description = "Mensagem sugerida para o lembrete (máximo 2000 caracteres, opcional)" },
+                        scheduledFor = new { type = "string", description = "Data e hora agendada (formato ISO 8601, ex: 2024-12-25T10:00:00Z)" }
+                    },
+                    required = new[] { "contactId", "reason", "scheduledFor", "suggestedMessage" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "list_reminders",
+                description = "Lista lembretes do usuário autenticado. Suporta filtros por contato, status e data.",
+                parameters = new
                 {
-                    name = "create_reminder",
-                    description = "Cria um novo lembrete para um contato. Útil para agendar follow-ups ou tarefas. IMPORTANTE: Se você não tiver o contactId (GUID) do contato, use primeiro a função search_contacts para encontrar o contato pelo nome e obter seu ID.",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato (GUID válido). Se você não tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
-                            reason = new { type = "string", description = "Motivo do lembrete (máximo 500 caracteres)" },
-                            suggestedMessage = new { type = new[] { "string", "null" }, description = "Mensagem sugerida para o lembrete (máximo 2000 caracteres, opcional)" },
-                            scheduledFor = new { type = "string", description = "Data e hora agendada (formato ISO 8601, ex: 2024-12-25T10:00:00Z)" }
-                        },
-                        required = new[] { "contactId", "reason", "scheduledFor", "suggestedMessage" },
-                        additionalProperties = false
+                        contactId = new { type = new[] { "string", "null" }, description = "Filtrar por ID do contato (GUID)" },
+                        status = new { type = new[] { "string", "null" }, description = "Filtrar por status (Pending, Sent, Dismissed, Snoozed)", @enum = new[] { "Pending", "Sent", "Dismissed", "Snoozed" } },
+                        startDate = new { type = new[] { "string", "null" }, description = "Data inicial (formato ISO 8601)" },
+                        endDate = new { type = new[] { "string", "null" }, description = "Data final (formato ISO 8601)" },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "contactId", "status", "startDate", "endDate", "page", "pageSize" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_reminder",
+                description = "Obtém um lembrete específico por ID",
+                parameters = new
                 {
-                    name = "list_reminders",
-                    description = "Lista lembretes do usuário autenticado. Suporta filtros por contato, status e data.",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = new[] { "string", "null" }, description = "Filtrar por ID do contato (GUID)" },
-                            status = new { type = new[] { "string", "null" }, description = "Filtrar por status (Pending, Sent, Dismissed, Snoozed)", @enum = new[] { "Pending", "Sent", "Dismissed", "Snoozed" } },
-                            startDate = new { type = new[] { "string", "null" }, description = "Data inicial (formato ISO 8601)" },
-                            endDate = new { type = new[] { "string", "null" }, description = "Data final (formato ISO 8601)" },
-                            page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
-                            pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
-                        },
-                        required = new[] { "contactId", "status", "startDate", "endDate", "page", "pageSize" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do lembrete (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "update_reminder_status",
+                description = "Atualiza o status de um lembrete (Pending, Completed, Cancelled)",
+                parameters = new
                 {
-                    name = "get_reminder",
-                    description = "Obtém um lembrete específico por ID",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do lembrete (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do lembrete (GUID)" },
+                        newStatus = new { type = "string", description = "Novo status", @enum = new[] { "Pending", "Sent", "Dismissed", "Snoozed" } },
+                        newScheduledFor = new { type = new[] { "string", "null" }, description = "Nova data agendada (formato ISO 8601, opcional)" }
                     },
-                    strict = true
-                }
-            },
-            // ========== Funções de Contatos Adicionais ==========
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "update_contact",
-                    description = "Atualiza um contato existente. Todos os campos são opcionais, mas pelo menos um deve ser fornecido.",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do contato (GUID)" },
-                            firstName = new { type = new[] { "string", "null" }, description = "Primeiro nome" },
-                            lastName = new { type = new[] { "string", "null" }, description = "Sobrenome" },
-                            jobTitle = new { type = new[] { "string", "null" }, description = "Cargo" },
-                            company = new { type = new[] { "string", "null" }, description = "Empresa" },
-                            street = new { type = new[] { "string", "null" }, description = "Endereço (rua)" },
-                            city = new { type = new[] { "string", "null" }, description = "Cidade" },
-                            state = new { type = new[] { "string", "null" }, description = "Estado" },
-                            zipCode = new { type = new[] { "string", "null" }, description = "CEP" },
-                            country = new { type = new[] { "string", "null" }, description = "País" }
-                        },
-                        required = new[] { "id", "firstName", "lastName", "jobTitle", "company", "street", "city", "state", "zipCode", "country" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    required = new[] { "id", "newStatus", "newScheduledFor" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "delete_reminder",
+                description = "Deleta um lembrete",
+                parameters = new
                 {
-                    name = "delete_contact",
-                    description = "Deleta um contato (soft delete)",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do contato (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do lembrete (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
+            },
+            // ========= Notas =========
+            new
+            {
+                type = "function",
+                name = "list_contact_notes",
+                description = "Lista todas as notas de um contato específico",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        contactId = new { type = "string", description = "ID do contato (GUID)" }
+                    },
+                    required = new[] { "contactId" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_note",
+                description = "Obtém uma nota específica por ID",
+                parameters = new
                 {
-                    name = "add_contact_email",
-                    description = "Adiciona um email a um contato",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato (GUID)" },
-                            email = new { type = "string", description = "Endereço de email" }
-                        },
-                        required = new[] { "contactId", "email" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID da nota (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "create_text_note",
+                description = "Cria uma nova nota de texto para um contato. IMPORTANTE: Se você não tiver o contactId (GUID) do contato, use primeiro a função search_contacts para encontrar o contato pelo nome e obter seu ID.",
+                parameters = new
                 {
-                    name = "add_contact_phone",
-                    description = "Adiciona um telefone a um contato",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato (GUID)" },
-                            phone = new { type = "string", description = "Número de telefone" }
-                        },
-                        required = new[] { "contactId", "phone" },
-                        additionalProperties = false
+                        contactId = new { type = "string", description = "ID do contato (GUID). Se você não tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
+                        text = new { type = "string", description = "Conteúdo da nota" },
+                        structuredData = new { type = new[] { "string", "null" }, description = "Dados estruturados em JSON (opcional)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "contactId", "text", "structuredData" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "update_note",
+                description = "Atualiza uma nota existente",
+                parameters = new
                 {
-                    name = "add_contact_tag",
-                    description = "Adiciona uma tag a um contato",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato (GUID)" },
-                            tag = new { type = "string", description = "Nome da tag" }
-                        },
-                        required = new[] { "contactId", "tag" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID da nota (GUID)" },
+                        rawContent = new { type = new[] { "string", "null" }, description = "Conteúdo bruto da nota" },
+                        structuredData = new { type = new[] { "string", "null" }, description = "Dados estruturados em JSON" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id", "rawContent", "structuredData" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "delete_note",
+                description = "Deleta uma nota",
+                parameters = new
                 {
-                    name = "add_contact_relationship",
-                    description = "Adiciona um relacionamento entre contatos",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato de origem (GUID)" },
-                            targetContactId = new { type = "string", description = "ID do contato de destino (GUID)" },
-                            type = new { type = "string", description = "Tipo de relacionamento (ex: \"colleague\", \"friend\", \"family\")" },
-                            description = new { type = new[] { "string", "null" }, description = "Descrição do relacionamento" },
-                            strength = new { type = new[] { "number", "null" }, description = "Força do relacionamento (0-1)" },
-                            isConfirmed = new { type = new[] { "boolean", "null" }, description = "Se o relacionamento é confirmado" }
-                        },
-                        required = new[] { "contactId", "targetContactId", "type", "description", "strength", "isConfirmed" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID da nota (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
+            },
+            // ========= Drafts =========
+            new
+            {
+                type = "function",
+                name = "create_draft",
+                description = "Cria um novo draft de documento",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        documentType = new { type = "string", description = "Tipo de documento", @enum = new[] { "Email", "Oficio", "Invite" } },
+                        content = new { type = "string", description = "Conteúdo do documento" },
+                        contactId = new { type = new[] { "string", "null" }, description = "ID do contato relacionado (GUID, opcional)" },
+                        companyId = new { type = new[] { "string", "null" }, description = "ID da empresa relacionada (GUID, opcional)" },
+                        templateId = new { type = new[] { "string", "null" }, description = "ID do template usado (GUID, opcional)" },
+                        letterheadId = new { type = new[] { "string", "null" }, description = "ID do papel timbrado usado (GUID, opcional)" }
+                    },
+                    required = new[] { "documentType", "content", "contactId", "companyId", "templateId", "letterheadId" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "list_drafts",
+                description = "Lista drafts do usuário autenticado",
+                parameters = new
                 {
-                    name = "delete_contact_relationship",
-                    description = "Deleta um relacionamento entre contatos",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            relationshipId = new { type = "string", description = "ID do relacionamento (GUID)" }
-                        },
-                        required = new[] { "relationshipId" },
-                        additionalProperties = false
+                        contactId = new { type = new[] { "string", "null" }, description = "Filtrar por ID do contato (GUID)" },
+                        companyId = new { type = new[] { "string", "null" }, description = "Filtrar por ID da empresa (GUID)" },
+                        documentType = new { type = new[] { "string", "null" }, description = "Filtrar por tipo de documento", @enum = new[] { "Email", "Oficio", "Invite" } },
+                        status = new { type = new[] { "string", "null" }, description = "Filtrar por status", @enum = new[] { "Draft", "Approved", "Sent" } },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "contactId", "companyId", "documentType", "status", "page", "pageSize" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_draft",
+                description = "Obtém um draft específico por ID",
+                parameters = new
                 {
-                    name = "get_network_graph",
-                    description = "Obtém o grafo de relacionamentos entre contatos",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            maxDepth = new { type = new[] { "number", "null" }, description = "Profundidade máxima do grafo (padrão: 2)" }
-                        },
-                        required = new[] { "maxDepth" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do draft (GUID)" }
                     },
-                    strict = true
-                }
-            },
-            // ========== Funções de Lembretes Adicionais ==========
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "update_reminder_status",
-                    description = "Atualiza o status de um lembrete (Pending, Completed, Cancelled)",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do lembrete (GUID)" },
-                            newStatus = new { type = "string", description = "Novo status", @enum = new[] { "Pending", "Sent", "Dismissed", "Snoozed" } },
-                            newScheduledFor = new { type = new[] { "string", "null" }, description = "Nova data agendada (formato ISO 8601, opcional)" }
-                        },
-                        required = new[] { "id", "newStatus", "newScheduledFor" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "update_draft",
+                description = "Atualiza um draft",
+                parameters = new
                 {
-                    name = "delete_reminder",
-                    description = "Deleta um lembrete",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do lembrete (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do draft (GUID)" },
+                        content = new { type = new[] { "string", "null" }, description = "Conteúdo do documento" },
+                        contactId = new { type = new[] { "string", "null" }, description = "ID do contato relacionado (GUID)" },
+                        companyId = new { type = new[] { "string", "null" }, description = "ID da empresa relacionada (GUID)" },
+                        templateId = new { type = new[] { "string", "null" }, description = "ID do template usado (GUID)" },
+                        letterheadId = new { type = new[] { "string", "null" }, description = "ID do papel timbrado usado (GUID)" }
                     },
-                    strict = true
-                }
-            },
-            // ========== Funções de Notas ==========
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "list_contact_notes",
-                    description = "Lista todas as notas de um contato específico",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato (GUID)" }
-                        },
-                        required = new[] { "contactId" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    required = new[] { "id", "content", "contactId", "companyId", "templateId", "letterheadId" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "approve_draft",
+                description = "Aprova um draft",
+                parameters = new
                 {
-                    name = "get_note",
-                    description = "Obtém uma nota específica por ID",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID da nota (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do draft (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "send_draft",
+                description = "Envia um draft",
+                parameters = new
                 {
-                    name = "create_text_note",
-                    description = "Cria uma nova nota de texto para um contato. IMPORTANTE: Se você não tiver o contactId (GUID) do contato, use primeiro a função search_contacts para encontrar o contato pelo nome e obter seu ID.",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = "string", description = "ID do contato (GUID). Se você não tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
-                            text = new { type = "string", description = "Conteúdo da nota" },
-                            structuredData = new { type = new[] { "string", "null" }, description = "Dados estruturados em JSON (opcional)" }
-                        },
-                        required = new[] { "contactId", "text", "structuredData" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do draft (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "delete_draft",
+                description = "Deleta um draft",
+                parameters = new
                 {
-                    name = "update_note",
-                    description = "Atualiza uma nota existente",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID da nota (GUID)" },
-                            rawContent = new { type = new[] { "string", "null" }, description = "Conteúdo bruto da nota" },
-                            structuredData = new { type = new[] { "string", "null" }, description = "Dados estruturados em JSON" }
-                        },
-                        required = new[] { "id", "rawContent", "structuredData" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do draft (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
+            },
+            // ========= Templates =========
+            new
+            {
+                type = "function",
+                name = "create_template",
+                description = "Cria um novo template de documento",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        name = new { type = "string", description = "Nome do template (máximo 200 caracteres)" },
+                        type = new { type = "string", description = "Tipo de template", @enum = new[] { "Email", "Oficio", "Invite", "Generic" } },
+                        body = new { type = "string", description = "Corpo do template" },
+                        placeholdersSchema = new { type = new[] { "string", "null" }, description = "Schema JSON dos placeholders (opcional)" }
+                    },
+                    required = new[] { "name", "type", "body", "placeholdersSchema" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "list_templates",
+                description = "Lista templates do usuário autenticado",
+                parameters = new
                 {
-                    name = "delete_note",
-                    description = "Deleta uma nota",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID da nota (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        type = new { type = new[] { "string", "null" }, description = "Filtrar por tipo", @enum = new[] { "Email", "Oficio", "Invite", "Generic" } },
+                        activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas templates ativos (padrão: false)" },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
-                    strict = true
-                }
-            },
-            // ========== Funções de Drafts ==========
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "create_draft",
-                    description = "Cria um novo draft de documento",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            documentType = new { type = "string", description = "Tipo de documento", @enum = new[] { "Email", "Oficio", "Invite" } },
-                            content = new { type = "string", description = "Conteúdo do documento" },
-                            contactId = new { type = new[] { "string", "null" }, description = "ID do contato relacionado (GUID, opcional)" },
-                            companyId = new { type = new[] { "string", "null" }, description = "ID da empresa relacionada (GUID, opcional)" },
-                            templateId = new { type = new[] { "string", "null" }, description = "ID do template usado (GUID, opcional)" },
-                            letterheadId = new { type = new[] { "string", "null" }, description = "ID do papel timbrado usado (GUID, opcional)" }
-                        },
-                        required = new[] { "documentType", "content", "contactId", "companyId", "templateId", "letterheadId" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    required = new[] { "type", "activeOnly", "page", "pageSize" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_template",
+                description = "Obtém um template específico por ID",
+                parameters = new
                 {
-                    name = "list_drafts",
-                    description = "Lista drafts do usuário autenticado",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            contactId = new { type = new[] { "string", "null" }, description = "Filtrar por ID do contato (GUID)" },
-                            companyId = new { type = new[] { "string", "null" }, description = "Filtrar por ID da empresa (GUID)" },
-                            documentType = new { type = new[] { "string", "null" }, description = "Filtrar por tipo de documento", @enum = new[] { "Email", "Oficio", "Invite" } },
-                            status = new { type = new[] { "string", "null" }, description = "Filtrar por status", @enum = new[] { "Draft", "Approved", "Sent" } },
-                            page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
-                            pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
-                        },
-                        required = new[] { "contactId", "companyId", "documentType", "status", "page", "pageSize" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do template (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "update_template",
+                description = "Atualiza um template",
+                parameters = new
                 {
-                    name = "get_draft",
-                    description = "Obtém um draft específico por ID",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do draft (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do template (GUID)" },
+                        name = new { type = new[] { "string", "null" }, description = "Nome do template" },
+                        body = new { type = new[] { "string", "null" }, description = "Corpo do template" },
+                        placeholdersSchema = new { type = new[] { "string", "null" }, description = "Schema JSON dos placeholders" },
+                        active = new { type = new[] { "boolean", "null" }, description = "Se o template está ativo" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id", "name", "body", "placeholdersSchema", "active" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "delete_template",
+                description = "Deleta um template",
+                parameters = new
                 {
-                    name = "update_draft",
-                    description = "Atualiza um draft",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do draft (GUID)" },
-                            content = new { type = new[] { "string", "null" }, description = "Conteúdo do documento" },
-                            contactId = new { type = new[] { "string", "null" }, description = "ID do contato relacionado (GUID)" },
-                            companyId = new { type = new[] { "string", "null" }, description = "ID da empresa relacionada (GUID)" },
-                            templateId = new { type = new[] { "string", "null" }, description = "ID do template usado (GUID)" },
-                            letterheadId = new { type = new[] { "string", "null" }, description = "ID do papel timbrado usado (GUID)" }
-                        },
-                        required = new[] { "id", "content", "contactId", "companyId", "templateId", "letterheadId" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do template (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
+            },
+            // ========= Letterheads =========
+            new
+            {
+                type = "function",
+                name = "create_letterhead",
+                description = "Cria um novo papel timbrado",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        name = new { type = "string", description = "Nome do papel timbrado (máximo 200 caracteres)" },
+                        designData = new { type = "string", description = "Dados de design em JSON" }
+                    },
+                    required = new[] { "name", "designData" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "list_letterheads",
+                description = "Lista papéis timbrados do usuário autenticado",
+                parameters = new
                 {
-                    name = "approve_draft",
-                    description = "Aprova um draft",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do draft (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas papéis timbrados ativos (padrão: false)" },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "activeOnly", "page", "pageSize" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_letterhead",
+                description = "Obtém um papel timbrado específico por ID",
+                parameters = new
                 {
-                    name = "send_draft",
-                    description = "Envia um draft",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do draft (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do papel timbrado (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "update_letterhead",
+                description = "Atualiza um papel timbrado",
+                parameters = new
                 {
-                    name = "delete_draft",
-                    description = "Deleta um draft",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do draft (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do papel timbrado (GUID)" },
+                        name = new { type = new[] { "string", "null" }, description = "Nome do papel timbrado" },
+                        designData = new { type = new[] { "string", "null" }, description = "Dados de design em JSON" },
+                        isActive = new { type = new[] { "boolean", "null" }, description = "Se o papel timbrado está ativo" }
                     },
-                    strict = true
-                }
-            },
-            // ========== Funções de Templates ==========
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "create_template",
-                    description = "Cria um novo template de documento",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            name = new { type = "string", description = "Nome do template (máximo 200 caracteres)" },
-                            type = new { type = "string", description = "Tipo de template", @enum = new[] { "Email", "Oficio", "Invite", "Generic" } },
-                            body = new { type = "string", description = "Corpo do template" },
-                            placeholdersSchema = new { type = new[] { "string", "null" }, description = "Schema JSON dos placeholders (opcional)" }
-                        },
-                        required = new[] { "name", "type", "body", "placeholdersSchema" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    required = new[] { "id", "name", "designData", "isActive" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "delete_letterhead",
+                description = "Deleta um papel timbrado",
+                parameters = new
                 {
-                    name = "list_templates",
-                    description = "Lista templates do usuário autenticado",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            type = new { type = new[] { "string", "null" }, description = "Filtrar por tipo", @enum = new[] { "Email", "Oficio", "Invite", "Generic" } },
-                            activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas templates ativos (padrão: false)" },
-                            page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
-                            pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
-                        },
-                        required = new[] { "type", "activeOnly", "page", "pageSize" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do papel timbrado (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
+            },
+            // ========= Workflows =========
+            new
+            {
+                type = "function",
+                name = "create_workflow",
+                description = "Cria um novo workflow de automação a partir de um WorkflowSpec JSON. O workflow pode ser executado manualmente, agendado por cron, ou acionado por eventos. IMPORTANTE: Você deve gerar um WorkflowSpec válido no formato JSON especificado.",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        specJson = new { type = "string", description = "JSON do WorkflowSpec contendo: name, description, trigger (type: Manual/Scheduled/EventBased), variables, steps (cada step tem id, name, type: Action/Condition, action ou condition)." },
+                        activateImmediately = new { type = new[] { "boolean", "null" }, description = "Se true, ativa o workflow imediatamente após criação (padrão: false)" }
+                    },
+                    required = new[] { "specJson", "activateImmediately" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "list_workflows",
+                description = "Lista todos os workflows do usuário autenticado",
+                parameters = new
                 {
-                    name = "get_template",
-                    description = "Obtém um template específico por ID",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do template (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        status = new { type = new[] { "string", "null" }, description = "Filtrar por status", @enum = new[] { "Draft", "Active", "Paused", "Archived" } }
                     },
-                    strict = true
-                }
+                    required = new[] { "status" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_workflow",
+                description = "Obtém detalhes de um workflow específico por ID",
+                parameters = new
                 {
-                    name = "update_template",
-                    description = "Atualiza um template",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do template (GUID)" },
-                            name = new { type = new[] { "string", "null" }, description = "Nome do template" },
-                            body = new { type = new[] { "string", "null" }, description = "Corpo do template" },
-                            placeholdersSchema = new { type = new[] { "string", "null" }, description = "Schema JSON dos placeholders" },
-                            active = new { type = new[] { "boolean", "null" }, description = "Se o template está ativo" }
-                        },
-                        required = new[] { "id", "name", "body", "placeholdersSchema", "active" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do workflow (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "id" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "run_workflow",
+                description = "Executa um workflow. O workflow deve estar ativo para ser executado.",
+                parameters = new
                 {
-                    name = "delete_template",
-                    description = "Deleta um template",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do template (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        id = new { type = "string", description = "ID do workflow (GUID)" },
+                        inputJson = new { type = new[] { "string", "null" }, description = "JSON com os inputs para o workflow (opcional)" }
                     },
-                    strict = true
-                }
-            },
-            // ========== Funções de Letterheads ==========
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "create_letterhead",
-                    description = "Cria um novo papel timbrado",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            name = new { type = "string", description = "Nome do papel timbrado (máximo 200 caracteres)" },
-                            designData = new { type = "string", description = "Dados de design em JSON" }
-                        },
-                        required = new[] { "name", "designData" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    required = new[] { "id", "inputJson" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "approve_workflow_step",
+                description = "Aprova um step de workflow que está aguardando aprovação",
+                parameters = new
                 {
-                    name = "list_letterheads",
-                    description = "Lista papéis timbrados do usuário autenticado",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas papéis timbrados ativos (padrão: false)" },
-                            page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
-                            pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
-                        },
-                        required = new[] { "activeOnly", "page", "pageSize" },
-                        additionalProperties = false
+                        executionId = new { type = "string", description = "ID da execução (GUID)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "executionId" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "list_workflow_executions",
+                description = "Lista o histórico de execuções de workflows",
+                parameters = new
                 {
-                    name = "get_letterhead",
-                    description = "Obtém um papel timbrado específico por ID",
-                    parameters = new
+                    type = "object",
+                    properties = new
                     {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do papel timbrado (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
+                        workflowId = new { type = new[] { "string", "null" }, description = "Filtrar por ID de workflow específico (GUID)" },
+                        limit = new { type = new[] { "number", "null" }, description = "Limite de resultados (padrão: 50)" }
                     },
-                    strict = true
-                }
+                    required = new[] { "workflowId", "limit" },
+                    additionalProperties = false
+                },
+                strict = true
             },
             new
             {
                 type = "function",
-                function = new
+                name = "get_pending_approvals",
+                description = "Lista execuções de workflow aguardando aprovação do usuário",
+                parameters = new
                 {
-                    name = "update_letterhead",
-                    description = "Atualiza um papel timbrado",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do papel timbrado (GUID)" },
-                            name = new { type = new[] { "string", "null" }, description = "Nome do papel timbrado" },
-                            designData = new { type = new[] { "string", "null" }, description = "Dados de design em JSON" },
-                            isActive = new { type = new[] { "boolean", "null" }, description = "Se o papel timbrado está ativo" }
-                        },
-                        required = new[] { "id", "name", "designData", "isActive" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
-            },
-            new
-            {
-                type = "function",
-                function = new
-                {
-                    name = "delete_letterhead",
-                    description = "Deleta um papel timbrado",
-                    parameters = new
-                    {
-                        type = "object",
-                        properties = new
-                        {
-                            id = new { type = "string", description = "ID do papel timbrado (GUID)" }
-                        },
-                        required = new[] { "id" },
-                        additionalProperties = false
-                    },
-                    strict = true
-                }
+                    type = "object",
+                    properties = new Dictionary<string, object>(),
+                    required = Array.Empty<string>(),
+                    additionalProperties = false
+                },
+                strict = true
             }
         };
     }
+    // Helpers para datas (garantir UTC)
+    private static DateTime? ParseOptionalUtc(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (!DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var dto))
+            throw new ArgumentException($"Data/hora invalida: '{value}'. Deve estar no formato ISO 8601 (ex: 2024-12-25T10:00:00Z)");
+
+        return dto.UtcDateTime;
+    }
+
 }
 
-// Classes auxiliares para deserialização da resposta do OpenAI
+// Classes auxiliares para deserialização da resposta do OpenAI Responses API
 // Usar JsonPropertyName para mapear corretamente os campos do JSON
 public class OpenAIResponse
 {
-    [System.Text.Json.Serialization.JsonPropertyName("choices")]
-    public List<Choice>? Choices { get; set; }
-}
+    [System.Text.Json.Serialization.JsonPropertyName("output")]
+    public List<OutputItem>? Output { get; set; }
 
-public class Choice
-{
-    [System.Text.Json.Serialization.JsonPropertyName("message")]
-    public Message? Message { get; set; }
-}
-
-public class Message
-{
-    [System.Text.Json.Serialization.JsonPropertyName("content")]
-    public string? Content { get; set; }
-    
-    [System.Text.Json.Serialization.JsonPropertyName("tool_calls")]
-    public List<ToolCall>? ToolCalls { get; set; }
-}
-
-public class ToolCall
-{
     [System.Text.Json.Serialization.JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
-    
+    public string? Id { get; set; }
+}
+
+public class OutputItem
+{
     [System.Text.Json.Serialization.JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
-    
-    [System.Text.Json.Serialization.JsonPropertyName("function")]
-    public FunctionCall? Function { get; set; }
-}
 
-public class FunctionCall
-{
+    [System.Text.Json.Serialization.JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    // Para tipo "text"
+    [System.Text.Json.Serialization.JsonPropertyName("text")]
+    public string? Text { get; set; }
+
+    // Para tipo "function_call" (campos diretos na Responses API)
+    [System.Text.Json.Serialization.JsonPropertyName("call_id")]
+    public string? CallId { get; set; }
+
     [System.Text.Json.Serialization.JsonPropertyName("name")]
     public string? Name { get; set; }
-    
+
     [System.Text.Json.Serialization.JsonPropertyName("arguments")]
     public string? Arguments { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("output")]
+    public string? Output { get; set; }
+
+    // Para tipo "message" - content é um array de ContentPart
+    [System.Text.Json.Serialization.JsonPropertyName("content")]
+    public List<ContentPart>? Content { get; set; }
 }
 
+public class ContentPart
+{
+    [System.Text.Json.Serialization.JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("text")]
+    public string? Text { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("annotations")]
+    public List<object>? Annotations { get; set; }
+}
+
+// Input items tipados para Responses API
+public class InputMessage
+{
+    [System.Text.Json.Serialization.JsonPropertyName("role")]
+    public string Role { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("content")]
+    public string Content { get; set; } = string.Empty;
+}
+
+public class InputFunctionCall
+{
+    [System.Text.Json.Serialization.JsonPropertyName("type")]
+    public string Type { get; } = "function_call";
+
+    [System.Text.Json.Serialization.JsonPropertyName("call_id")]
+    public string CallId { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("arguments")]
+    public string Arguments { get; set; } = string.Empty;
+}
+
+public class InputFunctionCallOutput
+{
+    [System.Text.Json.Serialization.JsonPropertyName("type")]
+    public string Type { get; } = "function_call_output";
+
+    [System.Text.Json.Serialization.JsonPropertyName("call_id")]
+    public string CallId { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("output")]
+    public string Output { get; set; } = string.Empty;
+}

@@ -9,3 +9,5 @@ LIMIT 1;
 -- Se não existir, cria (executar manualmente se necessário)
 -- O hash abaixo é um exemplo - precisamos gerar um hash válido do Keycloak
 
+
+

@@ -1,0 +1,207 @@
+{
+  "name": "System :: Flow Builder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "system/flows/build",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "flow-builder-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KEYCLOAK_TOKEN_URL || 'https://keycloak.callback-local-cchagas.xyz/realms/assistenteexecutivo/protocol/openid-connect/token' }}",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "grant_type", "value": "client_credentials" },
+            { "name": "client_id", "value": "={{ $env.KEYCLOAK_CLIENT_ID || 'assistente-api' }}" },
+            { "name": "client_secret", "value": "={{ $env.KEYCLOAK_CLIENT_SECRET }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-token",
+      "name": "Get OAuth Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize and validate input\nconst webhookData = $('Webhook Trigger').item.json;\nconst tokenData = $('Get OAuth Token').item.json;\nconst input = webhookData;\n\n// Generate correlation ID\nconst correlationId = `build_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// Extract fields\nconst spec = input.spec;\nconst tenantId = input.tenantId || 'default';\nconst requestedBy = input.requestedBy || 'system';\nconst mode = input.mode || 'create';\nconst idempotencyKey = input.idempotencyKey || correlationId;\n\n// Basic validation\nif (!spec) {\n  throw new Error('Missing required field: spec');\n}\n\nif (!spec.name) {\n  throw new Error('Missing required field: spec.name');\n}\n\nif (!spec.steps || !Array.isArray(spec.steps) || spec.steps.length === 0) {\n  throw new Error('spec.steps must be a non-empty array');\n}\n\n// Validate trigger\nconst validTriggerTypes = ['Manual', 'Scheduled', 'EventBased'];\nif (!spec.trigger || !validTriggerTypes.includes(spec.trigger.type)) {\n  throw new Error(`Invalid trigger type. Must be one of: ${validTriggerTypes.join(', ')}`);\n}\n\n// Validate steps\nconst validActionTypes = [\n  'CreateDocument', 'SendEmail', 'SendWhatsApp', 'ScheduleMeeting',\n  'CreateReminder', 'UpdateContact', 'CreateNote', 'HttpRequest', 'Wait', 'SetVariable'\n];\nconst validStepTypes = ['Action', 'Condition'];\n\nconst warnings = [];\n\nfor (const step of spec.steps) {\n  if (!step.id || !step.name || !step.type) {\n    throw new Error(`Step missing required fields (id, name, type): ${JSON.stringify(step)}`);\n  }\n  \n  if (!validStepTypes.includes(step.type)) {\n    throw new Error(`Invalid step type: ${step.type}`);\n  }\n  \n  if (step.type === 'Action' && step.action) {\n    if (!validActionTypes.includes(step.action.actionType)) {\n      warnings.push(`Unknown action type: ${step.action.actionType}`);\n    }\n    \n    // Security: Check for suspicious URLs\n    if (step.action.parameters?.url) {\n      const url = step.action.parameters.url;\n      if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('169.254')) {\n        throw new Error(`Security violation: Internal URLs not allowed in step ${step.id}`);\n      }\n    }\n  }\n}\n\nreturn {\n  correlationId,\n  spec,\n  tenantId,\n  requestedBy,\n  mode,\n  idempotencyKey,\n  warnings,\n  validatedAt: new Date().toISOString(),\n  accessToken: tokenData.access_token\n};"
+      },
+      "id": "normalize-validate",
+      "name": "Normalize & Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/specs",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.spec.name }}\",\n  \"description\": \"{{ $json.spec.description || '' }}\",\n  \"specJson\": {{ JSON.stringify($json.spec) }},\n  \"tenantId\": \"{{ $json.tenantId }}\",\n  \"requestedBy\": \"{{ $json.requestedBy }}\",\n  \"idempotencyKey\": \"{{ $json.idempotencyKey }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $json.accessToken }}" }
+          ]
+        }
+      },
+      "id": "save-spec",
+      "name": "Save Spec to Registry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compile Spec to n8n workflow JSON\nconst input = $input.first().json;\nconst spec = input.spec;\nconst specId = input.specId;\nconst specVersion = input.specVersion;\nconst tenantId = input.tenantId;\n\n// Helper to create node positions\nlet posY = 300;\nconst nextPosition = () => {\n  const pos = [500, posY];\n  posY += 150;\n  return pos;\n};\n\n// Create trigger node\nfunction createTriggerNode(trigger) {\n  switch (trigger.type) {\n    case 'Manual':\n      return {\n        name: 'Trigger',\n        type: 'n8n-nodes-base.manualTrigger',\n        typeVersion: 1,\n        position: [250, 300],\n        parameters: {}\n      };\n    case 'Scheduled':\n      return {\n        name: 'Trigger',\n        type: 'n8n-nodes-base.scheduleTrigger',\n        typeVersion: 1.1,\n        position: [250, 300],\n        parameters: {\n          rule: {\n            interval: [{ field: 'cronExpression', expression: trigger.cronExpression || '0 9 * * *' }]\n          }\n        }\n      };\n    case 'EventBased':\n      return {\n        name: 'Trigger',\n        type: 'n8n-nodes-base.webhook',\n        typeVersion: 2,\n        position: [250, 300],\n        parameters: {\n          path: trigger.eventName || 'webhook',\n          httpMethod: 'POST'\n        }\n      };\n    default:\n      throw new Error(`Unknown trigger type: ${trigger.type}`);\n  }\n}\n\n// Map action type to n8n node\nfunction createActionNode(step, position) {\n  const action = step.action;\n  const params = action.parameters || {};\n  \n  const nodeConfigs = {\n    'SendEmail': {\n      type: 'n8n-nodes-base.emailSend',\n      parameters: {\n        fromEmail: params.from || '',\n        toEmail: params.to || '',\n        subject: params.subject || '',\n        text: params.body || ''\n      }\n    },\n    'HttpRequest': {\n      type: 'n8n-nodes-base.httpRequest',\n      parameters: {\n        url: params.url || '',\n        method: params.method || 'GET',\n        sendBody: !!params.body,\n        bodyContentType: 'json',\n        body: params.body || ''\n      }\n    },\n    'Wait': {\n      type: 'n8n-nodes-base.wait',\n      parameters: {\n        amount: params.seconds || 5,\n        unit: 'seconds'\n      }\n    },\n    'SetVariable': {\n      type: 'n8n-nodes-base.set',\n      parameters: {\n        mode: 'manual',\n        duplicateItem: false,\n        assignments: {\n          assignments: [{\n            name: params.name || 'variable',\n            value: params.value || '',\n            type: 'string'\n          }]\n        }\n      }\n    },\n    'CreateDocument': {\n      type: 'n8n-nodes-base.httpRequest',\n      parameters: {\n        url: `${$env.API_BASE_URL}/api/drafts`,\n        method: 'POST',\n        sendBody: true,\n        bodyContentType: 'json',\n        body: JSON.stringify(params)\n      }\n    },\n    'CreateReminder': {\n      type: 'n8n-nodes-base.httpRequest',\n      parameters: {\n        url: `${$env.API_BASE_URL}/api/reminders`,\n        method: 'POST',\n        sendBody: true,\n        bodyContentType: 'json',\n        body: JSON.stringify(params)\n      }\n    },\n    'CreateNote': {\n      type: 'n8n-nodes-base.httpRequest',\n      parameters: {\n        url: `${$env.API_BASE_URL}/api/notes`,\n        method: 'POST',\n        sendBody: true,\n        bodyContentType: 'json',\n        body: JSON.stringify(params)\n      }\n    },\n    'UpdateContact': {\n      type: 'n8n-nodes-base.httpRequest',\n      parameters: {\n        url: `${$env.API_BASE_URL}/api/contacts/${params.contactId || ''}`,\n        method: 'PUT',\n        sendBody: true,\n        bodyContentType: 'json',\n        body: JSON.stringify(params)\n      }\n    },\n    'SendWhatsApp': {\n      type: 'n8n-nodes-base.httpRequest',\n      parameters: {\n        url: `${$env.WHATSAPP_API_URL || ''}/messages`,\n        method: 'POST',\n        sendBody: true,\n        bodyContentType: 'json',\n        body: JSON.stringify({ to: params.to, message: params.message })\n      }\n    },\n    'ScheduleMeeting': {\n      type: 'n8n-nodes-base.googleCalendar',\n      parameters: {\n        operation: 'create',\n        calendar: 'primary',\n        summary: params.title || '',\n        start: params.startTime || '',\n        end: params.endTime || ''\n      }\n    }\n  };\n  \n  const config = nodeConfigs[action.actionType];\n  if (!config) {\n    // Fallback to HTTP request for unknown types\n    return {\n      name: step.name,\n      type: 'n8n-nodes-base.noOp',\n      typeVersion: 1,\n      position,\n      parameters: {}\n    };\n  }\n  \n  return {\n    name: step.name,\n    type: config.type,\n    typeVersion: 1,\n    position,\n    parameters: config.parameters\n  };\n}\n\n// Create condition node\nfunction createConditionNode(step, position) {\n  const condition = step.condition;\n  const opMap = {\n    'Equals': 'equals',\n    'NotEquals': 'notEquals',\n    'Contains': 'contains',\n    'GreaterThan': 'larger',\n    'LessThan': 'smaller',\n    'IsEmpty': 'isEmpty',\n    'IsNotEmpty': 'isNotEmpty'\n  };\n  \n  return {\n    name: step.name,\n    type: 'n8n-nodes-base.if',\n    typeVersion: 2,\n    position,\n    parameters: {\n      conditions: {\n        options: { caseSensitive: true, leftValue: '' },\n        conditions: [{\n          leftValue: condition.leftOperand || '',\n          rightValue: condition.rightOperand || '',\n          operator: { type: 'string', operation: opMap[condition.conditionType] || 'equals' }\n        }],\n        combinator: 'and'\n      }\n    }\n  };\n}\n\n// Build nodes\nconst nodes = [];\nconst stepNodes = {};\n\n// Add trigger\nconst triggerNode = createTriggerNode(spec.trigger);\nnodes.push(triggerNode);\n\n// Add step nodes\nfor (const step of spec.steps) {\n  const position = nextPosition();\n  let node;\n  \n  if (step.type === 'Condition' && step.condition) {\n    node = createConditionNode(step, position);\n  } else if (step.type === 'Action' && step.action) {\n    node = createActionNode(step, position);\n  } else {\n    node = {\n      name: step.name,\n      type: 'n8n-nodes-base.noOp',\n      typeVersion: 1,\n      position,\n      parameters: {}\n    };\n  }\n  \n  nodes.push(node);\n  stepNodes[step.id] = node;\n}\n\n// Build connections\nconst connections = {};\n\nif (spec.steps.length > 0) {\n  // Connect trigger to first step\n  const firstStep = spec.steps[0];\n  if (stepNodes[firstStep.id]) {\n    connections[triggerNode.name] = {\n      main: [[{ node: stepNodes[firstStep.id].name, type: 'main', index: 0 }]]\n    };\n  }\n  \n  // Connect steps based on onSuccess/onFailure\n  for (const step of spec.steps) {\n    const sourceNode = stepNodes[step.id];\n    if (!sourceNode) continue;\n    \n    const mainConnections = [];\n    \n    // Success connections\n    const successConns = [];\n    if (step.onSuccess) {\n      for (const targetId of step.onSuccess) {\n        if (stepNodes[targetId]) {\n          successConns.push({ node: stepNodes[targetId].name, type: 'main', index: 0 });\n        }\n      }\n    }\n    mainConnections.push(successConns);\n    \n    // Failure connections (for conditions)\n    if (step.type === 'Condition' && step.condition?.falseBranch) {\n      const failureConns = [];\n      for (const targetId of step.condition.falseBranch) {\n        if (stepNodes[targetId]) {\n          failureConns.push({ node: stepNodes[targetId].name, type: 'main', index: 0 });\n        }\n      }\n      mainConnections.push(failureConns);\n    }\n    \n    if (mainConnections.some(c => c.length > 0)) {\n      connections[sourceNode.name] = { main: mainConnections };\n    }\n  }\n}\n\n// Build final workflow definition\nconst workflowName = `T${tenantId} :: ${spec.name} :: v${specVersion}`;\n\nconst compiledWorkflow = {\n  name: workflowName,\n  active: false,\n  nodes,\n  connections,\n  settings: {\n    executionOrder: 'v1',\n    saveManualExecutions: true,\n    callerPolicy: 'workflowsFromSameOwner'\n  },\n  tags: [\n    { name: `tenant:${tenantId}` },\n    { name: `spec:${specId}` },\n    { name: 'assistente-executivo' }\n  ]\n};\n\nreturn {\n  ...input,\n  compiledWorkflow,\n  workflowName\n};"
+      },
+      "id": "compile-spec",
+      "name": "Compile Spec to n8n",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_API_URL }}/api/v1/workflows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.compiledWorkflow) }}",
+        "options": {}
+      },
+      "id": "create-workflow",
+      "name": "Create Workflow in n8n",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "n8n-api-auth",
+          "name": "n8n API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/specs/{{ $('Save Spec to Registry').item.json.specId }}/bind",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"n8nWorkflowId\": \"{{ $json.id }}\",\n  \"compiledAt\": \"{{ new Date().toISOString() }}\",\n  \"checksum\": \"{{ require('crypto').createHash('md5').update(JSON.stringify($('Compile Spec to n8n').item.json.compiledWorkflow)).digest('hex') }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Normalize & Validate').item.json.accessToken }}" }
+          ]
+        }
+      },
+      "id": "bind-workflow",
+      "name": "Bind Spec to Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"workflowId\": \"{{ $('Create Workflow in n8n').item.json.id }}\",\n  \"workflowName\": \"{{ $('Compile Spec to n8n').item.json.workflowName }}\",\n  \"specId\": \"{{ $('Save Spec to Registry').item.json.specId }}\",\n  \"specVersion\": {{ $('Save Spec to Registry').item.json.specVersion }},\n  \"warnings\": {{ JSON.stringify($('Normalize & Validate').item.json.warnings) }},\n  \"compiledAt\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1570, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"{{ $json.message || 'Unknown error' }}\",\n  \"correlationId\": \"{{ $('Normalize & Validate').item.json.correlationId || 'unknown' }}\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Get OAuth Token", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get OAuth Token": {
+      "main": [
+        [{ "node": "Normalize & Validate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize & Validate": {
+      "main": [
+        [{ "node": "Save Spec to Registry", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save Spec to Registry": {
+      "main": [
+        [{ "node": "Compile Spec to n8n", "type": "main", "index": 0 }]
+      ]
+    },
+    "Compile Spec to n8n": {
+      "main": [
+        [{ "node": "Create Workflow in n8n", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Workflow in n8n": {
+      "main": [
+        [{ "node": "Bind Spec to Workflow", "type": "main", "index": 0 }]
+      ]
+    },
+    "Bind Spec to Workflow": {
+      "main": [
+        [{ "node": "Respond Success", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "system" },
+    { "name": "flow-builder" }
+  ],
+  "pinData": {},
+  "meta": {
+    "instanceId": "assistente-executivo"
+  }
+}

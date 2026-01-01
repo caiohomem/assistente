@@ -852,6 +852,171 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.ToTable("UserProfiles", (string)null);
                 });
 
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Workflow", b =>
+                {
+                    b.Property<Guid>("WorkflowId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("WorkflowId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("Description");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("IdempotencyKey");
+
+                    b.Property<string>("N8nWorkflowId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("N8nWorkflowId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("Name");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("OwnerUserId");
+
+                    b.Property<string>("SpecJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("SpecJson");
+
+                    b.Property<int>("SpecVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("SpecVersion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("Status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("UpdatedAt");
+
+                    b.HasKey("WorkflowId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Workflows_IdempotencyKey")
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+                    b.HasIndex("N8nWorkflowId")
+                        .HasDatabaseName("IX_Workflows_N8nWorkflowId");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("IX_Workflows_OwnerUserId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Workflows_Status");
+
+                    b.HasIndex("OwnerUserId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Workflows_OwnerUserId_Name");
+
+                    b.HasIndex("OwnerUserId", "Status")
+                        .HasDatabaseName("IX_Workflows_OwnerUserId_Status");
+
+                    b.ToTable("Workflows", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.WorkflowExecution", b =>
+                {
+                    b.Property<Guid>("ExecutionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("ExecutionId");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CompletedAt");
+
+                    b.Property<int?>("CurrentStepIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("CurrentStepIndex");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("ErrorMessage");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("IdempotencyKey");
+
+                    b.Property<string>("InputJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("InputJson");
+
+                    b.Property<string>("N8nExecutionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("N8nExecutionId");
+
+                    b.Property<string>("OutputJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("OutputJson");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("OwnerUserId");
+
+                    b.Property<int>("SpecVersionUsed")
+                        .HasColumnType("integer")
+                        .HasColumnName("SpecVersionUsed");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("StartedAt");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("Status");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("WorkflowId");
+
+                    b.HasKey("ExecutionId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkflowExecutions_IdempotencyKey")
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+                    b.HasIndex("N8nExecutionId")
+                        .HasDatabaseName("IX_WorkflowExecutions_N8nExecutionId");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("IX_WorkflowExecutions_OwnerUserId");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("IX_WorkflowExecutions_StartedAt");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_WorkflowExecutions_Status");
+
+                    b.HasIndex("WorkflowId")
+                        .HasDatabaseName("IX_WorkflowExecutions_WorkflowId");
+
+                    b.HasIndex("OwnerUserId", "Status")
+                        .HasDatabaseName("IX_WorkflowExecutions_OwnerUserId_Status");
+
+                    b.ToTable("WorkflowExecutions", (string)null);
+                });
+
             modelBuilder.Entity("AssistenteExecutivo.Domain.Notifications.EmailOutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1412,6 +1577,43 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("KeycloakSubject")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Workflow", b =>
+                {
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.WorkflowTrigger", "Trigger", b1 =>
+                        {
+                            b1.Property<Guid>("WorkflowId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("ConfigJson")
+                                .HasColumnType("jsonb")
+                                .HasColumnName("TriggerConfigJson");
+
+                            b1.Property<string>("CronExpression")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("TriggerCronExpression");
+
+                            b1.Property<string>("EventName")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("TriggerEventName");
+
+                            b1.Property<int>("Type")
+                                .HasColumnType("integer")
+                                .HasColumnName("TriggerType");
+
+                            b1.HasKey("WorkflowId");
+
+                            b1.ToTable("Workflows");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WorkflowId");
+                        });
+
+                    b.Navigation("Trigger")
                         .IsRequired();
                 });
 

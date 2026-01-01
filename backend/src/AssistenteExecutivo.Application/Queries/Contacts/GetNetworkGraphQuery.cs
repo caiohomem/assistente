@@ -9,3 +9,5 @@ public class GetNetworkGraphQuery : IRequest<NetworkGraphDto>
     public int MaxDepth { get; set; } = 2;
 }
 
+
+

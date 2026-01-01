@@ -31,6 +31,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<DraftDocument> DraftDocuments { get; set; }
     public DbSet<Template> Templates { get; set; }
     public DbSet<Letterhead> Letterheads { get; set; }
+    public DbSet<Workflow> Workflows { get; set; }
+    public DbSet<WorkflowExecution> WorkflowExecutions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

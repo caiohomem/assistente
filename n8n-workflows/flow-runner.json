@@ -1,0 +1,425 @@
+{
+  "name": "System :: Flow Runner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "system/flows/run",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "flow-runner-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KEYCLOAK_TOKEN_URL || 'https://keycloak.callback-local-cchagas.xyz/realms/assistenteexecutivo/protocol/openid-connect/token' }}",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "grant_type", "value": "client_credentials" },
+            { "name": "client_id", "value": "={{ $env.KEYCLOAK_CLIENT_ID || 'assistente-api' }}" },
+            { "name": "client_secret", "value": "={{ $env.KEYCLOAK_CLIENT_SECRET }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-token",
+      "name": "Get OAuth Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and normalize input\nconst webhookData = $('Webhook Trigger').item.json;\nconst tokenData = $('Get OAuth Token').item.json;\nconst input = webhookData;\n\n// Generate run ID\nconst runId = input.runId || `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// Extract fields\nconst workflowId = input.workflowId;\nconst specId = input.specId;\nconst specVersion = input.specVersion;\nconst inputs = input.inputs || {};\nconst tenantId = input.tenantId || 'default';\nconst requestedBy = input.requestedBy || 'system';\nconst idempotencyKey = input.idempotencyKey || runId;\nconst waitForCompletion = input.waitForCompletion !== false; // default true\nconst timeoutSeconds = input.timeoutSeconds || 300; // 5 minutes default\n\n// Validation\nif (!workflowId && !specId) {\n  throw new Error('Either workflowId or specId is required');\n}\n\nreturn {\n  runId,\n  workflowId,\n  specId,\n  specVersion,\n  inputs,\n  tenantId,\n  requestedBy,\n  idempotencyKey,\n  waitForCompletion,\n  timeoutSeconds,\n  startedAt: new Date().toISOString(),\n  accessToken: tokenData.access_token\n};"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/runs/check?idempotencyKey={{ $json.idempotencyKey }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $json.accessToken }}" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "check-idempotency",
+      "name": "Check Idempotency",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-already-executed",
+      "name": "Already Executed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"cached\": true,\n  \"runId\": \"{{ $('Check Idempotency').item.json.runId }}\",\n  \"executionId\": \"{{ $('Check Idempotency').item.json.executionId }}\",\n  \"status\": \"{{ $('Check Idempotency').item.json.status }}\",\n  \"result\": {{ JSON.stringify($('Check Idempotency').item.json.result) }}\n}",
+        "options": {}
+      },
+      "id": "respond-cached",
+      "name": "Respond Cached",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1130, 150]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Validate Input').item.json.workflowId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "has-workflow-id",
+      "name": "Has Workflow ID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1130, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/specs/{{ $('Validate Input').item.json.specId }}/resolve?version={{ $('Validate Input').item.json.specVersion || 'latest' }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Validate Input').item.json.accessToken }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "resolve-spec",
+      "name": "Resolve Spec to Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 550]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge workflow ID from different sources\nconst validateInput = $('Validate Input').item.json;\nconst hasWorkflowId = $('Has Workflow ID?').item.json;\n\nlet workflowId;\nlet resolvedFrom;\n\n// Check which branch we came from\ntry {\n  const resolveSpec = $('Resolve Spec to Workflow').item?.json;\n  if (resolveSpec && resolveSpec.n8nWorkflowId) {\n    workflowId = resolveSpec.n8nWorkflowId;\n    resolvedFrom = 'spec';\n  }\n} catch (e) {\n  // Came from the other branch\n}\n\nif (!workflowId) {\n  workflowId = validateInput.workflowId;\n  resolvedFrom = 'direct';\n}\n\nif (!workflowId) {\n  throw new Error('Could not resolve workflow ID');\n}\n\nreturn {\n  ...validateInput,\n  workflowId,\n  resolvedFrom\n};"
+      },
+      "id": "merge-workflow-id",
+      "name": "Merge Workflow ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1570, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/runs",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"runId\": \"{{ $json.runId }}\",\n  \"workflowId\": \"{{ $json.workflowId }}\",\n  \"tenantId\": \"{{ $json.tenantId }}\",\n  \"requestedBy\": \"{{ $json.requestedBy }}\",\n  \"idempotencyKey\": \"{{ $json.idempotencyKey }}\",\n  \"inputs\": {{ JSON.stringify($json.inputs) }},\n  \"startedAt\": \"{{ $json.startedAt }}\",\n  \"status\": \"Running\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $json.accessToken }}" }
+          ]
+        }
+      },
+      "id": "register-run",
+      "name": "Register Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1790, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_API_URL }}/api/v1/workflows/{{ $('Merge Workflow ID').item.json.workflowId }}/execute",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Merge Workflow ID').item.json.inputs) }}",
+        "options": {}
+      },
+      "id": "execute-workflow",
+      "name": "Execute Target Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2010, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "n8n-api-auth",
+          "name": "n8n API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Merge Workflow ID').item.json.waitForCompletion }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "should-wait",
+      "name": "Wait for Completion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2230, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Poll for execution status\nconst executionId = $('Execute Target Workflow').item.json.id;\nconst timeoutSeconds = $('Merge Workflow ID').item.json.timeoutSeconds;\nconst maxIterations = Math.ceil(timeoutSeconds / 2); // Poll every 2 seconds\n\nlet iteration = 0;\nlet status = 'running';\nlet result = null;\nlet error = null;\n\nwhile (iteration < maxIterations && status === 'running') {\n  // Wait 2 seconds\n  await new Promise(resolve => setTimeout(resolve, 2000));\n  \n  // Check status via n8n API\n  const response = await this.helpers.httpRequest({\n    method: 'GET',\n    url: `${$env.N8N_API_URL}/api/v1/executions/${executionId}`,\n    headers: {\n      'X-N8N-API-KEY': $env.N8N_API_KEY\n    }\n  });\n  \n  if (response.finished) {\n    if (response.stoppedAt) {\n      status = response.data?.resultData?.error ? 'failed' : 'success';\n      result = response.data?.resultData?.lastNodeExecuted;\n      error = response.data?.resultData?.error;\n    }\n  }\n  \n  iteration++;\n}\n\nif (status === 'running') {\n  status = 'timeout';\n}\n\nreturn {\n  executionId,\n  status,\n  result,\n  error,\n  iterations: iteration,\n  finishedAt: new Date().toISOString()\n};"
+      },
+      "id": "poll-status",
+      "name": "Poll Execution Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/runs/{{ $('Register Run').item.json.runId }}",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"n8nExecutionId\": \"{{ $('Execute Target Workflow').item.json.id }}\",\n  \"status\": \"{{ $json.status }}\",\n  \"result\": {{ JSON.stringify($json.result) }},\n  \"error\": {{ JSON.stringify($json.error) }},\n  \"finishedAt\": \"{{ $json.finishedAt }}\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Merge Workflow ID').item.json.accessToken }}" }
+          ]
+        }
+      },
+      "id": "update-run-completed",
+      "name": "Update Run (Completed)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2670, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": {{ $('Poll Execution Status').item.json.status === 'success' }},\n  \"runId\": \"{{ $('Merge Workflow ID').item.json.runId }}\",\n  \"executionId\": \"{{ $('Execute Target Workflow').item.json.id }}\",\n  \"status\": \"{{ $('Poll Execution Status').item.json.status }}\",\n  \"result\": {{ JSON.stringify($('Poll Execution Status').item.json.result) }},\n  \"error\": {{ JSON.stringify($('Poll Execution Status').item.json.error) }},\n  \"startedAt\": \"{{ $('Merge Workflow ID').item.json.startedAt }}\",\n  \"finishedAt\": \"{{ $('Poll Execution Status').item.json.finishedAt }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-completed",
+      "name": "Respond Completed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2890, 300]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.API_BASE_URL }}/api/workflows/runs/{{ $('Register Run').item.json.runId }}",
+        "authentication": "none",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"n8nExecutionId\": \"{{ $('Execute Target Workflow').item.json.id }}\",\n  \"status\": \"Accepted\"\n}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Merge Workflow ID').item.json.accessToken }}" }
+          ]
+        }
+      },
+      "id": "update-run-async",
+      "name": "Update Run (Async)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2450, 550]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"async\": true,\n  \"runId\": \"{{ $('Merge Workflow ID').item.json.runId }}\",\n  \"executionId\": \"{{ $('Execute Target Workflow').item.json.id }}\",\n  \"status\": \"Accepted\",\n  \"message\": \"Workflow execution started. Poll /api/workflows/runs/{{ $('Merge Workflow ID').item.json.runId }} for status.\",\n  \"startedAt\": \"{{ $('Merge Workflow ID').item.json.startedAt }}\"\n}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "respond-async",
+      "name": "Respond Async",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2670, 550]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"{{ $json.message || 'Execution failed' }}\",\n  \"runId\": \"{{ $('Merge Workflow ID').item.json.runId || 'unknown' }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2010, 600]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Get OAuth Token", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get OAuth Token": {
+      "main": [
+        [{ "node": "Validate Input", "type": "main", "index": 0 }]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [{ "node": "Check Idempotency", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Idempotency": {
+      "main": [
+        [{ "node": "Already Executed?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Already Executed?": {
+      "main": [
+        [{ "node": "Respond Cached", "type": "main", "index": 0 }],
+        [{ "node": "Has Workflow ID?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Workflow ID?": {
+      "main": [
+        [{ "node": "Merge Workflow ID", "type": "main", "index": 0 }],
+        [{ "node": "Resolve Spec to Workflow", "type": "main", "index": 0 }]
+      ]
+    },
+    "Resolve Spec to Workflow": {
+      "main": [
+        [{ "node": "Merge Workflow ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge Workflow ID": {
+      "main": [
+        [{ "node": "Register Run", "type": "main", "index": 0 }]
+      ]
+    },
+    "Register Run": {
+      "main": [
+        [{ "node": "Execute Target Workflow", "type": "main", "index": 0 }]
+      ]
+    },
+    "Execute Target Workflow": {
+      "main": [
+        [{ "node": "Wait for Completion?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait for Completion?": {
+      "main": [
+        [{ "node": "Poll Execution Status", "type": "main", "index": 0 }],
+        [{ "node": "Update Run (Async)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Poll Execution Status": {
+      "main": [
+        [{ "node": "Update Run (Completed)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Run (Completed)": {
+      "main": [
+        [{ "node": "Respond Completed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Run (Async)": {
+      "main": [
+        [{ "node": "Respond Async", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "system" },
+    { "name": "flow-runner" }
+  ],
+  "pinData": {},
+  "meta": {
+    "instanceId": "assistente-executivo"
+  }
+}

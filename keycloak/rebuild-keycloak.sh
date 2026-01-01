@@ -25,3 +25,5 @@ sleep 10
 echo "Verificando logs..."
 sudo docker logs keycloak --tail=50
 
+
+

@@ -21,3 +21,5 @@ Write-Host "Criando túnel..." -ForegroundColor Cyan
 # Cria o túnel SSH
 ssh -L 8080:localhost:8080 -i $keyPath ubuntu@$LIGHTSAIL_IP
 
+
+
