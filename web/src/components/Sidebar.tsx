@@ -56,8 +56,12 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
 
   const getActiveTab = () => {
     if (activeTab) return activeTab
-    const currentItem = menuItems.find(item => pathname?.startsWith(item.path))
-    return currentItem?.id || "dashboard"
+    // Find the most specific match (longest path that matches)
+    const matchingItems = menuItems.filter(item => pathname?.startsWith(item.path))
+    if (matchingItems.length === 0) return "dashboard"
+    // Sort by path length descending to get the most specific match
+    const mostSpecific = matchingItems.sort((a, b) => b.path.length - a.path.length)[0]
+    return mostSpecific.id
   }
 
   const currentActiveTab = getActiveTab()

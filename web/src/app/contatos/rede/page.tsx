@@ -35,7 +35,7 @@ export default function NetworkPage() {
 
   if (loading) {
     return (
-      <LayoutWrapper title="Rede de Relacionamentos" subtitle="Visualize sua rede de contatos" activeTab="contacts">
+      <LayoutWrapper title="Rede de Relacionamentos" subtitle="Visualize sua rede de contatos" activeTab="network">
         <div className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">Carregando...</p>
         </div>
@@ -44,7 +44,7 @@ export default function NetworkPage() {
   }
 
   return (
-    <LayoutWrapper title="Rede de Relacionamentos" subtitle="Visualize sua rede de contatos" activeTab="contacts">
+    <LayoutWrapper title="Rede de Relacionamentos" subtitle="Visualize sua rede de contatos" activeTab="network">
       <NetworkGraphClient />
     </LayoutWrapper>
   );

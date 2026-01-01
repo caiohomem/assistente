@@ -16,13 +16,13 @@ export function Header({ title, subtitle }: HeaderProps) {
   const router = useRouter()
 
   return (
-    <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8 animate-blur-in">
+    <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8 animate-blur-in relative z-50">
       <div className="lg:flex-1">
         <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">{title}</h1>
         {subtitle && <p className="text-muted-foreground mt-1.5 text-sm">{subtitle}</p>}
       </div>
-      
-      <div className="flex items-center gap-2 lg:gap-4 relative z-10">
+
+      <div className="flex items-center gap-2 lg:gap-4 relative">
         <div className="relative group hidden md:block">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors duration-300 group-focus-within:text-primary" />
           <input

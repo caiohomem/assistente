@@ -119,7 +119,7 @@ export default function NotasPage() {
 
   if (loading) {
     return (
-      <LayoutWrapper title="Notas" subtitle="Visualize e gerencie notas de contatos" activeTab="contacts">
+      <LayoutWrapper title="Notas" subtitle="Visualize e gerencie notas de contatos" activeTab="notes">
         <div className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">Carregando...</p>
         </div>
@@ -128,7 +128,7 @@ export default function NotasPage() {
   }
 
   return (
-    <LayoutWrapper title="Notas" subtitle="Visualize e gerencie notas de contatos" activeTab="contacts">
+    <LayoutWrapper title="Notas" subtitle="Visualize e gerencie notas de contatos" activeTab="notes">
       <div className="space-y-6">
         {/* Seletor de Contato */}
         <div className="glass-card p-6">
