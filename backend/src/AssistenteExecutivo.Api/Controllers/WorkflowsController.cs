@@ -8,6 +8,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace AssistenteExecutivo.Api.Controllers;
 
@@ -41,7 +42,7 @@ public sealed class WorkflowsController : ControllerBase
         var command = new CreateWorkflowFromSpecCommand
         {
             OwnerUserId = ownerUserId,
-            SpecJson = request.SpecJson,
+            SpecJson = NormalizeSpecJson(request.SpecJson),
             ActivateImmediately = request.ActivateImmediately
         };
 
@@ -333,26 +334,34 @@ public sealed class WorkflowsController : ControllerBase
     /// Saves a workflow spec (called by Flow Builder).
     /// </summary>
     [HttpPost("specs")]
-    [AllowAnonymous] // Uses internal API key authentication
     [ProducesResponseType(typeof(SaveSpecResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<SaveSpecResponse>> SaveSpec(
         [FromBody] SaveSpecRequest request,
-        [FromHeader(Name = "X-Internal-Key")] string? internalKey,
         CancellationToken cancellationToken)
     {
-        // Validate internal API key
-        if (!ValidateInternalKey(internalKey))
+        var ownerUserId = await HttpContext.GetOwnerUserIdAsync(_mediator, cancellationToken);
+        if (ownerUserId == null)
         {
-            return Unauthorized();
+            if (!IsServiceAccountRequest())
+            {
+                return Unauthorized();
+            }
+
+            if (!Guid.TryParse(request.TenantId, out var fallbackOwnerId))
+            {
+                return BadRequest(new { error = "tenantId must be a valid GUID when using service account tokens." });
+            }
+
+            ownerUserId = fallbackOwnerId;
         }
 
         var command = new SaveWorkflowSpecCommand
         {
             Name = request.Name,
             Description = request.Description,
-            SpecJson = request.SpecJson,
-            TenantId = request.TenantId,
+            SpecJson = NormalizeSpecJson(request.SpecJson),
+            TenantId = ownerUserId.Value.ToString(),
             RequestedBy = request.RequestedBy,
             IdempotencyKey = request.IdempotencyKey
         };
@@ -375,20 +384,13 @@ public sealed class WorkflowsController : ControllerBase
     /// Binds a spec to an n8n workflow (called by Flow Builder).
     /// </summary>
     [HttpPut("specs/{specId}/bind")]
-    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> BindSpecToWorkflow(
         Guid specId,
         [FromBody] BindSpecRequest request,
-        [FromHeader(Name = "X-Internal-Key")] string? internalKey,
         CancellationToken cancellationToken)
     {
-        if (!ValidateInternalKey(internalKey))
-        {
-            return Unauthorized();
-        }
-
         var command = new BindSpecToWorkflowCommand
         {
             SpecId = specId,
@@ -411,20 +413,13 @@ public sealed class WorkflowsController : ControllerBase
     /// Resolves a spec ID to its n8n workflow ID (called by Flow Runner).
     /// </summary>
     [HttpGet("specs/{specId}/resolve")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(ResolveSpecResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ResolveSpecResponse>> ResolveSpec(
         Guid specId,
         [FromQuery] int? version,
-        [FromHeader(Name = "X-Internal-Key")] string? internalKey,
         CancellationToken cancellationToken)
     {
-        if (!ValidateInternalKey(internalKey))
-        {
-            return Unauthorized();
-        }
-
         var query = new ResolveSpecToWorkflowQuery
         {
             SpecId = specId,
@@ -449,18 +444,11 @@ public sealed class WorkflowsController : ControllerBase
     /// Checks if a run with the given idempotency key already exists (called by Flow Runner).
     /// </summary>
     [HttpGet("runs/check")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(CheckIdempotencyResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<CheckIdempotencyResponse>> CheckIdempotency(
         [FromQuery] string idempotencyKey,
-        [FromHeader(Name = "X-Internal-Key")] string? internalKey,
         CancellationToken cancellationToken)
     {
-        if (!ValidateInternalKey(internalKey))
-        {
-            return Unauthorized();
-        }
-
         var query = new CheckRunIdempotencyQuery
         {
             IdempotencyKey = idempotencyKey
@@ -482,24 +470,33 @@ public sealed class WorkflowsController : ControllerBase
     /// Registers a new workflow run (called by Flow Runner).
     /// </summary>
     [HttpPost("runs")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(RegisterRunResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RegisterRunResponse>> RegisterRun(
         [FromBody] RegisterRunRequest request,
-        [FromHeader(Name = "X-Internal-Key")] string? internalKey,
         CancellationToken cancellationToken)
     {
-        if (!ValidateInternalKey(internalKey))
+        var ownerUserId = await HttpContext.GetOwnerUserIdAsync(_mediator, cancellationToken);
+        if (ownerUserId == null)
         {
-            return Unauthorized();
+            if (!IsServiceAccountRequest())
+            {
+                return Unauthorized();
+            }
+
+            if (!Guid.TryParse(request.TenantId, out var fallbackOwnerId))
+            {
+                return BadRequest(new { error = "tenantId must be a valid GUID when using service account tokens." });
+            }
+
+            ownerUserId = fallbackOwnerId;
         }
 
         var command = new RegisterWorkflowRunCommand
         {
             RunId = request.RunId,
             WorkflowId = request.WorkflowId,
-            TenantId = request.TenantId,
+            TenantId = ownerUserId.Value.ToString(),
             RequestedBy = request.RequestedBy,
             IdempotencyKey = request.IdempotencyKey,
             Inputs = request.Inputs,
@@ -524,20 +521,13 @@ public sealed class WorkflowsController : ControllerBase
     /// Updates a workflow run status (called by Flow Runner).
     /// </summary>
     [HttpPut("runs/{runId}")]
-    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateRun(
         string runId,
         [FromBody] UpdateRunRequest request,
-        [FromHeader(Name = "X-Internal-Key")] string? internalKey,
         CancellationToken cancellationToken)
     {
-        if (!ValidateInternalKey(internalKey))
-        {
-            return Unauthorized();
-        }
-
         var command = new UpdateWorkflowRunCommand
         {
             RunId = runId,
@@ -558,16 +548,37 @@ public sealed class WorkflowsController : ControllerBase
         return NoContent();
     }
 
-    private bool ValidateInternalKey(string? key)
+    private static string NormalizeSpecJson(JsonElement specJson)
     {
-        // In production, validate against a configured internal API key
-        // For now, accept any non-empty key or allow if coming from localhost
-        if (string.IsNullOrEmpty(key))
+        if (specJson.ValueKind == JsonValueKind.Undefined || specJson.ValueKind == JsonValueKind.Null)
         {
-            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
-            return remoteIp == "127.0.0.1" || remoteIp == "::1" || remoteIp?.StartsWith("10.") == true;
+            return string.Empty;
         }
-        return true; // TODO: Validate against configured key
+
+        if (specJson.ValueKind == JsonValueKind.String)
+        {
+            return specJson.GetString() ?? string.Empty;
+        }
+
+        return specJson.GetRawText();
+    }
+
+    private bool IsServiceAccountRequest()
+    {
+        var preferredUsername = User.FindFirst("preferred_username")?.Value;
+        if (!string.IsNullOrWhiteSpace(preferredUsername) &&
+            preferredUsername.StartsWith("service-account-", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var clientId = User.FindFirst("client_id")?.Value;
+        if (!string.IsNullOrWhiteSpace(clientId))
+        {
+            return true;
+        }
+
+        return User.IsInRole("api.access");
     }
 
     #endregion
@@ -577,7 +588,7 @@ public sealed class WorkflowsController : ControllerBase
 
 public class CreateWorkflowRequest
 {
-    public string SpecJson { get; set; } = string.Empty;
+    public JsonElement SpecJson { get; set; }
     public bool ActivateImmediately { get; set; }
 }
 
@@ -591,7 +602,7 @@ public class SaveSpecRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string SpecJson { get; set; } = string.Empty;
+    public JsonElement SpecJson { get; set; }
     public string TenantId { get; set; } = string.Empty;
     public string RequestedBy { get; set; } = string.Empty;
     public string? IdempotencyKey { get; set; }

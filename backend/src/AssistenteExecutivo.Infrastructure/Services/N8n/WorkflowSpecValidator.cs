@@ -4,6 +4,7 @@ using AssistenteExecutivo.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AssistenteExecutivo.Infrastructure.Services.N8n;
 
@@ -33,7 +34,8 @@ public sealed class WorkflowSpecValidator : IWorkflowSpecValidator
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
     }
 

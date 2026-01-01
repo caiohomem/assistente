@@ -4,6 +4,7 @@ using AssistenteExecutivo.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace AssistenteExecutivo.Infrastructure.Services.N8n;
 
@@ -19,7 +20,8 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            WriteIndented = false
+            WriteIndented = false,
+            Converters = { new JsonStringEnumConverter() }
         };
     }
 

@@ -6,6 +6,7 @@ using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AssistenteExecutivo.Application.Handlers.Workflow;
 
@@ -55,7 +56,8 @@ public class CreateWorkflowFromSpecCommandHandler : IRequestHandler<CreateWorkfl
         // 2. Parse spec to get name and trigger
         var spec = JsonSerializer.Deserialize<WorkflowSpecDto>(request.SpecJson, new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         });
 
         if (spec == null || string.IsNullOrWhiteSpace(spec.Name))
