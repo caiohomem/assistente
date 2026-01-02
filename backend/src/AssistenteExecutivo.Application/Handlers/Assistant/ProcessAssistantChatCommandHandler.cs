@@ -85,20 +85,33 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 hasFunctionCalls = true;
 
-                functionCalls.Add(new FunctionCallInfo
+                var callInfo = new FunctionCallInfo
                 {
                     Name = outputItem.Name,
                     Arguments = outputItem.Arguments ?? ""
-                });
+                };
+                functionCalls.Add(callInfo);
 
-                // Executar função
-                var result = await ExecuteFunctionAsync(
-                    request.OwnerUserId,
-                    outputItem.Name,
-                    outputItem.Arguments ?? "",
-                    cancellationToken);
+                string serializedResult;
+                object? executionResult;
 
-                // Adicionar o function_call original ao input (Responses API requer isso)
+                try
+                {
+                    executionResult = await ExecuteFunctionAsync(
+                        request.OwnerUserId,
+                        outputItem.Name,
+                        outputItem.Arguments ?? "",
+                        cancellationToken);
+
+                    serializedResult = SerializeFunctionResult(executionResult);
+                    callInfo.Result = TruncateForLog(serializedResult);
+                }
+                catch (Exception ex)
+                {
+                    callInfo.Error = ex.Message;
+                    throw;
+                }
+
                 inputItems.Add(new InputFunctionCall
                 {
                     CallId = outputItem.CallId ?? "",
@@ -110,7 +123,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                 inputItems.Add(new InputFunctionCallOutput
                 {
                     CallId = outputItem.CallId ?? "",
-                    Output = JsonSerializer.Serialize(result)
+                    Output = serializedResult
                 });
             }
             // Verificar se é text direto
@@ -147,17 +160,32 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                 {
                     hasFunctionCalls = true;
 
-                    functionCalls.Add(new FunctionCallInfo
+                    var callInfo = new FunctionCallInfo
                     {
                         Name = outputItem.Name,
                         Arguments = outputItem.Arguments ?? ""
-                    });
+                    };
+                    functionCalls.Add(callInfo);
 
-                    var result = await ExecuteFunctionAsync(
-                        request.OwnerUserId,
-                        outputItem.Name,
-                        outputItem.Arguments ?? "",
-                        cancellationToken);
+                    string serializedResult;
+                    object? executionResult;
+
+                    try
+                    {
+                        executionResult = await ExecuteFunctionAsync(
+                            request.OwnerUserId,
+                            outputItem.Name,
+                            outputItem.Arguments ?? "",
+                            cancellationToken);
+
+                        serializedResult = SerializeFunctionResult(executionResult);
+                        callInfo.Result = TruncateForLog(serializedResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        callInfo.Error = ex.Message;
+                        throw;
+                    }
 
                     inputItems.Add(new InputFunctionCall
                     {
@@ -169,7 +197,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     inputItems.Add(new InputFunctionCallOutput
                     {
                         CallId = outputItem.CallId ?? "",
-                        Output = JsonSerializer.Serialize(result)
+                        Output = serializedResult
                     });
                 }
                 else if (outputItem.Type == "text" && outputItem.Text != null)
@@ -208,6 +236,27 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             Message = finalTextContent != "" ? finalTextContent : "Não foi possível gerar uma resposta.",
             FunctionCalls = functionCalls
         };
+    }
+
+    private string SerializeFunctionResult(object? result)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao serializar resultado da função para log");
+            return result?.ToString() ?? "null";
+        }
+    }
+
+    private static string TruncateForLog(string? value, int maxLength = 4000)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value ?? string.Empty;
+
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...(truncated)";
     }
 
     private async Task<OpenAIResponse> CallOpenAIAsync(
