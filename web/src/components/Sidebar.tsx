@@ -1,6 +1,4 @@
 "use client"
-
-import { useState, useEffect } from "react"
 import {
   LayoutDashboard,
   Users,
@@ -8,10 +6,8 @@ import {
   Mic,
   FileText,
   Network,
-  MessageSquare,
   Settings,
   Sparkles,
-  Menu,
   X,
   Bell,
   Coins,
@@ -173,4 +169,3 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
     </>
   )
 }
-

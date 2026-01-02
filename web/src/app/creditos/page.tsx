@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCreditBalance, listCreditTransactions, purchaseCreditPackage } from '@/lib/api/creditsApi'
 import { getBffSession } from '@/lib/bff'
@@ -22,9 +22,50 @@ export default function CreditosPage() {
   const [showPackageModal, setShowPackageModal] = useState(false)
   const [purchasing, setPurchasing] = useState(false)
 
+  const loadCreditsData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Verificar autenticação
+      const session = await getBffSession()
+      if (!session.authenticated) {
+        router.push('/login')
+        return
+      }
+
+      // Carregar dados em paralelo
+      const [balanceResult, transactionsResult] = await Promise.allSettled([
+        getCreditBalance(),
+        listCreditTransactions()
+      ])
+
+      // Processar saldo
+      if (balanceResult.status === 'fulfilled') {
+        setBalance(balanceResult.value)
+      } else {
+        console.error('Erro ao carregar saldo:', balanceResult.reason)
+      }
+
+      // Processar transações
+      if (transactionsResult.status === 'fulfilled') {
+        const sortedTransactions = transactionsResult.value
+          .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+        setTransactions(sortedTransactions)
+      } else {
+        console.error('Erro ao carregar transações:', transactionsResult.reason)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar dados de créditos:', err)
+      setError('Erro ao carregar dados de créditos')
+    } finally {
+      setLoading(false)
+    }
+  }, [router])
+
   useEffect(() => {
     loadCreditsData()
-  }, [router])
+  }, [loadCreditsData])
 
   if (loading) {
     return (
@@ -99,54 +140,18 @@ export default function CreditosPage() {
       // Mostrar mensagem de sucesso (opcional)
       // Você pode adicionar um toast/notificação aqui
       console.log(`Pacote ${result.packageName} comprado com sucesso! ${result.creditsAdded} créditos adicionados.`)
-    } catch (err: any) {
-      console.error('Erro ao comprar pacote:', err)
-      setError(err?.message || 'Erro ao comprar pacote de créditos')
+    } catch (error: unknown) {
+      console.error('Erro ao comprar pacote:', error)
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Erro ao comprar pacote de créditos'
+      setError(message)
     } finally {
       setPurchasing(false)
     }
   }
 
-  async function loadCreditsData() {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Verificar autenticação
-      const session = await getBffSession()
-      if (!session.authenticated) {
-        router.push('/login')
-        return
-      }
-
-      // Carregar dados em paralelo
-      const [balanceResult, transactionsResult] = await Promise.allSettled([
-        getCreditBalance(),
-        listCreditTransactions()
-      ])
-
-      // Processar saldo
-      if (balanceResult.status === 'fulfilled') {
-        setBalance(balanceResult.value)
-      } else {
-        console.error('Erro ao carregar saldo:', balanceResult.reason)
-      }
-
-      // Processar transações
-      if (transactionsResult.status === 'fulfilled') {
-        const sortedTransactions = transactionsResult.value
-          .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-        setTransactions(sortedTransactions)
-      } else {
-        console.error('Erro ao carregar transações:', transactionsResult.reason)
-      }
-    } catch (err) {
-      console.error('Erro ao carregar dados de créditos:', err)
-      setError('Erro ao carregar dados de créditos')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <LayoutWrapper title="Créditos" subtitle="Gerencie seu saldo de créditos" activeTab="credits">
@@ -294,5 +299,3 @@ export default function CreditosPage() {
     </LayoutWrapper>
   )
 }
-
-

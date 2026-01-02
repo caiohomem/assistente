@@ -2,6 +2,7 @@
 
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 import type { Note, CreateTextNoteRequest, UpdateNoteRequest } from "../types/note";
+import { extractApiErrorMessage } from "./types";
 
 /**
  * Lista notas de um contato (client-side).
@@ -26,9 +27,7 @@ export async function listNotesByContactClient(contactId: string): Promise<Note[
     const contentType = res.headers.get("content-type") ?? "";
     const maybeJson = contentType.includes("application/json");
     const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
+    const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
     throw new Error(message);
   }
 
@@ -62,9 +61,7 @@ export async function createTextNoteClient(
     const contentType = res.headers.get("content-type") ?? "";
     const maybeJson = contentType.includes("application/json");
     const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
+    const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
     throw new Error(message);
   }
 
@@ -98,9 +95,7 @@ export async function updateNoteClient(
     const contentType = res.headers.get("content-type") ?? "";
     const maybeJson = contentType.includes("application/json");
     const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
+    const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
     throw new Error(message);
   }
 
@@ -129,9 +124,7 @@ export async function deleteNoteClient(noteId: string): Promise<void> {
     const contentType = res.headers.get("content-type") ?? "";
     const maybeJson = contentType.includes("application/json");
     const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
+    const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
     throw new Error(message);
   }
 }

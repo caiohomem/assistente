@@ -1,4 +1,5 @@
 import { getApiBaseUrl, getBffSession, BffSession } from "@/lib/bff";
+import { extractApiErrorMessage } from "./types";
 
 /**
  * Cliente HTTP para fazer requisições diretas à API (sem proxy do Next.js).
@@ -105,12 +106,7 @@ export class ApiClient {
         return undefined as TResponse; // Não lançar erro para evitar loop
       }
 
-      const message =
-        (data &&
-          typeof data === "object" &&
-          "message" in data &&
-          String((data as any).message)) ||
-        `Request failed: ${res.status}`;
+      const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
       throw new Error(message);
     }
 
@@ -204,4 +200,3 @@ export async function getApiClientForServer(cookieHeader?: string) {
     ) => client.patch<TResponse>(path, body, { ...options, cookieHeader }),
   };
 }
-

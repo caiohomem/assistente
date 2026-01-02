@@ -2,18 +2,10 @@
 
 import { useState, useRef } from "react";
 import { processAudioNote } from "@/lib/api/captureApi";
-import type { CaptureJob, JobStatus, JobType } from "@/lib/types/capture";
+import type { CaptureJob, JobStatus } from "@/lib/types/capture";
 import { JobStatus as JobStatusEnum, JobType as JobTypeEnum } from "@/lib/types/capture";
 import { Button } from "@/components/ui/button";
-import { getApiBaseUrl } from "@/lib/bff";
 import { Mic, StopCircle, Upload, X } from "lucide-react";
-
-function formatTime(seconds: number): string {
-  if (isNaN(seconds)) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 interface NovaNotaAudioClientProps {
   contactId: string;
@@ -447,4 +439,3 @@ export function NovaNotaAudioClient({ contactId, onSuccess, onCancel }: NovaNota
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -33,11 +33,7 @@ export default function EmailTemplatesPage() {
   const [filterActiveOnly, setFilterActiveOnly] = useState<boolean | undefined>(undefined);
   const [filterType, setFilterType] = useState<EmailTemplateType | undefined>(undefined);
 
-  useEffect(() => {
-    loadTemplates();
-  }, [page, filterActiveOnly, filterType]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -57,7 +53,11 @@ export default function EmailTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, filterActiveOnly, filterType]);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {

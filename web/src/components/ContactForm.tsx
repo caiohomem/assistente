@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { Address, CreateContactRequest, UpdateContactRequest } from "@/lib/types/contact";
+import { Address } from "@/lib/types/contact";
 
 export interface ContactFormData {
   firstName: string;
@@ -424,4 +424,3 @@ export function ContactForm({
     </form>
   );
 }
-

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./src/i18n/routing";
 
+type AppLocale = (typeof routing.locales)[number];
+
+const isSupportedLocale = (locale: string): locale is AppLocale =>
+  routing.locales.includes(locale as AppLocale);
+
 function pickLocaleFromAcceptLanguage(acceptLanguage: string | null): string {
   if (!acceptLanguage) return routing.defaultLocale;
 
@@ -49,7 +54,7 @@ export default function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
   const existing = req.cookies.get("NEXT_LOCALE")?.value;
-  if (existing && routing.locales.includes(existing as any)) {
+  if (existing && isSupportedLocale(existing)) {
     return res;
   }
 
@@ -76,8 +81,6 @@ export default function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
 };
-
-
 
 
 

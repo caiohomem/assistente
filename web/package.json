@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
     "@swc/helpers": "^0.5.18",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",

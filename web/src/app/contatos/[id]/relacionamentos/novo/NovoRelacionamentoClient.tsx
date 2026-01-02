@@ -100,8 +100,9 @@ export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClient
       await addRelationshipClient(contactId, formData);
       router.push(`/contatos/${contactId}`);
       router.refresh();
-    } catch (err: any) {
-      const errorMessage = err.message || tRel("errorCreating");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error && error.message ? error.message : tRel("errorCreating");
       if (errorMessage.includes("duplicate") || errorMessage.includes("já existe")) {
         setError(tRel("duplicateRelationship"));
       } else if (errorMessage.includes("não encontrado") || errorMessage.includes("not found")) {
@@ -247,4 +248,3 @@ export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClient
     </form>
   );
 }
-

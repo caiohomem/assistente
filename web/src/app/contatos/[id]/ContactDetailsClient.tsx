@@ -72,6 +72,26 @@ function getNoteTypeLabel(type: NoteType): string {
   }
 }
 
+type WindowWithWebkitAudioContext = Window &
+  typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+  };
+
+const getAudioContextConstructor = (): typeof AudioContext | undefined => {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  const win = window as WindowWithWebkitAudioContext;
+  return win.AudioContext ?? win.webkitAudioContext;
+};
+
+const getErrorDescription = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message || error.name;
+  }
+  return String(error);
+};
+
 export function ContactDetailsClient({
   contactId,
   contact,
@@ -636,7 +656,12 @@ function AudioPlayer({ noteId }: { noteId: string }) {
         let audioContext = audioContextRef.current;
         
         if (!audioContext) {
-          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const AudioContextConstructor = getAudioContextConstructor();
+          if (!AudioContextConstructor) {
+            console.warn("Web Audio API não está disponível neste navegador.");
+            return;
+          }
+          audioContext = new AudioContextConstructor();
         }
         
         // Resume AudioContext if suspended (required on Android)
@@ -656,17 +681,17 @@ function AudioPlayer({ noteId }: { noteId: string }) {
             source.connect(analyser);
             analyser.connect(audioContext.destination);
             analyserRef.current = analyser;
-          } catch (err: any) {
+          } catch (error: unknown) {
             // If createMediaElementSource fails (e.g., not supported on Android, already connected), 
             // skip visualization but don't block audio playback
-            console.warn('Audio visualization not available:', err.message || err.name);
+            console.warn('Audio visualization not available:', getErrorDescription(error));
             analyserRef.current = null; // Clear analyser so visualization is skipped
           }
         }
         
         audioContextRef.current = audioContext;
-      } catch (err: any) {
-        console.warn('Error setting up audio context for visualization:', err.message || err);
+      } catch (error: unknown) {
+        console.warn('Error setting up audio context for visualization:', getErrorDescription(error));
         // Don't block audio playback if visualization fails
         audioContextRef.current = null;
         analyserRef.current = null;
@@ -676,8 +701,8 @@ function AudioPlayer({ noteId }: { noteId: string }) {
     // Only setup AudioContext if audio has a source
     // But don't wait for it - audio playback should work independently
     if (audio.src) {
-      setupAudioContext().catch(err => {
-        console.warn('Failed to setup audio context:', err);
+      setupAudioContext().catch((error: unknown) => {
+        console.warn('Failed to setup audio context:', getErrorDescription(error));
       });
     }
 
@@ -792,8 +817,8 @@ function AudioPlayer({ noteId }: { noteId: string }) {
         // Try to resume AudioContext if it exists (for visualization)
         // But don't block playback if it fails
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(err => {
-            console.warn('Failed to resume AudioContext:', err);
+          audioContextRef.current.resume().catch((error: unknown) => {
+            console.warn('Failed to resume AudioContext:', getErrorDescription(error));
           });
         }
         
@@ -808,20 +833,24 @@ function AudioPlayer({ noteId }: { noteId: string }) {
         
         setIsPlaying(true);
       }
-    } catch (err: any) {
-      console.error('Error playing audio:', err);
+    } catch (error: unknown) {
+      console.error('Error playing audio:', error);
       // Provide more specific error messages
       let errorMessage = "Erro ao reproduzir áudio";
-      if (err.message) {
-        errorMessage = err.message;
-      } else if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
-        errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+      if (error instanceof Error) {
+        if (error.message) {
+          errorMessage = error.message;
+        }
+        if (error.name === 'NotSupportedError' || error.name === 'NotAllowedError') {
+          errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+        }
+      } else if (error != null) {
+        errorMessage = String(error);
       }
       setError(errorMessage);
       setIsPlaying(false);
     }
   }
-
   function handlePlaybackRateChange(newRate: number) {
     setPlaybackRate(newRate);
     if (audioRef.current) {
@@ -1115,7 +1144,12 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
         let audioContext = audioContextRef.current;
         
         if (!audioContext) {
-          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const AudioContextConstructor = getAudioContextConstructor();
+          if (!AudioContextConstructor) {
+            console.warn("Web Audio API não está disponível neste navegador.");
+            return;
+          }
+          audioContext = new AudioContextConstructor();
         }
         
         // Resume AudioContext if suspended (required on Android)
@@ -1135,17 +1169,17 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
             source.connect(analyser);
             analyser.connect(audioContext.destination);
             analyserRef.current = analyser;
-          } catch (err: any) {
+          } catch (error: unknown) {
             // If createMediaElementSource fails (e.g., not supported on Android, already connected), 
             // skip visualization but don't block audio playback
-            console.warn('Audio visualization not available:', err.message || err.name);
+            console.warn('Audio visualization not available:', getErrorDescription(error));
             analyserRef.current = null; // Clear analyser so visualization is skipped
           }
         }
         
         audioContextRef.current = audioContext;
-      } catch (err: any) {
-        console.warn('Error setting up audio context for visualization:', err.message || err);
+      } catch (error: unknown) {
+        console.warn('Error setting up audio context for visualization:', getErrorDescription(error));
         // Don't block audio playback if visualization fails
         audioContextRef.current = null;
         analyserRef.current = null;
@@ -1155,8 +1189,8 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
     // Only setup AudioContext if audio has a source
     // But don't wait for it - audio playback should work independently
     if (audio.src) {
-      setupAudioContext().catch(err => {
-        console.warn('Failed to setup audio context:', err);
+      setupAudioContext().catch((error: unknown) => {
+        console.warn('Failed to setup audio context:', getErrorDescription(error));
       });
     }
 
@@ -1318,7 +1352,7 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
       synthesisRef.current = null;
     };
 
-    utterance.onerror = (e) => {
+    utterance.onerror = () => {
       setError("Erro ao reproduzir áudio");
       setIsPlaying(false);
       synthesisRef.current = null;
@@ -1349,8 +1383,8 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
         // Try to resume AudioContext if it exists (for visualization)
         // But don't block playback if it fails
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(err => {
-            console.warn('Failed to resume AudioContext:', err);
+          audioContextRef.current.resume().catch((error: unknown) => {
+            console.warn('Failed to resume AudioContext:', getErrorDescription(error));
           });
         }
         
@@ -1367,14 +1401,19 @@ function StructuredDataTTSPlayer({ structuredData }: { structuredData: string })
           
           setIsPlaying(true);
         }
-      } catch (err: any) {
-        console.error('Error playing audio:', err);
+      } catch (error: unknown) {
+        console.error('Error playing audio:', error);
         // Provide more specific error messages
         let errorMessage = "Erro ao reproduzir áudio";
-        if (err.message) {
-          errorMessage = err.message;
-        } else if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
-          errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+        if (error instanceof Error) {
+          if (error.message) {
+            errorMessage = error.message;
+          }
+          if (error.name === 'NotSupportedError' || error.name === 'NotAllowedError') {
+            errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+          }
+        } else if (error != null) {
+          errorMessage = String(error);
         }
         setError(errorMessage);
         setIsPlaying(false);

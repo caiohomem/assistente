@@ -1,3 +1,10 @@
+import { buildApiError } from "./api/types";
+
+type ErrorWithMeta = Error & {
+  status?: number;
+  url?: string;
+};
+
 export type BffSession = {
   authenticated: boolean;
   csrfToken: string;
@@ -28,6 +35,14 @@ export function getApiBaseUrl(): string {
     "",
   );
 }
+
+const parseJsonResponse = async <T>(res: Response): Promise<T | undefined> => {
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return undefined;
+  }
+};
 
 export async function getBffSession(params?: {
   cookieHeader?: string;
@@ -158,10 +173,6 @@ export async function bffPostJson<TResponse>(
     body: JSON.stringify(body),
   });
 
-  const contentType = res.headers.get("content-type") ?? "";
-  const maybeJson = contentType.includes("application/json");
-  const data = maybeJson ? await res.json() : undefined;
-
   if (!res.ok) {
     // Tratar 401 (Não autorizado) - redirecionar para login no cliente
     if (res.status === 401 && typeof window !== "undefined") {
@@ -172,13 +183,11 @@ export async function bffPostJson<TResponse>(
       return {} as TResponse;
     }
 
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
-  return data as TResponse;
+  const data = await parseJsonResponse<TResponse>(res);
+  return (data ?? ({} as TResponse));
 }
 
 export async function bffPostNoContent(
@@ -211,13 +220,7 @@ export async function bffPostNoContent(
       return; // Não lançar erro para evitar loop
     }
 
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 }
 
@@ -258,10 +261,6 @@ export async function bffGetJson<TResponse>(
     headers,
   });
 
-  const contentType = res.headers.get("content-type") ?? "";
-  const maybeJson = contentType.includes("application/json");
-  const data = maybeJson ? await res.json() : undefined;
-
   if (!res.ok) {
     // Tratar 401 (Não autorizado) - redirecionar para login no cliente
     if (res.status === 401 && typeof window !== "undefined") {
@@ -276,28 +275,24 @@ export async function bffGetJson<TResponse>(
     if (typeof window === "undefined") {
       console.error(`[Server] Request failed: ${res.status} ${res.statusText}`);
       console.error(`[Server] URL: ${url}`);
-      console.error(`[Server] Response:`, data);
       console.error(`[Server] Response headers:`, Object.fromEntries(res.headers.entries()));
     }
-    
+
+    const error = (await buildApiError(res)) as ErrorWithMeta;
+
     // 404 é um caso esperado para endpoints opcionais (como /api/plans)
-    // Não logar como erro crítico
     if (res.status === 404) {
-      const error = new Error(`Endpoint not found: ${path}`);
-      (error as any).status = 404;
+      error.status = 404;
       throw error;
     }
-    
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    const error = new Error(message);
-    (error as any).status = res.status;
-    (error as any).url = url;
+
+    error.status = res.status;
+    error.url = url;
     throw error;
   }
 
-  return data as TResponse;
+  const data = await parseJsonResponse<TResponse>(res);
+  return (data ?? ({} as TResponse));
 }
 
 export async function bffPutJson<TResponse>(
@@ -324,10 +319,6 @@ export async function bffPutJson<TResponse>(
     body: JSON.stringify(body),
   });
 
-  const contentType = res.headers.get("content-type") ?? "";
-  const maybeJson = contentType.includes("application/json");
-  const data = maybeJson ? await res.json() : undefined;
-
   if (!res.ok) {
     // Tratar 401 (Não autorizado) - redirecionar para login no cliente
     if (res.status === 401 && typeof window !== "undefined") {
@@ -338,13 +329,11 @@ export async function bffPutJson<TResponse>(
       return {} as TResponse;
     }
 
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
-  return data as TResponse;
+  const data = await parseJsonResponse<TResponse>(res);
+  return (data ?? ({} as TResponse));
 }
 
 export async function bffDelete(
@@ -377,13 +366,6 @@ export async function bffDelete(
       return; // Não lançar erro para evitar loop
     }
 
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 }
-

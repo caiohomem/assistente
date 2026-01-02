@@ -1,15 +1,25 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { uploadCard, getCaptureJobById, type UploadCardResponse } from "@/lib/api/captureApi";
 import { updateContactClient, getContactByIdClient } from "@/lib/api/contactsApiClient";
-import type { CaptureJob, CardScanResult } from "@/lib/types/capture";
+import type { CardScanResult } from "@/lib/types/capture";
 import type { Contact } from "@/lib/types/contact";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
 import { BusinessCardScanner } from "@/components/BusinessCardScanner";
+
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+};
 
 export default function UploadCartaoPage() {
   const router = useRouter();
@@ -35,36 +45,6 @@ export default function UploadCartaoPage() {
     company: "",
     jobTitle: "",
   });
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setError("Tipo de arquivo não suportado. Use JPEG, PNG ou WebP.");
-      return;
-    }
-
-    // Validate file size (10MB)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setError("Arquivo muito grande. Tamanho máximo: 10MB.");
-      return;
-    }
-
-    setSelectedFile(file);
-    setError(null);
-    setSuccess(null);
-
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleUpload = async () => {
     if (!selectedFile) {
@@ -104,8 +84,8 @@ export default function UploadCartaoPage() {
       setContact(createdContact);
       
       setSuccess("Cartão processado com sucesso! Revise os dados abaixo.");
-    } catch (err: any) {
-      setError(err.message || "Erro ao processar cartão.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Erro ao processar cartão."));
     } finally {
       setUploading(false);
       setProcessing(false);
@@ -148,8 +128,8 @@ export default function UploadCartaoPage() {
       setTimeout(() => {
         router.push(`/contatos/${contact.contactId}`);
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Erro ao atualizar contato.");
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, "Erro ao atualizar contato."));
     } finally {
       setUploading(false);
     }
@@ -186,7 +166,7 @@ export default function UploadCartaoPage() {
     }
 
     // Validate file size (10MB)
-    const maxSize = 10 * 1024 * 1024
+    const maxSize = DEFAULT_MAX_FILE_SIZE
     if (file.size > maxSize) {
       setError("Arquivo muito grande. Tamanho máximo: 10MB.")
       return
@@ -230,10 +210,13 @@ export default function UploadCartaoPage() {
           <div className="glass-card p-6">
             <h3 className="text-lg font-semibold mb-4">Preview</h3>
             <div className="border border-border rounded-xl p-4 bg-secondary/20">
-              <img
+              <Image
                 src={previewUrl}
                 alt="Preview"
+                width={640}
+                height={360}
                 className="max-w-full h-auto max-h-64 mx-auto rounded"
+                unoptimized
               />
             </div>
             <div className="mt-4 flex gap-4">

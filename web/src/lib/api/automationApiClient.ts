@@ -1,6 +1,7 @@
 "use client";
 
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
+import { throwIfErrorResponse } from "./types";
 import type {
   Reminder,
   CreateReminderRequest,
@@ -85,23 +86,34 @@ export async function listRemindersClient(
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+  if (res.status === 204) {
+    return {
+      reminders: [],
+      total: 0,
+      page: params.page ?? 1,
+      pageSize: params.pageSize ?? 20,
+      totalPages: 0,
+    };
   }
-
-  const data = await res.json();
+  await throwIfErrorResponse(res);
+  const data = (await res.json()) as {
+    reminders?: Reminder[];
+    Reminders?: Reminder[];
+    total?: number;
+    Total?: number;
+    page?: number;
+    Page?: number;
+    pageSize?: number;
+    PageSize?: number;
+    totalPages?: number;
+    TotalPages?: number;
+  };
   return {
-    reminders: data.reminders || data.Reminders || [],
-    total: data.total || data.Total || 0,
-    page: data.page || data.Page || 1,
-    pageSize: data.pageSize || data.PageSize || 20,
-    totalPages: data.totalPages || data.TotalPages || 0,
+    reminders: data.reminders ?? data.Reminders ?? [],
+    total: data.total ?? data.Total ?? 0,
+    page: data.page ?? data.Page ?? 1,
+    pageSize: data.pageSize ?? data.PageSize ?? 20,
+    totalPages: data.totalPages ?? data.TotalPages ?? 0,
   };
 }
 
@@ -121,17 +133,9 @@ export async function getReminderByIdClient(reminderId: string): Promise<Reminde
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  return await res.json() as Reminder;
+  return (await res.json()) as Reminder;
 }
 
 export async function createReminderClient(
@@ -153,15 +157,7 @@ export async function createReminderClient(
     body: JSON.stringify(request),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const reminderId = await res.text();
   return { reminderId: reminderId.replace(/"/g, "") };
@@ -191,15 +187,7 @@ export async function updateReminderStatusClient(
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 // ============================================================================
@@ -243,23 +231,25 @@ export async function listDraftsClient(
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
-
-  const data = await res.json();
+  await throwIfErrorResponse(res);
+  const data = (await res.json()) as {
+    drafts?: DraftDocument[];
+    Drafts?: DraftDocument[];
+    total?: number;
+    Total?: number;
+    page?: number;
+    Page?: number;
+    pageSize?: number;
+    PageSize?: number;
+    totalPages?: number;
+    TotalPages?: number;
+  };
   return {
-    drafts: data.drafts || data.Drafts || [],
-    total: data.total || data.Total || 0,
-    page: data.page || data.Page || 1,
-    pageSize: data.pageSize || data.PageSize || 20,
-    totalPages: data.totalPages || data.TotalPages || 0,
+    drafts: data.drafts ?? data.Drafts ?? [],
+    total: data.total ?? data.Total ?? 0,
+    page: data.page ?? data.Page ?? 1,
+    pageSize: data.pageSize ?? data.PageSize ?? 20,
+    totalPages: data.totalPages ?? data.TotalPages ?? 0,
   };
 }
 
@@ -279,17 +269,9 @@ export async function getDraftByIdClient(draftId: string): Promise<DraftDocument
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  return await res.json() as DraftDocument;
+  return (await res.json()) as DraftDocument;
 }
 
 export async function createDraftClient(
@@ -311,15 +293,7 @@ export async function createDraftClient(
     body: JSON.stringify(request),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const draftId = await res.text();
   return { draftId: draftId.replace(/"/g, "") };
@@ -348,16 +322,7 @@ export async function updateDraftClient(
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function approveDraftClient(draftId: string): Promise<void> {
@@ -378,16 +343,7 @@ export async function approveDraftClient(draftId: string): Promise<void> {
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function sendDraftClient(draftId: string): Promise<void> {
@@ -408,16 +364,7 @@ export async function sendDraftClient(draftId: string): Promise<void> {
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 // ============================================================================
@@ -457,23 +404,25 @@ export async function listTemplatesClient(
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
-
-  const data = await res.json();
+  await throwIfErrorResponse(res);
+  const data = (await res.json()) as {
+    templates?: Template[];
+    Templates?: Template[];
+    total?: number;
+    Total?: number;
+    page?: number;
+    Page?: number;
+    pageSize?: number;
+    PageSize?: number;
+    totalPages?: number;
+    TotalPages?: number;
+  };
   return {
-    templates: data.templates || data.Templates || [],
-    total: data.total || data.Total || 0,
-    page: data.page || data.Page || 1,
-    pageSize: data.pageSize || data.PageSize || 20,
-    totalPages: data.totalPages || data.TotalPages || 0,
+    templates: data.templates ?? data.Templates ?? [],
+    total: data.total ?? data.Total ?? 0,
+    page: data.page ?? data.Page ?? 1,
+    pageSize: data.pageSize ?? data.PageSize ?? 20,
+    totalPages: data.totalPages ?? data.TotalPages ?? 0,
   };
 }
 
@@ -493,17 +442,9 @@ export async function getTemplateByIdClient(templateId: string): Promise<Templat
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  return await res.json() as Template;
+  return (await res.json()) as Template;
 }
 
 export async function createTemplateClient(
@@ -525,15 +466,7 @@ export async function createTemplateClient(
     body: JSON.stringify(request),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const templateId = await res.text();
   return { templateId: templateId.replace(/"/g, "") };
@@ -562,16 +495,7 @@ export async function updateTemplateClient(
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 // ============================================================================
@@ -609,23 +533,25 @@ export async function listLetterheadsClient(
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
-
-  const data = await res.json();
+  await throwIfErrorResponse(res);
+  const data = (await res.json()) as {
+    letterheads?: Letterhead[];
+    Letterheads?: Letterhead[];
+    total?: number;
+    Total?: number;
+    page?: number;
+    Page?: number;
+    pageSize?: number;
+    PageSize?: number;
+    totalPages?: number;
+    TotalPages?: number;
+  };
   return {
-    letterheads: data.letterheads || data.Letterheads || [],
-    total: data.total || data.Total || 0,
-    page: data.page || data.Page || 1,
-    pageSize: data.pageSize || data.PageSize || 20,
-    totalPages: data.totalPages || data.TotalPages || 0,
+    letterheads: data.letterheads ?? data.Letterheads ?? [],
+    total: data.total ?? data.Total ?? 0,
+    page: data.page ?? data.Page ?? 1,
+    pageSize: data.pageSize ?? data.PageSize ?? 20,
+    totalPages: data.totalPages ?? data.TotalPages ?? 0,
   };
 }
 
@@ -645,17 +571,9 @@ export async function getLetterheadByIdClient(letterheadId: string): Promise<Let
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  return await res.json() as Letterhead;
+  return (await res.json()) as Letterhead;
 }
 
 export async function createLetterheadClient(
@@ -677,15 +595,7 @@ export async function createLetterheadClient(
     body: JSON.stringify(request),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const letterheadId = await res.text();
   return { letterheadId: letterheadId.replace(/"/g, "") };
@@ -714,16 +624,7 @@ export async function updateLetterheadClient(
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function deleteReminderClient(reminderId: string): Promise<void> {
@@ -744,16 +645,7 @@ export async function deleteReminderClient(reminderId: string): Promise<void> {
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function deleteDraftClient(draftId: string): Promise<void> {
@@ -774,16 +666,7 @@ export async function deleteDraftClient(draftId: string): Promise<void> {
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function deleteTemplateClient(templateId: string): Promise<void> {
@@ -804,16 +687,7 @@ export async function deleteTemplateClient(templateId: string): Promise<void> {
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function deleteLetterheadClient(letterheadId: string): Promise<void> {
@@ -834,15 +708,5 @@ export async function deleteLetterheadClient(letterheadId: string): Promise<void
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
-

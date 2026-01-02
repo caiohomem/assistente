@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { getBffSession } from "@/lib/bff";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,7 @@ function ExecuteModal({ workflow, onClose, onExecute, isLoading }: ExecuteModalP
     try {
       JSON.parse(inputJson);
       setJsonError(null);
-    } catch (e) {
+    } catch {
       setJsonError("JSON inválido");
       return;
     }
@@ -178,7 +177,6 @@ function ExecuteModal({ workflow, onClose, onExecute, isLoading }: ExecuteModalP
 }
 
 export default function WorkflowsPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("workflows");
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);

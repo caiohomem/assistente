@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { getApiBaseUrl, getBffSession } from '@/lib/bff';
@@ -14,16 +15,14 @@ export default function LoginPage() {
   const keycloakSubject = searchParams?.get('keycloakSubject');
   const apiBase = getApiBaseUrl();
 
-  const [isChecking, setIsChecking] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const isDeletedError = authError === 'usuario_deletado' && !!email && !!keycloakSubject;
+  const [isChecking, setIsChecking] = useState(!isDeletedError);
+  const [hasError, setHasError] = useState(isDeletedError);
   const [isReactivating, setIsReactivating] = useState(false);
   const hasRedirectedRef = useRef(false);
 
   useEffect(() => {
-    // Se já temos erro de usuário deletado com email e keycloakSubject, não fazer nada
-    if (authError === 'usuario_deletado' && email && keycloakSubject) {
-      setHasError(true);
-      setIsChecking(false);
+    if (isDeletedError) {
       return;
     }
 
@@ -90,7 +89,7 @@ export default function LoginPage() {
     return () => {
       isMounted = false;
     };
-  }, [returnUrl, authError, apiBase, email, keycloakSubject]);
+  }, [returnUrl, authError, apiBase, email, keycloakSubject, isDeletedError]);
 
   if (isChecking && !hasError) {
     return (
@@ -153,12 +152,12 @@ export default function LoginPage() {
             >
               {isReactivating ? t('reactivating') : t('reactivateButton')}
             </button>
-            <a
+            <Link
               className="inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               href="/"
             >
               {t('goBack')}
-            </a>
+            </Link>
           </div>
         </div>
       </main>
@@ -180,12 +179,12 @@ export default function LoginPage() {
             >
               {t('tryAgain')}
             </a>
-            <a
+            <Link
               className="inline-flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               href="/"
             >
               {t('back')}
-            </a>
+            </Link>
           </div>
         </div>
       </main>

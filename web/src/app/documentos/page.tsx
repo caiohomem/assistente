@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { LayoutWrapper } from "@/components/LayoutWrapper"
-import { Button } from "@/components/ui/button"
 import { FileText, FileEdit, Stamp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DraftsListClient } from "@/components/DraftsListClient"
@@ -16,16 +14,9 @@ export default function DocumentosPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const tabParam = searchParams.get("tab") as TabType | null
-  const [activeTab, setActiveTab] = useState<TabType>(tabParam || "drafts")
-  
-  useEffect(() => {
-    if (tabParam && ["drafts", "templates", "letterheads"].includes(tabParam)) {
-      setActiveTab(tabParam)
-    }
-  }, [tabParam])
+  const activeTab: TabType = tabParam && ["drafts", "templates", "letterheads"].includes(tabParam) ? tabParam : "drafts"
   
   const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", tab)
     if (params.get("novo") === "true") {
@@ -95,4 +86,3 @@ export default function DocumentosPage() {
     </LayoutWrapper>
   )
 }
-

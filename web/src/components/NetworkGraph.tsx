@@ -15,6 +15,13 @@ const ForceGraph2D = dynamic(
   { ssr: false }
 );
 
+type ForceGraphMethods = {
+  zoom(): number;
+  zoom(factor: number, duration?: number): void;
+  zoomToFit(duration?: number, padding?: number): void;
+  centerAt(x: number, y: number, duration?: number): void;
+};
+
 interface NetworkGraphProps {
   /** Altura do grafo em pixels */
   height?: number;
@@ -32,6 +39,41 @@ interface NetworkGraphProps {
   onNodeClick?: (nodeId: string) => void;
 }
 
+interface ForceGraphNode {
+  id: string;
+  name: string;
+  company?: string | null;
+  jobTitle?: string | null;
+  email?: string | null;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number;
+  fy?: number;
+}
+
+interface ForceGraphLink {
+  source: string | ForceGraphNode;
+  target: string | ForceGraphNode;
+  type?: string | null;
+  strength?: number | null;
+  isConfirmed?: boolean | null;
+  relationshipId?: string | null;
+}
+
+interface ForceGraphData {
+  nodes: ForceGraphNode[];
+  links: ForceGraphLink[];
+}
+
+const getEndpointId = (endpoint: ForceGraphLink["source"]): string => {
+  if (typeof endpoint === "string") {
+    return endpoint;
+  }
+  return endpoint?.id ?? "";
+};
+
 export function NetworkGraph({
   height = 400,
   maxDepth = 2,
@@ -41,7 +83,7 @@ export function NetworkGraph({
   className = "",
   onNodeClick,
 }: NetworkGraphProps) {
-  const graphRef = useRef<any>(null);
+  const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
@@ -85,7 +127,7 @@ export function NetworkGraph({
   }, [currentMaxDepth]);
 
   // Preparar dados para o ForceGraph
-  const graphDataForForceGraph = useMemo(() => {
+  const graphDataForForceGraph = useMemo<ForceGraphData>(() => {
     if (!graphData) return { nodes: [], links: [] };
 
     // Filtrar nós baseado na busca
@@ -127,7 +169,7 @@ export function NetworkGraph({
   }, [graphData, searchTerm]);
 
   const handleNodeClick = useCallback(
-    (node: any) => {
+    (node: ForceGraphNode) => {
       setSelectedNode(node.id);
       if (onNodeClick) {
         onNodeClick(node.id);
@@ -142,43 +184,41 @@ export function NetworkGraph({
 
   // Controles de zoom
   const handleZoomIn = useCallback(() => {
-    if (graphRef.current) {
-      const currentZoom = graphRef.current.zoom();
-      graphRef.current.zoom(currentZoom * 1.3, 300);
-    }
+    const graph = graphRef.current;
+    if (!graph) return;
+    const currentZoom = graph.zoom();
+    graph.zoom(currentZoom * 1.3, 300);
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    if (graphRef.current) {
-      const currentZoom = graphRef.current.zoom();
-      graphRef.current.zoom(currentZoom / 1.3, 300);
-    }
+    const graph = graphRef.current;
+    if (!graph) return;
+    const currentZoom = graph.zoom();
+    graph.zoom(currentZoom / 1.3, 300);
   }, []);
 
   const handleFitToView = useCallback(() => {
-    if (graphRef.current) {
-      graphRef.current.zoomToFit(400, 50);
-    }
+    graphRef.current?.zoomToFit(400, 50);
   }, []);
 
   const handleRecenter = useCallback(() => {
-    if (graphRef.current) {
-      graphRef.current.centerAt(0, 0, 300);
-      graphRef.current.zoom(1, 300);
-    }
+    const graph = graphRef.current;
+    if (!graph) return;
+    graph.centerAt(0, 0, 300);
+    graph.zoom(1, 300);
   }, []);
 
   // Centralizar após o grafo estabilizar
   const handleEngineStop = useCallback(() => {
-    if (graphRef.current) {
-      setTimeout(() => {
-        graphRef.current.zoomToFit(400, 40);
-      }, 100);
-    }
+    const graph = graphRef.current;
+    if (!graph) return;
+    setTimeout(() => {
+      graph.zoomToFit(400, 40);
+    }, 100);
   }, []);
 
   // Cores baseadas no tema
-  const getLinkColor = useCallback((link: any) => {
+  const getLinkColor = useCallback((link: ForceGraphLink) => {
     if (link.isConfirmed) {
       return "#22c55e"; // Green for confirmed
     }
@@ -186,7 +226,7 @@ export function NetworkGraph({
     return isDarkMode ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.25)";
   }, [isDarkMode]);
 
-  const getNodeColor = useCallback((node: any) => {
+  const getNodeColor = useCallback((node: ForceGraphNode) => {
     if (selectedNode === node.id) {
       return "#0ea5e9"; // Primary color for selected
     }
@@ -333,29 +373,33 @@ export function NetworkGraph({
                 graphData={graphDataForForceGraph}
                 width={containerWidth - 48}
                 height={height}
-                nodeLabel={(node: any) => `${node.name}${node.company ? ` - ${node.company}` : ""}`}
+                nodeLabel={(node: ForceGraphNode) => `${node.name}${node.company ? ` - ${node.company}` : ""}`}
                 nodeColor={getNodeColor}
-                nodeVal={(node: any) => {
-                  // Tamanho baseado no número de conexões
-                  const connections = graphDataForForceGraph.links.filter(
-                    (link: any) =>
-                      (link.source?.id || link.source) === node.id ||
-                      (link.target?.id || link.target) === node.id
-                  ).length;
+                nodeVal={(node: ForceGraphNode) => {
+                  const connections = graphDataForForceGraph.links.filter((link) => {
+                    const sourceId = getEndpointId(link.source);
+                    const targetId = getEndpointId(link.target);
+                    return sourceId === node.id || targetId === node.id;
+                  }).length;
                   return 4 + connections * 2;
                 }}
-                nodeCanvasObject={(node: any, ctx, globalScale) => {
+                nodeCanvasObject={(node: ForceGraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
                   const label = node.name?.split(" ")[0] || "";
                   const fontSize = 12 / globalScale;
-                  const nodeSize = 4 + (graphDataForForceGraph.links.filter(
-                    (link: any) =>
-                      (link.source?.id || link.source) === node.id ||
-                      (link.target?.id || link.target) === node.id
-                  ).length * 2);
+                  const nodeSize =
+                    4 +
+                    graphDataForForceGraph.links.filter((link) => {
+                      const sourceId = getEndpointId(link.source);
+                      const targetId = getEndpointId(link.target);
+                      return sourceId === node.id || targetId === node.id;
+                    }).length *
+                      2;
 
                   // Desenhar círculo do nó
                   ctx.beginPath();
-                  ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI);
+                  const nodeX = node.x ?? 0;
+                  const nodeY = node.y ?? 0;
+                  ctx.arc(nodeX, nodeY, nodeSize, 0, 2 * Math.PI);
                   ctx.fillStyle = getNodeColor(node);
                   ctx.fill();
 
@@ -372,31 +416,38 @@ export function NetworkGraph({
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
                     ctx.fillStyle = isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.8)";
-                    ctx.fillText(label, node.x, node.y + nodeSize + fontSize);
+                    ctx.fillText(label, nodeX, nodeY + nodeSize + fontSize);
                   }
                 }}
-                nodePointerAreaPaint={(node: any, color, ctx) => {
-                  const nodeSize = 6 + (graphDataForForceGraph.links.filter(
-                    (link: any) =>
-                      (link.source?.id || link.source) === node.id ||
-                      (link.target?.id || link.target) === node.id
-                  ).length * 2);
+                nodePointerAreaPaint={(node: ForceGraphNode, color: string, ctx: CanvasRenderingContext2D) => {
+                  const nodeSize =
+                    6 +
+                    graphDataForForceGraph.links.filter((link) => {
+                      const sourceId = getEndpointId(link.source);
+                      const targetId = getEndpointId(link.target);
+                      return sourceId === node.id || targetId === node.id;
+                    }).length *
+                      2;
+                  const nodeX = node.x ?? 0;
+                  const nodeY = node.y ?? 0;
                   ctx.beginPath();
-                  ctx.arc(node.x, node.y, nodeSize + 5, 0, 2 * Math.PI);
+                  ctx.arc(nodeX, nodeY, nodeSize + 5, 0, 2 * Math.PI);
                   ctx.fillStyle = color;
                   ctx.fill();
                 }}
                 linkColor={getLinkColor}
-                linkWidth={(link: any) => 1 + (link.strength || 0.5) * 2}
+                linkWidth={(link: ForceGraphLink) => 1 + (link.strength ?? 0.5) * 2}
                 linkDirectionalArrowLength={4}
                 linkDirectionalArrowRelPos={1}
                 linkCanvasObjectMode={() => "after"}
-                linkCanvasObject={(link: any, ctx, globalScale) => {
+                linkCanvasObject={(link: ForceGraphLink, ctx: CanvasRenderingContext2D, globalScale: number) => {
                   // Desenhar label do tipo de relacionamento se zoom suficiente
                   if (globalScale > 1.2 && link.type) {
-                    const start = link.source;
-                    const end = link.target;
-                    if (typeof start !== "object" || typeof end !== "object") return;
+                    const start = typeof link.source === "object" ? link.source : undefined;
+                    const end = typeof link.target === "object" ? link.target : undefined;
+                    if (!start || !end || start.x === undefined || end.x === undefined || start.y === undefined || end.y === undefined) {
+                      return;
+                    }
 
                     const midX = (start.x + end.x) / 2;
                     const midY = (start.y + end.y) / 2;
@@ -560,4 +611,3 @@ export function NetworkGraph({
     </div>
   );
 }
-

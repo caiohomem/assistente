@@ -1,5 +1,5 @@
 import { Contact, CreateContactRequest, UpdateContactRequest } from "@/lib/types/contact";
-import { bffGetJson, bffPostJson, bffPutJson, getBffSession, getApiBaseUrl } from "@/lib/bff";
+import { bffGetJson, bffPostJson, bffPutJson, getBffSession } from "@/lib/bff";
 import { cookies } from "next/headers";
 
 export interface ListContactsResult {
@@ -30,6 +30,19 @@ export interface SearchContactsParams {
   pageSize?: number;
 }
 
+interface RawContactsResponse {
+  contacts?: Contact[];
+  Contacts?: Contact[];
+  total?: number;
+  Total?: number;
+  page?: number;
+  Page?: number;
+  pageSize?: number;
+  PageSize?: number;
+  totalPages?: number;
+  TotalPages?: number;
+}
+
 /**
  * Lista contatos do usuário autenticado.
  */
@@ -53,7 +66,7 @@ export async function listContacts(
   if (params.includeDeleted) queryParams.set("includeDeleted", "true");
 
   const path = `/api/contacts${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-  const data = await bffGetJson<any>(path, session.csrfToken, cookieHeader);
+  const data = await bffGetJson<RawContactsResponse>(path, session.csrfToken, cookieHeader);
   // Normalize response to camelCase
   return {
     contacts: data.contacts || data.Contacts || [],
@@ -87,7 +100,7 @@ export async function searchContacts(
   if (params.pageSize) queryParams.set("pageSize", params.pageSize.toString());
 
   const path = `/api/contacts/search${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-  const data = await bffGetJson<any>(path, session.csrfToken, cookieHeader);
+  const data = await bffGetJson<RawContactsResponse>(path, session.csrfToken, cookieHeader);
   // Normalize response to camelCase
   return {
     contacts: data.contacts || data.Contacts || [],

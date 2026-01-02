@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { getBffSession } from "@/lib/bff";
 import { NetworkGraphClient } from "./NetworkGraphClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 
 export default function NetworkPage() {
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     let isMounted = true;
@@ -49,7 +47,6 @@ export default function NetworkPage() {
     </LayoutWrapper>
   );
 }
-
 
 
 

@@ -1,17 +1,30 @@
 "use client";
 
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
+import { throwIfErrorResponse } from "./types";
 import type {
   EmailTemplate,
   CreateEmailTemplateRequest,
   UpdateEmailTemplateRequest,
   ListEmailTemplatesResult,
   ListEmailTemplatesParams,
-  EmailTemplateType,
 } from "@/lib/types/emailTemplates";
 
 // Re-export types for convenience
 export type { EmailTemplate, ListEmailTemplatesResult };
+
+interface ListEmailTemplatesResponse {
+  templates?: EmailTemplate[]
+  Templates?: EmailTemplate[]
+  total?: number
+  Total?: number
+  page?: number
+  Page?: number
+  pageSize?: number
+  PageSize?: number
+  totalPages?: number
+  TotalPages?: number
+}
 
 export async function listEmailTemplatesClient(
   params: ListEmailTemplatesParams = {},
@@ -39,23 +52,15 @@ export async function listEmailTemplatesClient(
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  const data = await res.json();
+  const data = (await res.json()) as ListEmailTemplatesResponse;
   return {
-    templates: data.templates || data.Templates || [],
-    total: data.total || data.Total || 0,
-    page: data.page || data.Page || 1,
-    pageSize: data.pageSize || data.PageSize || 20,
-    totalPages: data.totalPages || data.TotalPages || 0,
+    templates: data.templates ?? data.Templates ?? [],
+    total: data.total ?? data.Total ?? 0,
+    page: data.page ?? data.Page ?? 1,
+    pageSize: data.pageSize ?? data.PageSize ?? 20,
+    totalPages: data.totalPages ?? data.TotalPages ?? 0,
   };
 }
 
@@ -75,17 +80,9 @@ export async function getEmailTemplateByIdClient(emailTemplateId: string): Promi
     },
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  return await res.json() as EmailTemplate;
+  return (await res.json()) as EmailTemplate;
 }
 
 export async function createEmailTemplateClient(
@@ -107,15 +104,7 @@ export async function createEmailTemplateClient(
     body: JSON.stringify(request),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const id = await res.text();
   return { id: id.replace(/"/g, "") };
@@ -145,15 +134,7 @@ export async function updateEmailTemplateClient(
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function activateEmailTemplateClient(emailTemplateId: string): Promise<void> {
@@ -175,15 +156,7 @@ export async function activateEmailTemplateClient(emailTemplateId: string): Prom
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function deactivateEmailTemplateClient(emailTemplateId: string): Promise<void> {
@@ -205,15 +178,7 @@ export async function deactivateEmailTemplateClient(emailTemplateId: string): Pr
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 export async function deleteEmailTemplateClient(emailTemplateId: string): Promise<void> {
@@ -234,15 +199,5 @@ export async function deleteEmailTemplateClient(emailTemplateId: string): Promis
   if (res.status === 204) {
     return;
   }
-
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
-

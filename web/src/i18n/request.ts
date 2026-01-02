@@ -2,6 +2,11 @@ import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
 import { cookies } from 'next/headers';
 
+type AppLocale = (typeof routing.locales)[number];
+
+const isSupportedLocale = (locale: string): locale is AppLocale =>
+  routing.locales.includes(locale as AppLocale);
+
 export default getRequestConfig(async ({ requestLocale }) => {
   // Try to get locale from requestLocale first (set by middleware)
   let locale = await requestLocale;
@@ -16,7 +21,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
   }
 
   // Ensure that a valid locale is used
-  if (!locale || !routing.locales.includes(locale as any)) {
+  if (!locale || !isSupportedLocale(locale)) {
     locale = routing.defaultLocale;
   }
 
@@ -26,4 +31,3 @@ export default getRequestConfig(async ({ requestLocale }) => {
     timeZone: 'America/Sao_Paulo'
   };
 });
-

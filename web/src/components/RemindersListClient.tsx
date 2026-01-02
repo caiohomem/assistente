@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -34,13 +34,7 @@ export function RemindersListClient({ initialData }: RemindersListClientProps) {
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!initialData) {
-      loadReminders();
-    }
-  }, [page]);
-
-  const loadReminders = async () => {
+  const loadReminders = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -58,7 +52,13 @@ export function RemindersListClient({ initialData }: RemindersListClientProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    if (!initialData) {
+      loadReminders();
+    }
+  }, [initialData, loadReminders]);
 
   const getStatusLabel = (status: ReminderStatus): string => {
     switch (status) {
@@ -151,6 +151,12 @@ export function RemindersListClient({ initialData }: RemindersListClientProps) {
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
+
+        <div className="mb-6">
+          <p className="text-sm text-muted-foreground">
+            {total} {total === 1 ? "lembrete encontrado" : "lembretes encontrados"}
+          </p>
+        </div>
 
         {loading && reminders.length === 0 ? (
           <div className="glass-card p-12 text-center">
@@ -267,4 +273,3 @@ export function RemindersListClient({ initialData }: RemindersListClientProps) {
     </div>
   );
 }
-

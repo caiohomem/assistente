@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { LayoutWrapper } from "@/components/LayoutWrapper"
@@ -20,6 +20,13 @@ import { EmailTemplateType } from "@/lib/types/emailTemplates"
 import { getAgentConfiguration, updateAgentConfiguration, type AgentConfiguration } from "@/lib/api/agentConfigurationApi"
 
 type TabType = "email-templates" | "agent"
+
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return undefined
+}
 
 export default function ConfiguracoesPage() {
   const router = useRouter()
@@ -54,20 +61,7 @@ export default function ConfiguracoesPage() {
   const [success, setSuccess] = useState(false)
 
   // Load email templates
-  useEffect(() => {
-    if (activeTab === "email-templates") {
-      loadTemplates()
-    }
-  }, [page, filterActiveOnly, filterType, activeTab])
-
-  // Load agent configuration
-  useEffect(() => {
-    if (activeTab === "agent") {
-      loadAgentConfiguration()
-    }
-  }, [activeTab])
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoadingTemplates(true)
     setErrorTemplates(null)
     try {
@@ -87,9 +81,9 @@ export default function ConfiguracoesPage() {
     } finally {
       setLoadingTemplates(false)
     }
-  }
+  }, [page, pageSize, filterActiveOnly, filterType])
 
-  const loadAgentConfiguration = async () => {
+  const loadAgentConfiguration = useCallback(async () => {
     try {
       setLoadingAgent(true)
       setErrorAgent(null)
@@ -98,20 +92,34 @@ export default function ConfiguracoesPage() {
       setOcrPrompt(config.ocrPrompt)
       setTranscriptionPrompt(config.transcriptionPrompt || '')
       setWorkflowPrompt(config.workflowPrompt || '')
-    } catch (err: any) {
-      if (err.message === 'Configuração não encontrada') {
+    } catch (error: unknown) {
+      const message = getErrorMessage(error)
+      if (message === 'Configuração não encontrada') {
         setConfiguration(null)
         setOcrPrompt('')
         setTranscriptionPrompt('')
         setWorkflowPrompt('')
       } else {
-        console.error('Erro ao carregar configuração:', err)
-        setErrorAgent(err.message || t('errorLoading'))
+        console.error('Erro ao carregar configuração:', error)
+        setErrorAgent(message || t('errorLoading'))
       }
     } finally {
       setLoadingAgent(false)
     }
-  }
+  }, [t])
+
+  useEffect(() => {
+    if (activeTab === "email-templates") {
+      loadTemplates()
+    }
+  }, [page, filterActiveOnly, filterType, activeTab, loadTemplates])
+
+  // Load agent configuration
+  useEffect(() => {
+    if (activeTab === "agent") {
+      loadAgentConfiguration()
+    }
+  }, [activeTab, loadAgentConfiguration])
 
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {
@@ -201,9 +209,9 @@ export default function ConfiguracoesPage() {
       setSuccess(true)
       
       setTimeout(() => setSuccess(false), 3000)
-    } catch (err: any) {
-      console.error('Erro ao salvar configuração:', err)
-      setErrorAgent(err.message || t('errorSaving'))
+    } catch (error: unknown) {
+      console.error('Erro ao salvar configuração:', error)
+      setErrorAgent(getErrorMessage(error) || t('errorSaving'))
     } finally {
       setSaving(false)
     }
@@ -565,5 +573,3 @@ export default function ConfiguracoesPage() {
     </LayoutWrapper>
   )
 }
-
-

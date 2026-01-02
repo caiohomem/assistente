@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { getBffSession } from "@/lib/bff";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
-import { Button } from "@/components/ui/button";
 import {
   Building2,
   Users,
   Search,
   Loader2,
-  ExternalLink,
   Globe,
   Mail,
   ChevronRight,
@@ -280,7 +278,7 @@ export default function EmpresasPage() {
                 Empresas extraídas automaticamente
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Esta lista é gerada a partir do campo "Empresa" dos seus contatos.
+                Esta lista é gerada a partir do campo &quot;Empresa&quot; dos seus contatos.
                 Em breve você poderá adicionar informações detalhadas como CNPJ,
                 endereço e notas para cada empresa.
               </p>

@@ -8,6 +8,13 @@ import { LayoutWrapper } from '@/components/LayoutWrapper'
 import { Button } from '@/components/ui/button'
 import { Bot, Save, X, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
 
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (error instanceof Error) {
+    return error.message
+  }
+  return undefined
+}
+
 export default function AgentConfigurationPage() {
   const router = useRouter()
   const t = useTranslations('agentConfiguration')
@@ -31,15 +38,16 @@ export default function AgentConfigurationPage() {
         setOcrPrompt(config.ocrPrompt)
         setTranscriptionPrompt(config.transcriptionPrompt || '')
         setWorkflowPrompt(config.workflowPrompt || '')
-      } catch (err: any) {
-        if (err.message === 'Configuração não encontrada') {
+      } catch (error: unknown) {
+        const message = getErrorMessage(error)
+        if (message === 'Configuração não encontrada') {
           // Configuração ainda não existe, permitir criar
           setConfiguration(null)
           setOcrPrompt('')
           setWorkflowPrompt('')
         } else {
-          console.error('Erro ao carregar configuração:', err)
-          setError(err.message || t('errorLoading'))
+          console.error('Erro ao carregar configuração:', error)
+          setError(message || t('errorLoading'))
         }
       } finally {
         setLoading(false)
@@ -47,7 +55,7 @@ export default function AgentConfigurationPage() {
     }
 
     loadConfiguration()
-  }, [])
+  }, [t])
 
   const handleSave = async () => {
     if (!ocrPrompt.trim()) {
@@ -71,9 +79,9 @@ export default function AgentConfigurationPage() {
       
       // Limpar mensagem de sucesso após 3 segundos
       setTimeout(() => setSuccess(false), 3000)
-    } catch (err: any) {
-      console.error('Erro ao salvar configuração:', err)
-      setError(err.message || t('errorSaving'))
+    } catch (error: unknown) {
+      console.error('Erro ao salvar configuração:', error)
+      setError(getErrorMessage(error) || t('errorSaving'))
     } finally {
       setSaving(false)
     }
@@ -210,7 +218,5 @@ export default function AgentConfigurationPage() {
     </LayoutWrapper>
   )
 }
-
-
 
 

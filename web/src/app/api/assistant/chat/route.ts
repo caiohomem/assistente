@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBffSession, getApiBaseUrl } from "@/lib/bff";
 
-interface ChatMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
-}
-
 /**
  * API route para chat com assistente - delega para o backend
  */
@@ -65,4 +60,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

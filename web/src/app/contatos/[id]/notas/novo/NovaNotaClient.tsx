@@ -71,8 +71,12 @@ export function NovaNotaClient({ contactId, onSuccess, onCancel }: NovaNotaClien
         router.push(`/contatos/${contactId}`);
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err.message || tNotes("errorCreating"));
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : tNotes("errorCreating");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -154,4 +158,3 @@ export function NovaNotaClient({ contactId, onSuccess, onCancel }: NovaNotaClien
     </form>
   );
 }
-

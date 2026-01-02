@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -33,13 +33,7 @@ export function DraftsListClient({ initialData }: DraftsListClientProps) {
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!initialData) {
-      loadDrafts();
-    }
-  }, [page]);
-
-  const loadDrafts = async () => {
+  const loadDrafts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -57,7 +51,13 @@ export function DraftsListClient({ initialData }: DraftsListClientProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    if (!initialData) {
+      loadDrafts();
+    }
+  }, [initialData, loadDrafts]);
 
   const getStatusLabel = (status: DraftStatus): string => {
     switch (status) {
@@ -288,4 +288,3 @@ export function DraftsListClient({ initialData }: DraftsListClientProps) {
     </div>
   );
 }
-

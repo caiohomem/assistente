@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -32,13 +32,7 @@ export function LetterheadsListClient({ initialData }: LetterheadsListClientProp
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!initialData) {
-      loadLetterheads();
-    }
-  }, [page]);
-
-  const loadLetterheads = async () => {
+  const loadLetterheads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -56,7 +50,13 @@ export function LetterheadsListClient({ initialData }: LetterheadsListClientProp
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    if (!initialData) {
+      loadLetterheads();
+    }
+  }, [initialData, loadLetterheads]);
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -244,4 +244,3 @@ export function LetterheadsListClient({ initialData }: LetterheadsListClientProp
     </div>
   );
 }
-

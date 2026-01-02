@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { getCreditBalance, listCreditTransactions } from '@/lib/api/creditsApi'
+import { getCreditBalance } from '@/lib/api/creditsApi'
 import { listContactsClient } from '@/lib/api/contactsApiClient'
 import { getBffSession } from '@/lib/bff'
 import type { CreditBalance } from '@/lib/types/credit'
@@ -26,7 +25,6 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const t = useTranslations('dashboard')
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
@@ -132,7 +130,7 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [router, t])
+  }, [t])
 
   if (loading) {
     return (

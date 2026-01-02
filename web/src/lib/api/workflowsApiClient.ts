@@ -71,6 +71,86 @@ function mapTriggerType(type: number | string): TriggerType {
 /**
  * Lists all workflows for the current user.
  */
+type RawWorkflowSummary = {
+  workflowId?: string
+  WorkflowId?: string
+  name?: string
+  Name?: string
+  description?: string
+  Description?: string
+  triggerType?: number | string
+  TriggerType?: number | string
+  status?: number | string
+  Status?: number | string
+  specVersion?: number
+  SpecVersion?: number
+  createdAt?: string
+  CreatedAt?: string
+  updatedAt?: string
+  UpdatedAt?: string
+}
+
+type RawWorkflow = RawWorkflowSummary & {
+  ownerUserId?: string
+  OwnerUserId?: string
+  trigger?: {
+    type?: number | string
+    cronExpression?: string
+    eventName?: string
+    configJson?: string
+  }
+  Trigger?: {
+    Type?: number | string
+    CronExpression?: string
+    EventName?: string
+    ConfigJson?: string
+  }
+  specJson?: string
+  SpecJson?: string
+  n8nWorkflowId?: string
+  N8nWorkflowId?: string
+}
+
+type RawExecutionSummary = {
+  executionId?: string
+  ExecutionId?: string
+  workflowId?: string
+  WorkflowId?: string
+  workflowName?: string
+  WorkflowName?: string
+  status?: number | string
+  Status?: number | string
+  startedAt?: string
+  StartedAt?: string
+  completedAt?: string
+  CompletedAt?: string
+}
+
+type RawExecution = RawExecutionSummary & {
+  ownerUserId?: string
+  OwnerUserId?: string
+  specVersionUsed?: number
+  SpecVersionUsed?: number
+  inputJson?: string
+  InputJson?: string
+  outputJson?: string
+  OutputJson?: string
+  n8nExecutionId?: string
+  N8nExecutionId?: string
+  errorMessage?: string
+  ErrorMessage?: string
+  currentStepIndex?: number
+  CurrentStepIndex?: number
+}
+
+type RawExecuteResponse = {
+  success?: boolean
+  executionId?: string
+  ExecutionId?: string
+  errorMessage?: string
+  message?: string
+}
+
 export async function listWorkflowsClient(
   status?: WorkflowStatus
 ): Promise<WorkflowSummary[]> {
@@ -100,15 +180,15 @@ export async function listWorkflowsClient(
   }
 
   const data = await res.json();
-  return (data || []).map((w: any) => ({
-    workflowId: w.workflowId || w.WorkflowId,
-    name: w.name || w.Name,
-    description: w.description || w.Description,
-    triggerType: mapTriggerType(w.triggerType ?? w.TriggerType),
-    status: mapWorkflowStatus(w.status ?? w.Status),
-    specVersion: w.specVersion || w.SpecVersion || 1,
-    createdAt: w.createdAt || w.CreatedAt,
-    updatedAt: w.updatedAt || w.UpdatedAt,
+  return (data || []).map((w: RawWorkflowSummary) => ({
+    workflowId: w.workflowId ?? w.WorkflowId ?? "",
+    name: w.name ?? w.Name ?? "",
+    description: w.description ?? w.Description ?? "",
+    triggerType: mapTriggerType(w.triggerType ?? w.TriggerType ?? "Manual"),
+    status: mapWorkflowStatus(w.status ?? w.Status ?? "Draft"),
+    specVersion: w.specVersion ?? w.SpecVersion ?? 1,
+    createdAt: w.createdAt ?? w.CreatedAt ?? "",
+    updatedAt: w.updatedAt ?? w.UpdatedAt ?? "",
   }));
 }
 
@@ -136,24 +216,24 @@ export async function getWorkflowByIdClient(workflowId: string): Promise<Workflo
     throw new Error(data.message || `Request failed: ${res.status}`);
   }
 
-  const w = await res.json();
+  const w = (await res.json()) as RawWorkflow;
   return {
-    workflowId: w.workflowId || w.WorkflowId,
-    ownerUserId: w.ownerUserId || w.OwnerUserId,
-    name: w.name || w.Name,
-    description: w.description || w.Description,
+    workflowId: w.workflowId ?? w.WorkflowId ?? "",
+    ownerUserId: w.ownerUserId ?? w.OwnerUserId ?? "",
+    name: w.name ?? w.Name ?? "",
+    description: w.description ?? w.Description ?? "",
     trigger: {
-      type: mapTriggerType(w.trigger?.type ?? w.Trigger?.Type),
-      cronExpression: w.trigger?.cronExpression || w.Trigger?.CronExpression,
-      eventName: w.trigger?.eventName || w.Trigger?.EventName,
-      configJson: w.trigger?.configJson || w.Trigger?.ConfigJson,
+      type: mapTriggerType(w.trigger?.type ?? w.Trigger?.Type ?? "Manual"),
+      cronExpression: w.trigger?.cronExpression ?? w.Trigger?.CronExpression,
+      eventName: w.trigger?.eventName ?? w.Trigger?.EventName,
+      configJson: w.trigger?.configJson ?? w.Trigger?.ConfigJson,
     },
-    specJson: w.specJson || w.SpecJson || "{}",
-    specVersion: w.specVersion || w.SpecVersion || 1,
-    n8nWorkflowId: w.n8nWorkflowId || w.N8nWorkflowId,
-    status: mapWorkflowStatus(w.status ?? w.Status),
-    createdAt: w.createdAt || w.CreatedAt,
-    updatedAt: w.updatedAt || w.UpdatedAt,
+    specJson: w.specJson ?? w.SpecJson ?? "{}",
+    specVersion: w.specVersion ?? w.SpecVersion ?? 1,
+    n8nWorkflowId: w.n8nWorkflowId ?? w.N8nWorkflowId ?? "",
+    status: mapWorkflowStatus(w.status ?? w.Status ?? "Draft"),
+    createdAt: w.createdAt ?? w.CreatedAt ?? "",
+    updatedAt: w.updatedAt ?? w.UpdatedAt ?? "",
   };
 }
 
@@ -220,7 +300,7 @@ export async function executeWorkflowClient(
     body: JSON.stringify(request || {}),
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = (await res.json().catch(() => ({}))) as RawExecuteResponse;
 
   if (!res.ok) {
     return {
@@ -230,8 +310,8 @@ export async function executeWorkflowClient(
   }
 
   return {
-    success: true,
-    executionId: data.executionId || data.ExecutionId,
+    success: data.success ?? true,
+    executionId: data.executionId ?? data.ExecutionId ?? "",
   };
 }
 
@@ -269,13 +349,13 @@ export async function listExecutionsClient(
   }
 
   const data = await res.json();
-  return (data || []).map((e: any) => ({
-    executionId: e.executionId || e.ExecutionId,
-    workflowId: e.workflowId || e.WorkflowId,
-    workflowName: e.workflowName || e.WorkflowName || "Workflow",
-    status: mapExecutionStatus(e.status ?? e.Status),
-    startedAt: e.startedAt || e.StartedAt,
-    completedAt: e.completedAt || e.CompletedAt,
+  return (data || []).map((e: RawExecutionSummary) => ({
+    executionId: e.executionId ?? e.ExecutionId ?? "",
+    workflowId: e.workflowId ?? e.WorkflowId ?? "",
+    workflowName: e.workflowName ?? e.WorkflowName ?? "Workflow",
+    status: mapExecutionStatus(e.status ?? e.Status ?? "Pending"),
+    startedAt: e.startedAt ?? e.StartedAt ?? "",
+    completedAt: e.completedAt ?? e.CompletedAt ?? "",
   }));
 }
 
@@ -303,20 +383,20 @@ export async function getExecutionByIdClient(executionId: string): Promise<Workf
     throw new Error(data.message || `Request failed: ${res.status}`);
   }
 
-  const e = await res.json();
+  const e = (await res.json()) as RawExecution;
   return {
-    executionId: e.executionId || e.ExecutionId,
-    workflowId: e.workflowId || e.WorkflowId,
-    ownerUserId: e.ownerUserId || e.OwnerUserId,
-    specVersionUsed: e.specVersionUsed || e.SpecVersionUsed || 1,
-    inputJson: e.inputJson || e.InputJson,
-    outputJson: e.outputJson || e.OutputJson,
-    status: mapExecutionStatus(e.status ?? e.Status),
-    n8nExecutionId: e.n8nExecutionId || e.N8nExecutionId,
-    errorMessage: e.errorMessage || e.ErrorMessage,
-    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex,
-    startedAt: e.startedAt || e.StartedAt,
-    completedAt: e.completedAt || e.CompletedAt,
+    executionId: e.executionId ?? e.ExecutionId ?? "",
+    workflowId: e.workflowId ?? e.WorkflowId ?? "",
+    ownerUserId: e.ownerUserId ?? e.OwnerUserId ?? "",
+    specVersionUsed: e.specVersionUsed ?? e.SpecVersionUsed ?? 1,
+    inputJson: e.inputJson ?? e.InputJson,
+    outputJson: e.outputJson ?? e.OutputJson,
+    status: mapExecutionStatus(e.status ?? e.Status ?? "Pending"),
+    n8nExecutionId: e.n8nExecutionId ?? e.N8nExecutionId,
+    errorMessage: e.errorMessage ?? e.ErrorMessage,
+    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex ?? 0,
+    startedAt: e.startedAt ?? e.StartedAt ?? "",
+    completedAt: e.completedAt ?? e.CompletedAt,
   };
 }
 
@@ -345,19 +425,19 @@ export async function getPendingApprovalsClient(): Promise<WorkflowExecution[]> 
   }
 
   const data = await res.json();
-  return (data || []).map((e: any) => ({
-    executionId: e.executionId || e.ExecutionId,
-    workflowId: e.workflowId || e.WorkflowId,
-    ownerUserId: e.ownerUserId || e.OwnerUserId,
-    specVersionUsed: e.specVersionUsed || e.SpecVersionUsed || 1,
-    inputJson: e.inputJson || e.InputJson,
-    outputJson: e.outputJson || e.OutputJson,
-    status: mapExecutionStatus(e.status ?? e.Status),
-    n8nExecutionId: e.n8nExecutionId || e.N8nExecutionId,
-    errorMessage: e.errorMessage || e.ErrorMessage,
-    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex,
-    startedAt: e.startedAt || e.StartedAt,
-    completedAt: e.completedAt || e.CompletedAt,
+  return (data || []).map((e: RawExecution) => ({
+    executionId: e.executionId ?? e.ExecutionId ?? "",
+    workflowId: e.workflowId ?? e.WorkflowId ?? "",
+    ownerUserId: e.ownerUserId ?? e.OwnerUserId ?? "",
+    specVersionUsed: e.specVersionUsed ?? e.SpecVersionUsed ?? 1,
+    inputJson: e.inputJson ?? e.InputJson,
+    outputJson: e.outputJson ?? e.OutputJson,
+    status: mapExecutionStatus(e.status ?? e.Status ?? "Pending"),
+    n8nExecutionId: e.n8nExecutionId ?? e.N8nExecutionId,
+    errorMessage: e.errorMessage ?? e.ErrorMessage,
+    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex ?? 0,
+    startedAt: e.startedAt ?? e.StartedAt ?? "",
+    completedAt: e.completedAt ?? e.CompletedAt,
   }));
 }
 
@@ -380,7 +460,7 @@ export async function approveStepClient(executionId: string): Promise<ApproveSte
     },
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = (await res.json().catch(() => ({}))) as RawExecuteResponse;
 
   if (!res.ok) {
     return {
@@ -389,7 +469,7 @@ export async function approveStepClient(executionId: string): Promise<ApproveSte
     };
   }
 
-  return { success: true };
+  return { success: data.success ?? true };
 }
 
 /**

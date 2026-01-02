@@ -1,4 +1,5 @@
 import { getBffSession, bffGetJson, getApiBaseUrl } from "../bff";
+import { buildApiError } from "./types";
 import type {
   CaptureJob,
   UploadCardRequest,
@@ -9,6 +10,16 @@ async function getCsrfToken(): Promise<string> {
   const session = await getBffSession();
   return session.csrfToken;
 }
+
+const handleUnauthorizedRedirect = (res: Response): boolean => {
+  if (res.status === 401 && typeof window !== "undefined") {
+    const currentPath = window.location.pathname;
+    const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+    window.location.href = loginUrl;
+    return true;
+  }
+  return false;
+};
 
 export interface UploadCardResponse {
   contactId: string;
@@ -37,22 +48,10 @@ export async function uploadCard(request: UploadCardRequest): Promise<UploadCard
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
+    if (handleUnauthorizedRedirect(res)) {
       return {} as UploadCardResponse;
     }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
   return (await res.json()) as UploadCardResponse;
@@ -106,22 +105,10 @@ export async function processAudioNote(
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
+    if (handleUnauthorizedRedirect(res)) {
       return {} as ProcessAudioNoteResponse;
     }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
   return (await res.json()) as ProcessAudioNoteResponse;
@@ -160,22 +147,11 @@ export async function transcribeAudio(file: File): Promise<TranscribeAudioRespon
   });
 
   if (!res.ok) {
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
+    if (handleUnauthorizedRedirect(res)) {
       return {} as TranscribeAudioResponse;
     }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
   return (await res.json()) as TranscribeAudioResponse;
 }
-
