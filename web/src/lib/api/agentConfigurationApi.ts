@@ -1,6 +1,6 @@
 "use client";
 
-import { getApiBaseUrl } from "@/lib/bff";
+import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 
 export interface AgentConfiguration {
   configurationId: string;
@@ -21,15 +21,26 @@ export interface UpdateAgentConfigurationRequest {
  * Obtém a configuração atual do agente.
  */
 export async function getAgentConfiguration(): Promise<AgentConfiguration> {
+  const session = await getBffSession();
+  if (!session.authenticated) {
+    throw new Error("Não autenticado");
+  }
+
   const apiBase = getApiBaseUrl();
   const path = `${apiBase}/api/agent-configuration`;
+
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (session.csrfToken) {
+    headers["X-CSRF-TOKEN"] = session.csrfToken;
+  }
   
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
   });
 
   if (!res.ok) {
@@ -48,6 +59,11 @@ export async function getAgentConfiguration(): Promise<AgentConfiguration> {
 export async function updateAgentConfiguration(
   request: UpdateAgentConfigurationRequest
 ): Promise<AgentConfiguration> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.csrfToken) {
+    throw new Error("Não autenticado");
+  }
+
   const apiBase = getApiBaseUrl();
   const path = `${apiBase}/api/agent-configuration`;
   
@@ -56,6 +72,7 @@ export async function updateAgentConfiguration(
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      "X-CSRF-TOKEN": session.csrfToken,
     },
     body: JSON.stringify(request),
   });
@@ -66,7 +83,6 @@ export async function updateAgentConfiguration(
 
   return res.json();
 }
-
 
 
 
