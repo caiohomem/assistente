@@ -29,6 +29,12 @@ interface AssistantResponsePayload {
   message?: string;
   Message?: string;
   error?: string;
+  functionCalls?: Array<{
+    name: string;
+    arguments: string;
+    result?: string;
+    error?: string | null;
+  }>;
   [key: string]: unknown;
 }
 // ============================================================
@@ -76,6 +82,15 @@ export function AIAssistant() {
 
   const clearDebugLogs = () => {
     setDebugLogs([]);
+  };
+
+  const parseJsonSafely = (value: unknown) => {
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
   };
 
   const getLogTypeColor = (type: DebugLog["type"]) => {
@@ -537,6 +552,22 @@ export function AIAssistant() {
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
         body: data,
+      });
+
+      const functionCalls = Array.isArray(data.functionCalls) ? data.functionCalls : [];
+      functionCalls.forEach((call, index) => {
+        const parsedArgs = parseJsonSafely(call.arguments);
+        const parsedResult = parseJsonSafely(call.result);
+        const logType: DebugLog["type"] =
+          call.error || (parsedResult && typeof parsedResult === "object" && (parsedResult as { success?: boolean }).success === false)
+            ? "error"
+            : "info";
+
+        addDebugLog(logType, `Function Call #${index + 1}: ${call.name}`, {
+          arguments: parsedArgs,
+          result: parsedResult,
+          error: call.error,
+        });
       });
 
       if (!response.ok) {
