@@ -23,7 +23,7 @@ BEGIN
     LOOP
         EXECUTE 'DROP SEQUENCE IF EXISTS ' || quote_ident(r.sequence_name) || ' CASCADE';
         RAISE NOTICE 'Sequence % removida', r.sequence_name;
-    END LOOP;
+    END LOOP; 
     
     -- Reabilitar verificação de chaves estrangeiras
     SET session_replication_role = 'origin';
