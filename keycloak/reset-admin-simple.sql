@@ -10,3 +10,5 @@ SELECT 'Credenciais do admin deletadas. Reinicie o Keycloak para recriar com KEY
 
 
 
+
+

@@ -34,3 +34,5 @@ SELECT 'Banco de dados limpo! Reinicie o Keycloak para recriar tudo do zero.' as
 
 
 
+
+

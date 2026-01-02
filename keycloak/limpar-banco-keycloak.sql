@@ -76,3 +76,5 @@ SELECT 'Banco de dados do Keycloak limpo! Reinicie o Keycloak para recriar tudo 
 
 
 
+
+

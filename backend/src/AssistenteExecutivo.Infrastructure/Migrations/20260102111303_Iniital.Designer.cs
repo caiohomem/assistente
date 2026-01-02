@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AssistenteExecutivo.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260101015143_AddWorkflowTables")]
-    partial class AddWorkflowTables
+    [Migration("20260102111303_Iniital")]
+    partial class Iniital
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -48,6 +48,10 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");
+
+                    b.Property<string>("WorkflowPrompt")
+                        .HasColumnType("text")
+                        .HasColumnName("WorkflowPrompt");
 
                     b.HasKey("ConfigurationId");
 
@@ -871,6 +875,11 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("Description");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("IdempotencyKey");
+
                     b.Property<string>("N8nWorkflowId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -904,6 +913,11 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnName("UpdatedAt");
 
                     b.HasKey("WorkflowId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Workflows_IdempotencyKey")
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
                     b.HasIndex("N8nWorkflowId")
                         .HasDatabaseName("IX_Workflows_N8nWorkflowId");
@@ -944,6 +958,11 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("ErrorMessage");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("IdempotencyKey");
+
                     b.Property<string>("InputJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("InputJson");
@@ -978,6 +997,11 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnName("WorkflowId");
 
                     b.HasKey("ExecutionId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkflowExecutions_IdempotencyKey")
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
                     b.HasIndex("N8nExecutionId")
                         .HasDatabaseName("IX_WorkflowExecutions_N8nExecutionId");

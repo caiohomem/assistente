@@ -27,3 +27,5 @@ sudo docker logs keycloak --tail=50
 
 
 
+
+

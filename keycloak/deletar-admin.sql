@@ -7,3 +7,5 @@ SELECT 'Admin deletado. Keycloak deve criar automaticamente com KC_BOOTSTRAP_ADM
 
 
 
+
+
