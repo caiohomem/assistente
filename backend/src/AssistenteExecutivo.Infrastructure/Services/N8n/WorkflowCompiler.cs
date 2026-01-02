@@ -170,15 +170,15 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
     {
         return trigger.Type switch
         {
-            TriggerType.Manual => new N8nNode
+            TriggerType.Manual => AssignNodeIdentity(new N8nNode
             {
                 Name = "Trigger",
                 Type = "n8n-nodes-base.manualTrigger",
                 TypeVersion = 1,
                 Position = new[] { 250, 300 },
                 Parameters = new Dictionary<string, object>()
-            },
-            TriggerType.Scheduled => new N8nNode
+            }),
+            TriggerType.Scheduled => AssignNodeIdentity(new N8nNode
             {
                 Name = "Trigger",
                 Type = "n8n-nodes-base.scheduleTrigger",
@@ -194,31 +194,31 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                         }
                     }
                 }
-            },
-            TriggerType.EventBased => new N8nNode
+            }),
+            TriggerType.EventBased => AssignNodeIdentity(new N8nNode
             {
                 Name = "Trigger",
                 Type = "n8n-nodes-base.webhook",
-                TypeVersion = 1,
+                TypeVersion = 2,
                 Position = new[] { 250, 300 },
                 Parameters = new Dictionary<string, object>
                 {
                     ["path"] = trigger.EventName ?? "webhook",
                     ["httpMethod"] = "POST"
                 }
-            },
-            TriggerType.Webhook => new N8nNode
+            }, includeWebhookId: true),
+            TriggerType.Webhook => AssignNodeIdentity(new N8nNode
             {
                 Name = "Trigger",
                 Type = "n8n-nodes-base.webhook",
-                TypeVersion = 1,
+                TypeVersion = 2,
                 Position = new[] { 250, 300 },
                 Parameters = new Dictionary<string, object>
                 {
                     ["path"] = trigger.EventName ?? "workflow",
                     ["httpMethod"] = "POST"
                 }
-            },
+            }, includeWebhookId: true),
             _ => throw new ArgumentException($"Unknown trigger type: {trigger.Type}")
         };
     }
@@ -242,7 +242,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
     {
         var condition = step.Condition!;
 
-        return new N8nNode
+        return AssignNodeIdentity(new N8nNode
         {
             Name = step.Name,
             Type = "n8n-nodes-base.if",
@@ -263,32 +263,32 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                     }
                 }
             }
-        };
+        });
     }
 
     private N8nNode CreateActionNode(StepSpecDto step, int positionY)
     {
         var action = step.Action!;
-        var (nodeType, parameters, credentials) = MapActionToN8nNode(action);
+        var (nodeType, typeVersion, parameters, credentials) = MapActionToN8nNode(action);
 
-        return new N8nNode
+        return AssignNodeIdentity(new N8nNode
         {
             Name = step.Name,
             Type = nodeType,
-            TypeVersion = 1,
+            TypeVersion = typeVersion,
             Position = new[] { 500, positionY },
             Parameters = parameters,
             Credentials = credentials
-        };
+        });
     }
 
-    private (string NodeType, Dictionary<string, object> Parameters, Dictionary<string, object>? Credentials) MapActionToN8nNode(ActionSpecDto action)
+    private (string NodeType, double TypeVersion, Dictionary<string, object> Parameters, Dictionary<string, object>? Credentials) MapActionToN8nNode(ActionSpecDto action)
     {
         return action.ActionType switch
         {
             ActionType.SendEmail => CreateMailjetEmailAction(action),
 
-            ActionType.HttpRequest => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
+            ActionType.HttpRequest => ("n8n-nodes-base.httpRequest", 1, new Dictionary<string, object>
             {
                 ["url"] = action.Parameters.GetValueOrDefault("url", ""),
                 ["method"] = action.Parameters.GetValueOrDefault("method", "GET"),
@@ -297,12 +297,12 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["body"] = action.Parameters.GetValueOrDefault("body", "")
             }, null),
 
-            ActionType.Wait => ("n8n-nodes-base.wait", new Dictionary<string, object>
+            ActionType.Wait => ("n8n-nodes-base.wait", 1, new Dictionary<string, object>
             {
                 ["amount"] = action.Parameters.GetValueOrDefault("seconds", 5)
             }, null),
 
-            ActionType.SetVariable => ("n8n-nodes-base.set", new Dictionary<string, object>
+            ActionType.SetVariable => ("n8n-nodes-base.set", 1, new Dictionary<string, object>
             {
                 ["values"] = new
                 {
@@ -317,7 +317,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 }
             }, null),
 
-            ActionType.CreateDocument => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
+            ActionType.CreateDocument => ("n8n-nodes-base.httpRequest", 1, new Dictionary<string, object>
             {
                 ["url"] = "{{$env.API_BASE_URL}}/api/drafts",
                 ["method"] = "POST",
@@ -326,7 +326,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
             }, null),
 
-            ActionType.SendWhatsApp => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
+            ActionType.SendWhatsApp => ("n8n-nodes-base.httpRequest", 1, new Dictionary<string, object>
             {
                 ["url"] = "{{$env.WHATSAPP_API_URL}}/messages",
                 ["method"] = "POST",
@@ -339,7 +339,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 }, _jsonOptions)
             }, null),
 
-            ActionType.ScheduleMeeting => ("n8n-nodes-base.googleCalendar", new Dictionary<string, object>
+            ActionType.ScheduleMeeting => ("n8n-nodes-base.googleCalendar", 1, new Dictionary<string, object>
             {
                 ["operation"] = "create",
                 ["calendar"] = "primary",
@@ -348,7 +348,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["end"] = action.Parameters.GetValueOrDefault("endTime", "")
             }, null),
 
-            ActionType.CreateReminder => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
+            ActionType.CreateReminder => ("n8n-nodes-base.httpRequest", 1, new Dictionary<string, object>
             {
                 ["url"] = "{{$env.API_BASE_URL}}/api/reminders",
                 ["method"] = "POST",
@@ -357,7 +357,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
             }, null),
 
-            ActionType.UpdateContact => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
+            ActionType.UpdateContact => ("n8n-nodes-base.httpRequest", 1, new Dictionary<string, object>
             {
                 ["url"] = $"{{{{$env.API_BASE_URL}}}}/api/contacts/{action.Parameters.GetValueOrDefault("contactId", "")}",
                 ["method"] = "PUT",
@@ -366,7 +366,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
             }, null),
 
-            ActionType.CreateNote => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
+            ActionType.CreateNote => ("n8n-nodes-base.httpRequest", 1, new Dictionary<string, object>
             {
                 ["url"] = "{{$env.API_BASE_URL}}/api/notes",
                 ["method"] = "POST",
@@ -379,7 +379,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
         };
     }
 
-    private (string NodeType, Dictionary<string, object> Parameters, Dictionary<string, object>? Credentials) CreateMailjetEmailAction(ActionSpecDto action)
+    private (string NodeType, double TypeVersion, Dictionary<string, object> Parameters, Dictionary<string, object>? Credentials) CreateMailjetEmailAction(ActionSpecDto action)
     {
         var parameters = new Dictionary<string, object>
         {
@@ -392,7 +392,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
 
         var credentials = BuildMailjetCredentials(action.Parameters);
 
-        return ("n8n-nodes-base.mailjet", parameters, credentials);
+        return ("n8n-nodes-base.mailjet", 2.1, parameters, credentials);
     }
 
     private static Dictionary<string, object>? BuildMailjetCredentials(Dictionary<string, object> parameters)
@@ -488,6 +488,16 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
         return value.ToString() ?? string.Empty;
     }
 
+    private static N8nNode AssignNodeIdentity(N8nNode node, bool includeWebhookId = false)
+    {
+        node.Id = Guid.NewGuid().ToString();
+        if (includeWebhookId)
+        {
+            node.WebhookId = Guid.NewGuid().ToString();
+        }
+        return node;
+    }
+
     private string MapConditionType(ConditionType conditionType)
     {
         return conditionType switch
@@ -519,10 +529,12 @@ public class N8nNode
 {
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
-    public int TypeVersion { get; set; } = 1;
+    public double TypeVersion { get; set; } = 1;
     public int[] Position { get; set; } = new[] { 0, 0 };
     public Dictionary<string, object> Parameters { get; set; } = new();
     public Dictionary<string, object>? Credentials { get; set; }
+    public string Id { get; set; } = string.Empty;
+    public string? WebhookId { get; set; }
 }
 
 public class N8nConnectionSet
