@@ -1,6 +1,6 @@
 "use client"
 
-import { Send, Sparkles, Mic, Paperclip, Loader2, StopCircle, Image as ImageIcon, Upload } from "lucide-react";
+import { Send, Sparkles, Mic, Paperclip, Loader2, StopCircle, Image as ImageIcon, Upload, Bug, X, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
@@ -14,6 +14,17 @@ interface Message {
   content: string;
   timestamp: string;
 }
+
+// ========== DEBUG MODE - TEMPORARY FOR DEVELOPMENT ==========
+interface DebugLog {
+  id: string;
+  timestamp: string;
+  type: "request" | "response" | "error" | "info" | "ai-adapted";
+  title: string;
+  data: any;
+  expanded?: boolean;
+}
+// ============================================================
 
 export function AIAssistant() {
   const [input, setInput] = useState("");
@@ -32,6 +43,56 @@ export function AIAssistant() {
   const [isUploadingCard, setIsUploadingCard] = useState(false);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+
+  // ========== DEBUG MODE - TEMPORARY FOR DEVELOPMENT ==========
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
+  const [debugPanelMinimized, setDebugPanelMinimized] = useState(false);
+
+  const addDebugLog = (type: DebugLog["type"], title: string, data: any) => {
+    const log: DebugLog = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      type,
+      title,
+      data,
+      expanded: false,
+    };
+    setDebugLogs(prev => [log, ...prev].slice(0, 100)); // Keep last 100 logs
+  };
+
+  const toggleLogExpanded = (id: string) => {
+    setDebugLogs(prev => prev.map(log =>
+      log.id === id ? { ...log, expanded: !log.expanded } : log
+    ));
+  };
+
+  const clearDebugLogs = () => {
+    setDebugLogs([]);
+  };
+
+  const getLogTypeColor = (type: DebugLog["type"]) => {
+    switch (type) {
+      case "request": return "text-blue-400 bg-blue-500/10";
+      case "response": return "text-green-400 bg-green-500/10";
+      case "error": return "text-red-400 bg-red-500/10";
+      case "ai-adapted": return "text-purple-400 bg-purple-500/10";
+      case "info": return "text-yellow-400 bg-yellow-500/10";
+      default: return "text-gray-400 bg-gray-500/10";
+    }
+  };
+
+  const getLogTypeLabel = (type: DebugLog["type"]) => {
+    switch (type) {
+      case "request": return "REQ";
+      case "response": return "RES";
+      case "error": return "ERR";
+      case "ai-adapted": return "AI";
+      case "info": return "INF";
+      default: return "???";
+    }
+  };
+  // ============================================================
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -89,8 +150,22 @@ export function AIAssistant() {
     setMessages(prev => [...prev, uploadMessage]);
 
     try {
+      // DEBUG: Log card upload request
+      addDebugLog("request", "uploadCard", {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+      });
+
       const result: UploadCardResponse = await uploadCard({ file });
-      
+
+      // DEBUG: Log card upload response
+      addDebugLog("response", "uploadCard Success", {
+        contactId: result.contactId,
+        jobId: result.jobId,
+        fullResult: result,
+      });
+
       // Adicionar mensagem de sucesso
       const successMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -103,7 +178,19 @@ export function AIAssistant() {
       // Aguardar processamento e obter resultado
       setTimeout(async () => {
         try {
+          // DEBUG: Log OCR job fetch
+          addDebugLog("request", "getCaptureJobById", { jobId: result.jobId });
+
           const job = await getCaptureJobById(result.jobId);
+
+          // DEBUG: Log OCR result
+          addDebugLog("response", "getCaptureJobById Result", {
+            jobId: result.jobId,
+            hasCardScanResult: !!job.cardScanResult,
+            cardScanResult: job.cardScanResult,
+            fullJob: job,
+          });
+
           if (job.cardScanResult) {
             const ocrMessage: Message = {
               id: (Date.now() + 2).toString(),
@@ -114,11 +201,22 @@ export function AIAssistant() {
             setMessages(prev => [...prev, ocrMessage]);
           }
         } catch (err) {
+          // DEBUG: Log OCR error
+          addDebugLog("error", "getCaptureJobById Error", {
+            jobId: result.jobId,
+            error: err instanceof Error ? err.message : String(err),
+          });
           console.error("Erro ao obter resultado do OCR:", err);
         }
       }, 2000);
 
     } catch (error) {
+      // DEBUG: Log upload error
+      addDebugLog("error", "uploadCard Error", {
+        fileName: file.name,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       addErrorMessage(`Erro ao processar cartão: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
     } finally {
       setIsUploadingCard(false);
@@ -213,7 +311,7 @@ export function AIAssistant() {
 
   const handleAudioUpload = async (file: File) => {
     setIsUploadingAudio(true);
-    
+
     // Adicionar mensagem de processamento
     const processingMessage: Message = {
       id: Date.now().toString(),
@@ -224,8 +322,23 @@ export function AIAssistant() {
     setMessages(prev => [...prev, processingMessage]);
 
     try {
+      // DEBUG: Log audio upload request
+      addDebugLog("request", "transcribeAudio", {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+      });
+
       // Transcrever áudio para texto
       const transcript = await transcribeAudio(file);
+
+      // DEBUG: Log transcription result
+      addDebugLog("response", "transcribeAudio Success", {
+        hasText: !!transcript.text,
+        textLength: transcript.text?.length || 0,
+        textPreview: transcript.text?.substring(0, 200) || "",
+        fullTranscript: transcript,
+      });
       
       // Remover mensagem de processamento
       setMessages(prev => prev.filter(m => m.id !== processingMessage.id));
@@ -299,9 +412,16 @@ export function AIAssistant() {
       setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
+      // DEBUG: Log audio error
+      addDebugLog("error", "transcribeAudio Error", {
+        fileName: file.name,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
       // Remover mensagem de processamento
       setMessages(prev => prev.filter(m => m.id !== processingMessage.id));
-      
+
       addErrorMessage(`Erro ao transcrever áudio: ${error instanceof Error ? error.message : "Erro desconhecido"}`);
     } finally {
       setIsUploadingAudio(false);
@@ -333,14 +453,14 @@ export function AIAssistant() {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
-    
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input,
       timestamp: formatTimestamp()
     };
-    
+
     const userInput = input;
     setMessages(prev => [...prev, userMessage]);
     setInput("");
@@ -354,7 +474,7 @@ export function AIAssistant() {
       timestamp: formatTimestamp()
     };
     setMessages(prev => [...prev, loadingMessage]);
-    
+
     try {
       // Preparar histórico de mensagens para enviar
       const chatMessages = messages
@@ -363,10 +483,22 @@ export function AIAssistant() {
           role: m.role,
           content: m.content,
         }));
-      
+
       chatMessages.push({
         role: "user",
         content: userInput,
+      });
+
+      const requestBody = {
+        messages: chatMessages,
+        model: "gpt-4o",
+      };
+
+      // DEBUG: Log request
+      addDebugLog("request", "POST /api/assistant/chat", {
+        url: "/api/assistant/chat",
+        method: "POST",
+        body: requestBody,
       });
 
       const response = await fetch("/api/assistant/chat", {
@@ -374,25 +506,65 @@ export function AIAssistant() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          messages: chatMessages,
-          model: "gpt-4o",
-        }),
+        body: JSON.stringify(requestBody),
+      });
+
+      const responseText = await response.text();
+      let data: any;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        // DEBUG: Log parse error
+        addDebugLog("error", "JSON Parse Error", {
+          status: response.status,
+          rawResponse: responseText.substring(0, 1000),
+          parseError: String(parseError),
+        });
+        throw new Error("Resposta inválida do servidor");
+      }
+
+      // DEBUG: Log raw response
+      addDebugLog("response", `Response ${response.status}`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: data,
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Erro ao processar mensagem");
+        // DEBUG: Log error details
+        addDebugLog("error", "API Error", {
+          status: response.status,
+          errorData: data,
+          originalError: data.error || data.message || "Unknown error",
+        });
+        throw new Error(data.error || "Erro ao processar mensagem");
       }
 
-      const data = await response.json();
-      
       // Remover mensagem de carregamento
       setMessages(prev => prev.filter(m => m.id !== loadingMessage.id));
-      
+
       // Adicionar resposta do assistente
       // Aceitar tanto camelCase quanto PascalCase
       const messageContent = data.message || data.Message || "Não foi possível gerar uma resposta.";
+
+      // DEBUG: Log AI adaptation if content was transformed
+      if (data.message !== messageContent || data.Message !== messageContent) {
+        addDebugLog("ai-adapted", "AI Response Adapted", {
+          originalMessage: data.message,
+          originalMessagePascal: data.Message,
+          finalContent: messageContent,
+          fullResponseData: data,
+        });
+      }
+
+      // DEBUG: Log info about final message
+      addDebugLog("info", "Message displayed to user", {
+        content: messageContent.substring(0, 200) + (messageContent.length > 200 ? "..." : ""),
+        fullLength: messageContent.length,
+      });
+
       const aiMessage: Message = {
         id: (Date.now() + 2).toString(),
         role: "assistant",
@@ -402,9 +574,16 @@ export function AIAssistant() {
       setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
+      // DEBUG: Log caught error
+      addDebugLog("error", "Caught Exception", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+      });
+
       // Remover mensagem de carregamento
       setMessages(prev => prev.filter(m => m.id !== loadingMessage.id));
-      
+
       // Adicionar mensagem de erro
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
@@ -419,16 +598,28 @@ export function AIAssistant() {
   };
 
   return (
+    <div className="space-y-4">
     <div className="glass-card h-[600px] flex flex-col animate-slide-up">
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
           <Sparkles className="w-5 h-5 text-primary-foreground" />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="font-semibold">Assistente IA</h2>
           <p className="text-xs text-muted-foreground">Powered by GPT-4 Vision</p>
         </div>
+        {/* DEBUG TOGGLE - TEMPORARY */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={debugMode}
+            onChange={(e) => setDebugMode(e.target.checked)}
+            className="w-4 h-4 rounded border-border bg-secondary accent-primary cursor-pointer"
+          />
+          <Bug className={`w-4 h-4 ${debugMode ? "text-yellow-500" : "text-muted-foreground"}`} />
+          <span className="text-xs text-muted-foreground">Debug</span>
+        </label>
       </div>
       
       {/* Messages */}
@@ -570,9 +761,9 @@ export function AIAssistant() {
             className="flex-1 bg-secondary rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             disabled={isRecording}
           />
-          <Button 
-            variant="glow" 
-            size="icon" 
+          <Button
+            variant="glow"
+            size="icon"
             onClick={handleSend}
             disabled={loading || !input.trim() || isRecording}
           >
@@ -584,6 +775,90 @@ export function AIAssistant() {
           </Button>
         </div>
       </div>
+    </div>
+
+    {/* ========== DEBUG PANEL - TEMPORARY FOR DEVELOPMENT ========== */}
+    {debugMode && (
+      <div className="glass-card animate-slide-up overflow-hidden">
+        {/* Debug Panel Header */}
+        <div className="p-3 border-b border-border flex items-center justify-between bg-yellow-500/5">
+          <div className="flex items-center gap-2">
+            <Bug className="w-4 h-4 text-yellow-500" />
+            <span className="text-sm font-semibold text-yellow-500">Debug Console</span>
+            <span className="text-xs text-muted-foreground">({debugLogs.length} logs)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearDebugLogs}
+              className="h-7 px-2 text-xs"
+              title="Limpar logs"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Limpar
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDebugPanelMinimized(!debugPanelMinimized)}
+              className="h-7 w-7"
+            >
+              {debugPanelMinimized ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Debug Panel Content */}
+        {!debugPanelMinimized && (
+          <div className="max-h-[400px] overflow-y-auto p-2 space-y-1 bg-black/20 font-mono text-xs">
+            {debugLogs.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum log ainda. Interaja com o assistente para ver os logs.
+              </p>
+            ) : (
+              debugLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="border border-border/50 rounded-lg overflow-hidden bg-card/50"
+                >
+                  {/* Log Header */}
+                  <div
+                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-secondary/50"
+                    onClick={() => toggleLogExpanded(log.id)}
+                  >
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getLogTypeColor(log.type)}`}>
+                      {getLogTypeLabel(log.type)}
+                    </span>
+                    <span className="text-muted-foreground">{log.timestamp}</span>
+                    <span className="flex-1 truncate">{log.title}</span>
+                    {log.expanded ? (
+                      <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </div>
+
+                  {/* Log Details */}
+                  {log.expanded && (
+                    <div className="p-2 border-t border-border/50 bg-black/30">
+                      <pre className="whitespace-pre-wrap break-all text-[11px] text-foreground/80 overflow-x-auto">
+                        {JSON.stringify(log.data, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    )}
+    {/* ============================================================ */}
     </div>
   );
 }
