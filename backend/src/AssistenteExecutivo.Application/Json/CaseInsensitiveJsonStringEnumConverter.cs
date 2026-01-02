@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -33,11 +34,21 @@ public sealed class CaseInsensitiveJsonStringEnumConverter : JsonConverterFactor
         if (underlyingType != null)
         {
             var converterType = typeof(CaseInsensitiveNullableEnumConverter<>).MakeGenericType(underlyingType);
-            return (JsonConverter)Activator.CreateInstance(converterType, _allowIntegerValues)!;
+            return CreateConverterInstance(converterType, _allowIntegerValues);
         }
 
         var converter = typeof(CaseInsensitiveEnumConverter<>).MakeGenericType(typeToConvert);
-        return (JsonConverter)Activator.CreateInstance(converter, _allowIntegerValues)!;
+        return CreateConverterInstance(converter, _allowIntegerValues);
+    }
+
+    private static JsonConverter CreateConverterInstance(Type converterType, bool allowIntegerValues)
+    {
+        return (JsonConverter)Activator.CreateInstance(
+            converterType,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            args: new object[] { allowIntegerValues },
+            culture: null)!;
     }
 
     private sealed class CaseInsensitiveEnumConverter<TEnum> : JsonConverter<TEnum> where TEnum : struct, Enum
