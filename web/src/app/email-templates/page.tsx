@@ -1,17 +1,17 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Button } from "@/components/ui/button";
 import {
   listEmailTemplatesClient,
   deleteEmailTemplateClient,
   activateEmailTemplateClient,
   deactivateEmailTemplateClient,
   type EmailTemplate,
-  type ListEmailTemplatesResult,
 } from "@/lib/api/emailTemplatesApiClient";
 import { EmailTemplateType } from "@/lib/types/emailTemplates";
 
@@ -62,9 +62,9 @@ export default function EmailTemplatesPage() {
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {
       case EmailTemplateType.UserCreated:
-        return "Usuário Criado";
+        return "UsuA­rio Criado";
       case EmailTemplateType.PasswordReset:
-        return "Redefinição de Senha";
+        return "RedefiniA§A£o de Senha";
       case EmailTemplateType.Welcome:
         return "Bem-vindo";
       default:
@@ -128,73 +128,65 @@ export default function EmailTemplatesPage() {
 
   if (loading && templates.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <TopBar title="Templates de Email" showBackButton backHref="/dashboard" />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Carregando templates...</p>
-          </div>
+      <LayoutWrapper title="Templates de Email" subtitle="Gerencie seus templates de email" activeTab="documents">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Carregando templates...</p>
         </div>
-      </div>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Templates de Email" showBackButton backHref="/dashboard">
-        <Link
-          href="/email-templates/novo"
-          className="inline-flex items-center justify-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          Novo Template
-        </Link>
-      </TopBar>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <LayoutWrapper title="Templates de Email" subtitle="Gerencie seus templates de email" activeTab="documents">
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-zinc-600 dark:text-zinc-400">Filtrar:</label>
+              <select
+                value={filterActiveOnly === undefined ? "all" : filterActiveOnly ? "active" : "inactive"}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilterActiveOnly(value === "all" ? undefined : value === "active");
+                }}
+                className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1 text-sm text-zinc-700 dark:text-zinc-300"
+              >
+                <option value="all">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-zinc-600 dark:text-zinc-400">Tipo:</label>
+              <select
+                value={filterType === undefined ? "all" : filterType.toString()}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilterType(value === "all" ? undefined : parseInt(value) as EmailTemplateType);
+                }}
+                className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1 text-sm text-zinc-700 dark:text-zinc-300"
+              >
+                <option value="all">Todos</option>
+                <option value={EmailTemplateType.UserCreated}>UsuA­rio Criado</option>
+                <option value={EmailTemplateType.PasswordReset}>RedefiniA§A£o de Senha</option>
+                <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
+              </select>
+            </div>
+          </div>
+          <Button asChild variant="glow">
+            <Link href="/email-templates/novo">Novo Template</Link>
+          </Button>
+        </div>
+
+        <div className="text-sm text-zinc-600 dark:text-zinc-400">
+          {total} {total === 1 ? "template encontrado" : "templates encontrados"}
+        </div>
+
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
-
-        {/* Filtros */}
-        <div className="mb-6 flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-zinc-600 dark:text-zinc-400">Filtrar:</label>
-            <select
-              value={filterActiveOnly === undefined ? "all" : filterActiveOnly ? "active" : "inactive"}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFilterActiveOnly(value === "all" ? undefined : value === "active");
-              }}
-              className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1 text-sm text-zinc-700 dark:text-zinc-300"
-            >
-              <option value="all">Todos</option>
-              <option value="active">Ativos</option>
-              <option value="inactive">Inativos</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-zinc-600 dark:text-zinc-400">Tipo:</label>
-            <select
-              value={filterType === undefined ? "all" : filterType.toString()}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFilterType(value === "all" ? undefined : parseInt(value) as EmailTemplateType);
-              }}
-              className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1 text-sm text-zinc-700 dark:text-zinc-300"
-            >
-              <option value="all">Todos</option>
-              <option value={EmailTemplateType.UserCreated}>Usuário Criado</option>
-              <option value={EmailTemplateType.PasswordReset}>Redefinição de Senha</option>
-              <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
-            </select>
-          </div>
-          <div className="flex-1"></div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {total} {total === 1 ? "template encontrado" : "templates encontrados"}
-          </p>
-        </div>
 
         {templates.length === 0 ? (
           <div className="rounded-lg bg-white dark:bg-zinc-800 p-8 text-center shadow">
@@ -283,7 +275,7 @@ export default function EmailTemplatesPage() {
             <ConfirmDialog
               isOpen={deleteDialog.isOpen}
               title="Excluir Template de Email"
-              message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta ação não pode ser desfeita.`}
+              message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta aA§A£o nA§A£o pode ser desfeita.`}
               confirmText="Excluir"
               cancelText="Cancelar"
               onConfirm={handleDeleteConfirm}
@@ -302,21 +294,20 @@ export default function EmailTemplatesPage() {
                   Anterior
                 </button>
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Página {page} de {totalPages}
+                  PA­gina {page} de {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
                   className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Próxima
+                  PrA3xima
                 </button>
               </div>
             )}
           </>
         )}
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
-

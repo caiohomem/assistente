@@ -1,9 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getBffSession } from "@/lib/bff";
 import { NovoContatoClient } from "./NovoContatoClient";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function NovoContatoPage() {
   const [loading, setLoading] = useState(true);
@@ -30,19 +33,31 @@ export default function NovoContatoPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Novo Contato" showBackButton backHref="/dashboard" />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-zinc-800 dark:bg-zinc-800 rounded-lg border border-zinc-700 dark:border-zinc-700 shadow-sm p-6">
-            {loading ? (
-              <p className="text-sm text-zinc-400 dark:text-zinc-400">Carregando...</p>
-            ) : (
-              <NovoContatoClient />
-            )}
-          </div>
+    <LayoutWrapper
+      title="Novo Contato"
+      subtitle="Adicione um novo contato"
+      activeTab="contacts"
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Button asChild variant="ghost" className="gap-2">
+            <Link href="/contatos">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para contatos
+            </Link>
+          </Button>
         </div>
-      </main>
-    </div>
+        <div className="glass-card p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Carregando...</span>
+            </div>
+          ) : (
+            <NovoContatoClient />
+          )}
+        </div>
+      </div>
+    </LayoutWrapper>
   );
 }

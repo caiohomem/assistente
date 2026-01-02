@@ -121,7 +121,7 @@
     }
   },
   "notes": {
-    "title": "Notas",
+    "title": "Nova Nota",
     "audio": {
       "title": "Notas de Áudio",
       "upload": "Carregar Áudio",
@@ -135,7 +135,18 @@
         "completed": "Concluído",
         "failed": "Falhou"
       }
-    }
+    },
+    "addNote": "Adicionar Nota",
+    "content": "Conte?do",
+    "contentPlaceholder": "Escreva o conte?do da nota...",
+    "contentRequired": "O conte?do da nota ? obrigat?rio",
+    "structuredData": "Dados Estruturados (JSON)",
+    "structuredDataPlaceholder": "Dados estruturados em JSON (opcional)",
+    "invalidJson": "JSON inv?lido",
+    "create": "Criar Nota",
+    "creating": "A criar...",
+    "errorCreating": "Erro ao criar nota",
+    "successCreating": "Nota criada com sucesso"
   },
   "auth": {
     "login": {
@@ -330,4 +341,3 @@
     "reactivateErrorRetry": "Erro ao reativar utilizador. Tente novamente."
   }
 }
-

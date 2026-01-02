@@ -1,11 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { listDraftsClient, deleteDraftClient, type DraftDocument, type ListDraftsResult } from "@/lib/api/automationApiClient";
+import { Button } from "@/components/ui/button";
+import { listDraftsClient, deleteDraftClient, type DraftDocument } from "@/lib/api/automationApiClient";
 import { DraftStatus, DocumentType } from "@/lib/types/automation";
 
 export default function DraftsPage() {
@@ -79,7 +80,7 @@ export default function DraftsPage() {
       case DocumentType.Email:
         return "E-mail";
       case DocumentType.Oficio:
-        return "Ofício";
+        return "OfA-cio";
       case DocumentType.Invite:
         return "Convite";
       default:
@@ -128,40 +129,31 @@ export default function DraftsPage() {
 
   if (loading && drafts.length === 0) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <TopBar title="Rascunhos" showBackButton backHref="/dashboard" />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Carregando rascunhos...</p>
-          </div>
+      <LayoutWrapper title="Rascunhos" subtitle="Gerencie seus rascunhos" activeTab="documents">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Carregando rascunhos...</p>
         </div>
-      </div>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Rascunhos" showBackButton backHref="/dashboard">
-        <Link
-          href="/automacao/rascunhos/novo"
-          className="inline-flex items-center justify-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          Novo Rascunho
-        </Link>
-      </TopBar>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <LayoutWrapper title="Rascunhos" subtitle="Gerencie seus rascunhos" activeTab="documents">
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="text-sm text-zinc-600 dark:text-zinc-400">
+            {total} {total === 1 ? "rascunho encontrado" : "rascunhos encontrados"}
+          </div>
+          <Button asChild variant="glow">
+            <Link href="/automacao/rascunhos/novo">Novo Rascunho</Link>
+          </Button>
+        </div>
+
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+          <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
-
-        <div className="mb-6">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {total} {total === 1 ? "rascunho encontrado" : "rascunhos encontrados"}
-          </p>
-        </div>
 
         {drafts.length === 0 ? (
           <div className="rounded-lg bg-white dark:bg-zinc-800 p-8 text-center shadow">
@@ -230,7 +222,7 @@ export default function DraftsPage() {
             <ConfirmDialog
               isOpen={deleteDialog.isOpen}
               title="Excluir Rascunho"
-              message={`Tem certeza que deseja excluir este rascunho (${deleteDialog.draftType})? Esta ação não pode ser desfeita.`}
+              message={`Tem certeza que deseja excluir este rascunho (${deleteDialog.draftType})? Esta aA§A£o nA§A£o pode ser desfeita.`}
               confirmText="Excluir"
               cancelText="Cancelar"
               onConfirm={handleDeleteConfirm}
@@ -249,21 +241,20 @@ export default function DraftsPage() {
                   Anterior
                 </button>
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Página {page} de {totalPages}
+                  PA­gina {page} de {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
                   className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Próxima
+                  PrA3xima
                 </button>
               </div>
             )}
           </>
         )}
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
-

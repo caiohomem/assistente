@@ -153,7 +153,7 @@
     "jobTitlePlaceholder": "Ruolo/Funzione"
   },
   "notes": {
-    "title": "Note",
+    "title": "Nuova Nota",
     "audioNotes": "Note Audio",
     "noNotes": "Nessuna nota disponibile",
     "addNote": "Aggiungi Nota",
@@ -162,7 +162,17 @@
     "noteContent": "Contenuto Nota",
     "noteType": "Tipo Nota",
     "createdAt": "Creato il",
-    "updatedAt": "Aggiornato il"
+    "updatedAt": "Aggiornato il",
+    "content": "Contenuto",
+    "contentPlaceholder": "Inserisci il contenuto della nota...",
+    "contentRequired": "Il contenuto della nota ? obbligatorio",
+    "structuredData": "Dati strutturati (JSON)",
+    "structuredDataPlaceholder": "Dati strutturati in JSON (opzionale)",
+    "invalidJson": "JSON non valido",
+    "create": "Crea Nota",
+    "creating": "Creazione...",
+    "errorCreating": "Errore durante la creazione della nota",
+    "successCreating": "Nota creata con successo"
   },
   "audioCapture": {
     "title": "Cattura Audio",
@@ -348,4 +358,3 @@
     "reactivateErrorRetry": "Errore durante la riattivazione dell'utente. Riprova."
   }
 }
-

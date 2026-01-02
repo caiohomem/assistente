@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -6,7 +6,9 @@ import Link from "next/link";
 import { getBffSession } from "@/lib/bff";
 import { getReminderByIdClient } from "@/lib/api/automationApiClient";
 import { EditarLembreteClient } from "./EditarLembreteClient";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function EditarLembretePage() {
   const params = useParams<{ id: string }>();
@@ -22,11 +24,11 @@ export default function EditarLembretePage() {
     async function load() {
       if (!reminderId) return;
 
-      // Validar se o ID é um GUID válido
+      // Validar se o ID Ac um GUID vA­lido
       const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!guidRegex.test(reminderId)) {
         if (!isMounted) return;
-        setError("ID do lembrete inválido");
+        setError("ID do lembrete invA­lido");
         setLoading(false);
         return;
       }
@@ -45,9 +47,9 @@ export default function EditarLembretePage() {
         console.error("Erro ao carregar lembrete:", e);
         if (!isMounted) return;
         const errorMessage = e instanceof Error ? e.message : "Erro ao carregar lembrete";
-        // Se for 404, mostrar mensagem mais específica
-        if (errorMessage.includes("404") || errorMessage.includes("não encontrado")) {
-          setError("Lembrete não encontrado. Ele pode ter sido deletado ou você não tem permissão para visualizá-lo.");
+        // Se for 404, mostrar mensagem mais especA-fica
+        if (errorMessage.includes("404") || errorMessage.includes("nAśo encontrado")) {
+          setError("Lembrete nAśo encontrado. Ele pode ter sido deletado ou vocA¦ nAśo tem permissAśo para visualizA­-lo.");
         } else {
           setError(errorMessage);
         }
@@ -65,43 +67,50 @@ export default function EditarLembretePage() {
   if (!reminderId) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Editar Lembrete" showBackButton backHref={`/automacao/lembretes`} />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-zinc-800 dark:bg-zinc-800 rounded-lg border border-zinc-700 dark:border-zinc-700 shadow-sm p-6">
-            {loading ? (
-              <p className="text-sm text-zinc-400 dark:text-zinc-400">Carregando...</p>
-            ) : error || !reminder ? (
-              <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
-                <p className="text-sm text-red-700 dark:text-red-400">{error ?? "Lembrete não encontrado."}</p>
-                <Link
-                  href={`/automacao/lembretes`}
-                  className="mt-3 inline-block text-sm text-red-700 dark:text-red-400 underline"
-                >
-                  Voltar
-                </Link>
-              </div>
-            ) : (
-              <EditarLembreteClient
-                reminderId={reminderId}
-                initialData={{
-                  contactId: reminder.contactId,
-                  reason: reminder.reason,
-                  suggestedMessage: reminder.suggestedMessage || "",
-                  scheduledFor: reminder.scheduledFor,
-                  status: reminder.status,
-                }}
-              />
-            )}
-          </div>
+    <LayoutWrapper
+      title="Editar Lembrete"
+      subtitle="Atualize o lembrete e o agendamento"
+      activeTab="reminders"
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Link href="/automacao/lembretes">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para lembretes
+            </Button>
+          </Link>
         </div>
-      </main>
-    </div>
+        <div className="glass-card p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Carregando lembrete...</span>
+            </div>
+          ) : error || !reminder ? (
+            <div className="rounded-md bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">{error ?? "Lembrete nAśo encontrado."}</p>
+              <Link
+                href="/automacao/lembretes"
+                className="mt-3 inline-block text-sm text-destructive underline"
+              >
+                Voltar
+              </Link>
+            </div>
+          ) : (
+            <EditarLembreteClient
+              reminderId={reminderId}
+              initialData={{
+                contactId: reminder.contactId,
+                reason: reminder.reason,
+                suggestedMessage: reminder.suggestedMessage || "",
+                scheduledFor: reminder.scheduledFor,
+                status: reminder.status,
+              }}
+            />
+          )}
+        </div>
+      </div>
+    </LayoutWrapper>
   );
 }
-
-
-
-
-

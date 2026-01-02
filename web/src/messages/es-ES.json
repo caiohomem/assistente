@@ -106,7 +106,7 @@
     }
   },
   "notes": {
-    "title": "Notas",
+    "title": "Nueva Nota",
     "newNote": "Nueva Nota",
     "editNote": "Editar Nota",
     "deleteNote": "Eliminar Nota",
@@ -123,7 +123,18 @@
     "priority": "Prioridad",
     "jobId": "ID del Trabajo",
     "requestedAt": "Solicitado en",
-    "completedAt": "Completado en"
+    "completedAt": "Completado en",
+    "addNote": "Agregar Nota",
+    "content": "Contenido",
+    "contentPlaceholder": "Escribe el contenido de la nota...",
+    "contentRequired": "El contenido de la nota es obligatorio",
+    "structuredData": "Datos estructurados (JSON)",
+    "structuredDataPlaceholder": "Datos estructurados en JSON (opcional)",
+    "invalidJson": "JSON inv?lido",
+    "create": "Crear Nota",
+    "creating": "Creando...",
+    "errorCreating": "Error al crear la nota",
+    "successCreating": "Nota creada con ?xito"
   },
   "audioCapture": {
     "title": "Captura de Audio",
@@ -301,4 +312,3 @@
     "reactivateErrorRetry": "Error al reactivar usuario. Por favor, intente de nuevo."
   }
 }
-

@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getBffSession } from "@/lib/bff";
 import { getContactByIdClient } from "@/lib/api/contactsApiClient";
 import { EditarContatoClient } from "./EditarContatoClient";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function EditarContatoPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const contactId = params?.id;
 
   const [loading, setLoading] = useState(true);
@@ -49,48 +52,104 @@ export default function EditarContatoPage() {
 
   if (!contactId) return null;
 
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Editar Contato" showBackButton backHref={`/contatos/${contactId}`} />
-      <main className="container mx-auto px-4 py-8">
+  const contactName = contact ? `${contact.firstName}${contact.lastName ? ` ${contact.lastName}` : ""}` : "Contato";
+
+  if (loading) {
+    return (
+      <LayoutWrapper
+        title="Editar Contato"
+        subtitle="Carregando informações..."
+        activeTab="contacts"
+      >
         <div className="max-w-2xl mx-auto">
-          <div className="bg-zinc-800 dark:bg-zinc-800 rounded-lg border border-zinc-700 dark:border-zinc-700 shadow-sm p-6">
-            {loading ? (
-              <p className="text-sm text-zinc-400 dark:text-zinc-400">Carregando...</p>
-            ) : error || !contact ? (
-              <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
-                <p className="text-sm text-red-700 dark:text-red-400">{error ?? "Contato não encontrado."}</p>
-                <Link
-                  href={`/contatos/${contactId}`}
-                  className="mt-3 inline-block text-sm text-red-700 dark:text-red-400 underline"
-                >
-                  Voltar
-                </Link>
-              </div>
-            ) : (
-              <EditarContatoClient
-                contactId={contactId}
-                initialData={{
-                  firstName: contact.firstName,
-                  lastName: contact.lastName || "",
-                  emails: contact.emails.length > 0 ? contact.emails : [""],
-                  phones: contact.phones.length > 0 ? contact.phones : [""],
-                  jobTitle: contact.jobTitle || "",
-                  company: contact.company || "",
-                  address: contact.address || {
-                    street: "",
-                    city: "",
-                    state: "",
-                    zipCode: "",
-                    country: "",
-                  },
-                }}
-              />
-            )}
+          <div className="glass-card p-8">
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Carregando contato...</span>
+            </div>
           </div>
         </div>
-      </main>
-    </div>
+      </LayoutWrapper>
+    );
+  }
+
+  if (error || !contact) {
+    return (
+      <LayoutWrapper
+        title="Editar Contato"
+        subtitle="Erro ao carregar"
+        activeTab="contacts"
+      >
+        <div className="max-w-2xl mx-auto">
+          <div className="glass-card p-8">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center mb-4">
+                <AlertCircle className="w-6 h-6 text-destructive" />
+              </div>
+              <h3 className="text-lg font-semibold text-destructive mb-2">
+                {error ?? "Contato não encontrado"}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Não foi possível carregar os dados do contato para edição.
+              </p>
+              <div className="flex gap-3">
+                <Button variant="ghost" onClick={() => router.back()}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar
+                </Button>
+                <Link href="/contatos">
+                  <Button variant="glow">Ver todos contatos</Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
+  return (
+    <LayoutWrapper
+      title={`Editar ${contactName}`}
+      subtitle="Atualize as informações do contato"
+      activeTab="contacts"
+    >
+      <div className="max-w-2xl mx-auto">
+        {/* Botão Voltar */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => router.push(`/contatos/${contactId}`)}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para o contato
+          </Button>
+        </div>
+
+        {/* Formulário */}
+        <div className="glass-card p-6">
+          <EditarContatoClient
+            contactId={contactId}
+            initialData={{
+              firstName: contact.firstName,
+              lastName: contact.lastName || "",
+              emails: contact.emails.length > 0 ? contact.emails : [""],
+              phones: contact.phones.length > 0 ? contact.phones : [""],
+              jobTitle: contact.jobTitle || "",
+              company: contact.company || "",
+              address: contact.address || {
+                street: "",
+                city: "",
+                state: "",
+                zipCode: "",
+                country: "",
+              },
+            }}
+          />
+        </div>
+      </div>
+    </LayoutWrapper>
   );
 }
 

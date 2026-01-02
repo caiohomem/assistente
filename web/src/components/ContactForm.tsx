@@ -158,37 +158,39 @@ export function ContactForm({
     }));
   };
 
+  // Classes base para inputs
+  const inputBaseClass = "w-full rounded-xl border bg-secondary/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50";
+  const inputErrorClass = "border-destructive/50 focus:ring-destructive/30 focus:border-destructive/50";
+  const inputNormalClass = "border-border";
+  const labelClass = "block text-sm font-medium text-foreground mb-2";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {errors.general && (
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
-          <p className="text-sm text-red-800 dark:text-red-200">{errors.general}</p>
+        <div className="rounded-xl bg-destructive/10 border border-destructive/30 p-4">
+          <p className="text-sm text-destructive">{errors.general}</p>
         </div>
       )}
 
       {/* Nome */}
       <div>
-        <label htmlFor="firstName" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-          Nome <span className="text-red-500 dark:text-red-400">*</span>
+        <label htmlFor="firstName" className={labelClass}>
+          Nome <span className="text-destructive">*</span>
         </label>
         <input
           type="text"
           id="firstName"
           value={formData.firstName}
           onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
-          className={`w-full rounded-md border px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 ${
-            errors.firstName 
-              ? "border-red-300 dark:border-red-600" 
-              : "border-zinc-300 dark:border-zinc-600"
-          } focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400`}
+          className={`${inputBaseClass} ${errors.firstName ? inputErrorClass : inputNormalClass}`}
           required
         />
-        {errors.firstName && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName}</p>}
+        {errors.firstName && <p className="mt-2 text-sm text-destructive">{errors.firstName}</p>}
       </div>
 
       {/* Sobrenome */}
       <div>
-        <label htmlFor="lastName" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+        <label htmlFor="lastName" className={labelClass}>
           Sobrenome
         </label>
         <input
@@ -196,40 +198,38 @@ export function ContactForm({
           id="lastName"
           value={formData.lastName}
           onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+          className={`${inputBaseClass} ${inputNormalClass}`}
         />
       </div>
 
       {/* Emails */}
       <div>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Emails</label>
+        <label className={labelClass}>Emails</label>
         {formData.emails.map((email, index) => (
-          <div key={index} className="flex gap-2 mb-2 items-center">
+          <div key={index} className="flex gap-2 mb-3 items-center">
             <input
               type="email"
               value={email}
               onChange={(e) => updateEmail(index, e.target.value)}
               placeholder="email@exemplo.com"
-              className={`flex-1 rounded-md border px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 ${
-                errors[`emails.${index}` as keyof typeof errors]
-                  ? "border-red-300 dark:border-red-600"
-                  : "border-zinc-300 dark:border-zinc-600"
-              } focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400`}
+              className={`flex-1 ${inputBaseClass} ${
+                errors[`emails.${index}` as keyof typeof errors] ? inputErrorClass : inputNormalClass
+              }`}
             />
             {index === formData.emails.length - 1 && (
               <button
                 type="button"
                 onClick={addEmail}
-                className="text-sm text-black dark:text-zinc-300 hover:underline whitespace-nowrap"
+                className="text-sm text-primary hover:text-primary/80 whitespace-nowrap font-medium transition-colors"
               >
-                + Adicionar email
+                + Adicionar
               </button>
             )}
             {formData.emails.length > 1 && index < formData.emails.length - 1 && (
               <button
                 type="button"
                 onClick={() => removeEmail(index)}
-                className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                className="px-3 py-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
               >
                 Remover
               </button>
@@ -240,34 +240,32 @@ export function ContactForm({
 
       {/* Telefones */}
       <div>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Telefones</label>
+        <label className={labelClass}>Telefones</label>
         {formData.phones.map((phone, index) => (
-          <div key={index} className="flex gap-2 mb-2 items-center">
+          <div key={index} className="flex gap-2 mb-3 items-center">
             <input
               type="tel"
               value={phone}
               onChange={(e) => updatePhone(index, e.target.value)}
               placeholder="(11) 99999-9999"
-              className={`flex-1 rounded-md border px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 ${
-                errors[`phones.${index}` as keyof typeof errors]
-                  ? "border-red-300 dark:border-red-600"
-                  : "border-zinc-300 dark:border-zinc-600"
-              } focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400`}
+              className={`flex-1 ${inputBaseClass} ${
+                errors[`phones.${index}` as keyof typeof errors] ? inputErrorClass : inputNormalClass
+              }`}
             />
             {index === formData.phones.length - 1 && (
               <button
                 type="button"
                 onClick={addPhone}
-                className="text-sm text-black dark:text-zinc-300 hover:underline whitespace-nowrap"
+                className="text-sm text-primary hover:text-primary/80 whitespace-nowrap font-medium transition-colors"
               >
-                + Adicionar telefone
+                + Adicionar
               </button>
             )}
             {formData.phones.length > 1 && index < formData.phones.length - 1 && (
               <button
                 type="button"
                 onClick={() => removePhone(index)}
-                className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                className="px-3 py-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
               >
                 Remover
               </button>
@@ -278,7 +276,7 @@ export function ContactForm({
 
       {/* Empresa */}
       <div>
-        <label htmlFor="company" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+        <label htmlFor="company" className={labelClass}>
           Empresa
         </label>
         <input
@@ -286,13 +284,13 @@ export function ContactForm({
           id="company"
           value={formData.company}
           onChange={(e) => setFormData((prev) => ({ ...prev, company: e.target.value }))}
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+          className={`${inputBaseClass} ${inputNormalClass}`}
         />
       </div>
 
       {/* Cargo */}
       <div>
-        <label htmlFor="jobTitle" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+        <label htmlFor="jobTitle" className={labelClass}>
           Cargo
         </label>
         <input
@@ -300,16 +298,16 @@ export function ContactForm({
           id="jobTitle"
           value={formData.jobTitle}
           onChange={(e) => setFormData((prev) => ({ ...prev, jobTitle: e.target.value }))}
-          className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+          className={`${inputBaseClass} ${inputNormalClass}`}
         />
       </div>
 
       {/* Endereço */}
-      <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-700 pt-4">
-        <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Endereço</h3>
+      <div className="space-y-4 border-t border-border pt-6">
+        <h3 className="text-sm font-semibold text-foreground">Endereço</h3>
 
         <div>
-          <label htmlFor="street" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <label htmlFor="street" className={labelClass}>
             Rua
           </label>
           <input
@@ -322,13 +320,13 @@ export function ContactForm({
                 address: { ...prev.address, street: e.target.value },
               }))
             }
-            className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+            className={`${inputBaseClass} ${inputNormalClass}`}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="city" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="city" className={labelClass}>
               Cidade
             </label>
             <input
@@ -341,12 +339,12 @@ export function ContactForm({
                   address: { ...prev.address, city: e.target.value },
                 }))
               }
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+              className={`${inputBaseClass} ${inputNormalClass}`}
             />
           </div>
 
           <div>
-            <label htmlFor="state" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="state" className={labelClass}>
               Estado
             </label>
             <input
@@ -359,14 +357,14 @@ export function ContactForm({
                   address: { ...prev.address, state: e.target.value },
                 }))
               }
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+              className={`${inputBaseClass} ${inputNormalClass}`}
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="zipCode" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="zipCode" className={labelClass}>
               CEP
             </label>
             <input
@@ -379,12 +377,12 @@ export function ContactForm({
                   address: { ...prev.address, zipCode: e.target.value },
                 }))
               }
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+              className={`${inputBaseClass} ${inputNormalClass}`}
             />
           </div>
 
           <div>
-            <label htmlFor="country" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="country" className={labelClass}>
               País
             </label>
             <input
@@ -397,18 +395,18 @@ export function ContactForm({
                   address: { ...prev.address, country: e.target.value },
                 }))
               }
-              className="w-full rounded-md border border-zinc-300 dark:border-zinc-600 px-3 py-2 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:border-black dark:focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-zinc-400"
+              className={`${inputBaseClass} ${inputNormalClass}`}
             />
           </div>
         </div>
       </div>
 
       {/* Botões */}
-      <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+      <div className="flex gap-3 pt-6 border-t border-border">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-md bg-black dark:bg-zinc-700 px-4 py-2 text-white dark:text-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300"
         >
           {isSubmitting ? "Salvando..." : submitLabel}
         </button>
@@ -417,7 +415,7 @@ export function ContactForm({
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="px-4 py-2 rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 rounded-xl border border-border bg-secondary/50 text-sm font-medium text-foreground hover:bg-secondary disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300"
           >
             {cancelLabel}
           </button>

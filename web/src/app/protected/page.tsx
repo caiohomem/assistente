@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { getBffSession, type BffSession } from "@/lib/bff";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
 
 export default function ProtectedPage() {
   const [loading, setLoading] = useState(true);
@@ -67,17 +67,19 @@ export default function ProtectedPage() {
     return cores[index];
   }, [user?.email, user?.name]);
 
-  const nomeExibido = user?.name || user?.email || "Usuário";
+  const nomeExibido = user?.name || user?.email || "UsuA­rio";
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-      <TopBar title="Perfil" />
-      <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm p-6">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6">Perfil do Usuário</h2>
+    <LayoutWrapper title="Perfil" subtitle="Detalhes do usuA­rio" activeTab="settings">
+      <div className="max-w-4xl mx-auto">
+        <div className="glass-card p-6">
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Perfil do UsuA­rio</h2>
 
           {loading ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Carregando...</p>
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Carregando...</span>
+            </div>
           ) : (
             <div className="flex flex-col md:flex-row gap-6 mb-6">
               <div className="flex-shrink-0">
@@ -89,19 +91,19 @@ export default function ProtectedPage() {
               <div className="flex-1">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Nome
                     </label>
-                    <p className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    <p className="mt-1 text-lg font-semibold text-foreground">
                       {nomeExibido}
                     </p>
                   </div>
                   {user?.email && (
                     <div>
-                      <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Email
                       </label>
-                      <p className="mt-1 text-base text-zinc-700 dark:text-zinc-300">{user.email}</p>
+                      <p className="mt-1 text-base text-muted-foreground">{user.email}</p>
                     </div>
                   )}
                 </div>
@@ -110,7 +112,6 @@ export default function ProtectedPage() {
           )}
         </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
-

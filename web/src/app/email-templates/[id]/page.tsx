@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -6,7 +6,9 @@ import Link from "next/link";
 import { getBffSession } from "@/lib/bff";
 import { getEmailTemplateByIdClient } from "@/lib/api/emailTemplatesApiClient";
 import { EmailTemplateDetailsClient } from "./EmailTemplateDetailsClient";
-import { TopBar } from "@/components/TopBar";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function EmailTemplateDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -51,55 +53,64 @@ export default function EmailTemplateDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <TopBar title="Detalhes do Template" showBackButton backHref="/email-templates" />
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Carregando template...</p>
+      <LayoutWrapper
+        title="Detalhes do Template"
+        subtitle="Carregando informaA§Aµes do template"
+        activeTab="documents"
+      >
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-card p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando template...</p>
           </div>
         </div>
-      </div>
+      </LayoutWrapper>
     );
   }
 
   if (error || !template) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <TopBar title="Detalhes do Template" showBackButton backHref="/email-templates" />
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-            <p className="text-sm text-red-800 dark:text-red-200">
-              {error || "Template não encontrado"}
-            </p>
-            <Link
-              href="/email-templates"
-              className="mt-2 inline-block text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-            >
-              Voltar para lista
-            </Link>
+      <LayoutWrapper
+        title="Detalhes do Template"
+        subtitle="Erro ao carregar"
+        activeTab="documents"
+      >
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-card p-6">
+            <div className="rounded-md bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">
+                {error || "Template nAśo encontrado"}
+              </p>
+              <Button asChild variant="ghost" className="mt-3">
+                <Link href="/email-templates">Voltar para lista</Link>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </LayoutWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Detalhes do Template" showBackButton backHref="/email-templates">
-        <Link
-          href={`/email-templates/${templateId}/editar`}
-          className="inline-flex items-center justify-center rounded-md bg-indigo-600 dark:bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          Editar
-        </Link>
-      </TopBar>
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <EmailTemplateDetailsClient template={template} />
+    <LayoutWrapper
+      title="Detalhes do Template"
+      subtitle="Visualize o conteA§do do template de email"
+      activeTab="documents"
+    >
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <Button asChild variant="ghost" className="gap-2">
+            <Link href="/email-templates">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para templates
+            </Link>
+          </Button>
+          <Button asChild variant="glow">
+            <Link href={`/email-templates/${templateId}/editar`}>Editar</Link>
+          </Button>
         </div>
-      </main>
-    </div>
+        <EmailTemplateDetailsClient template={template} />
+      </div>
+    </LayoutWrapper>
   );
 }
-

@@ -1,10 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { getBffSession } from "@/lib/bff";
-import { TopBar } from "@/components/TopBar";
 import { NovaNotaAudioClient } from "./NovaNotaAudioClient";
+import { LayoutWrapper } from "@/components/LayoutWrapper";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function NotasAudioPage() {
   const params = useParams();
@@ -36,19 +39,31 @@ export default function NotasAudioPage() {
   if (!contactId) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <TopBar title="Notas de Áudio" showBackButton backHref={`/contatos/${contactId}`} />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm p-6">
-            {loading ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">Carregando...</p>
-            ) : (
-              <NovaNotaAudioClient contactId={contactId} />
-            )}
-          </div>
+    <LayoutWrapper
+      title="Notas de A?udio"
+      subtitle="Registre notas de A?udio para o contato"
+      activeTab="notes"
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Button asChild variant="ghost" className="gap-2">
+            <Link href={`/contatos/${contactId}`}>
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para o contato
+            </Link>
+          </Button>
         </div>
-      </main>
-    </div>
+        <div className="glass-card p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Carregando...</span>
+            </div>
+          ) : (
+            <NovaNotaAudioClient contactId={contactId} />
+          )}
+        </div>
+      </div>
+    </LayoutWrapper>
   );
 }

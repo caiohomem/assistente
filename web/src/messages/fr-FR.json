@@ -283,6 +283,19 @@
     "back": "Retour",
     "reactivateError": "Erreur lors de la réactivation de l'utilisateur",
     "reactivateErrorRetry": "Erreur lors de la réactivation de l'utilisateur. Veuillez réessayer."
+  },
+  "notes": {
+    "title": "Nouvelle note",
+    "addNote": "Ajouter une note",
+    "content": "Contenu",
+    "contentPlaceholder": "Saisissez le contenu de la note...",
+    "contentRequired": "Le contenu de la note est obligatoire",
+    "structuredData": "Donn?es structur?es (JSON)",
+    "structuredDataPlaceholder": "Donn?es structur?es en JSON (optionnel)",
+    "invalidJson": "JSON invalide",
+    "create": "Cr?er la note",
+    "creating": "Cr?ation...",
+    "errorCreating": "Erreur lors de la cr?ation de la note",
+    "successCreating": "Note cr??e avec succ?s"
   }
 }
-
