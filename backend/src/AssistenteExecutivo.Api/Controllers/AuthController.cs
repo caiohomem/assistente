@@ -867,7 +867,7 @@ public sealed class AuthController : ControllerBase
         var redirect = Uri.EscapeDataString(postLogoutRedirectUri);
         var cid = Uri.EscapeDataString(clientId);
 
-        // Enviar tanto `post_logout_redirect_uri` quanto `redirect_uri` para maximizar compatibilidade entre versAµes do Keycloak.
+        // Enviar tanto `post_logout_redirect_uri` quanto `redirect_uri` para maximizar compatibilidade entre versões do Keycloak.
         return $"{keycloakBaseUrl}/realms/{realm}/protocol/openid-connect/logout?client_id={cid}&post_logout_redirect_uri={redirect}&redirect_uri={redirect}";
     }
 

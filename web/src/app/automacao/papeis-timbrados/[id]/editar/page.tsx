@@ -74,7 +74,7 @@ export default function EditarPapelTimbradoPage() {
             </div>
           ) : error || !letterhead ? (
             <div className="rounded-md bg-destructive/10 p-4">
-              <p className="text-sm text-destructive">{error ?? "Papel timbrado nAśo encontrado."}</p>
+              <p className="text-sm text-destructive">{error ?? "Papel timbrado não encontrado."}</p>
               <Link
                 href="/automacao/papeis-timbrados"
                 className="mt-3 inline-block text-sm text-destructive underline"

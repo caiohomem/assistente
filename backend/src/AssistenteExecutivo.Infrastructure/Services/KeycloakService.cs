@@ -142,7 +142,7 @@ public class KeycloakService : IKeycloakService
                 }
                 else
                 {
-                    _logger.LogWarning("Theme {ThemeName} nAœo foi aplicado no realm {RealmId}. Verifique se o theme existe no servidor do Keycloak.", themeName, realmId);
+                    _logger.LogWarning("Theme {ThemeName} não foi aplicado no realm {RealmId}. Verifique se o theme existe no servidor do Keycloak.", themeName, realmId);
                 }
             }
             catch (Exception ex)
@@ -165,13 +165,13 @@ public class KeycloakService : IKeycloakService
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
 
-            // O theme em si nAœo pode ser "provisionado" via Admin API: ele precisa existir no filesystem do Keycloak
+            // O theme em si não pode ser "provisionado" via Admin API: ele precisa existir no filesystem do Keycloak
             // (ex: /opt/keycloak/themes/<themeName> no container).
             var themeName = _configuration["Keycloak:ThemeName"] ?? "assistenteexecutivo";
             if (false)
             {
                 _logger.LogWarning(
-                    "Theme {ThemeName} nAœo encontrado no Keycloak. Em Docker, garanta que exista em /opt/keycloak/themes/{ThemeName}.",
+                    "Theme {ThemeName} não encontrado no Keycloak. Em Docker, garanta que exista em /opt/keycloak/themes/{ThemeName}.",
                     themeName);
                 return;
             }
@@ -289,7 +289,7 @@ public class KeycloakService : IKeycloakService
             var getResponse = await _httpClient.SendAsync(getRequest, cancellationToken);
             if (!getResponse.IsSuccessStatusCode)
             {
-                _logger.LogWarning("NAœo foi possA-vel obter configuraAAœo do realm {RealmId} para configurar login settings", realmId);
+                _logger.LogWarning("Não foi possível obter configuração do realm {RealmId} para configurar login settings", realmId);
                 return;
             }
 

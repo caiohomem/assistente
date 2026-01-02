@@ -41,7 +41,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
 
         _apiKey = configuration["OpenAI:ApiKey"]
-            ?? throw new InvalidOperationException("OpenAI:ApiKey nÃ£o configurado");
+            ?? throw new InvalidOperationException("OpenAI:ApiKey não configurado");
 
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
@@ -68,7 +68,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         {
             return new ProcessAssistantChatResult
             {
-                Message = "NÃ£o foi possÃ­vel gerar uma resposta.",
+                Message = "Não foi possível gerar uma resposta.",
                 FunctionCalls = new List<FunctionCallInfo>()
             };
         }
@@ -80,7 +80,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         // Processar output items
         foreach (var outputItem in openaiResponse.Output)
         {
-            // Verificar se Ã© function_call (campos diretos na Responses API)
+            // Verificar se é function_call (campos diretos na Responses API)
             if (outputItem.Type == "function_call" && !string.IsNullOrEmpty(outputItem.Name))
             {
                 hasFunctionCalls = true;
@@ -91,7 +91,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     Arguments = outputItem.Arguments ?? ""
                 });
 
-                // Executar funÃ§Ã£o
+                // Executar função
                 var result = await ExecuteFunctionAsync(
                     request.OwnerUserId,
                     outputItem.Name,
@@ -106,19 +106,19 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     Arguments = outputItem.Arguments ?? ""
                 });
 
-                // Adicionar resultado ao input para prÃ³xima chamada
+                // Adicionar resultado ao input para próxima chamada
                 inputItems.Add(new InputFunctionCallOutput
                 {
                     CallId = outputItem.CallId ?? "",
                     Output = JsonSerializer.Serialize(result)
                 });
             }
-            // Verificar se Ã© text direto
+            // Verificar se é text direto
             else if (outputItem.Type == "text" && outputItem.Text != null)
             {
                 finalTextContent = outputItem.Text;
             }
-            // Verificar se Ã© message (Responses API retorna assim)
+            // Verificar se é message (Responses API retorna assim)
             else if (outputItem.Type == "message" && outputItem.Content != null)
             {
                 var textPart = outputItem.Content.FirstOrDefault(c => c.Type == "output_text" && !string.IsNullOrEmpty(c.Text));
@@ -129,7 +129,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             }
         }
 
-        // Se houver function calls, continuar chamando atÃ© resolver (limite de seguranÃ§a de 3 iteraÃ§Ãµes)
+        // Se houver function calls, continuar chamando até resolver (limite de segurança de 3 iterações)
         var safetyIterations = 0;
         while (hasFunctionCalls && safetyIterations < 5)
         {
@@ -202,10 +202,10 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             };
         }
 
-        // Se nÃ£o houver function calls, retornar resposta direta
+        // Se não houver function calls, retornar resposta direta
         return new ProcessAssistantChatResult
         {
-            Message = finalTextContent != "" ? finalTextContent : "NÃ£o foi possÃ­vel gerar uma resposta.",
+            Message = finalTextContent != "" ? finalTextContent : "Não foi possível gerar uma resposta.",
             FunctionCalls = functionCalls
         };
     }
@@ -216,8 +216,8 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         List<object> tools,
         CancellationToken cancellationToken)
     {
-        // Configurar opÃ§Ãµes de serializaÃ§Ã£o para garantir formato correto
-        // NÃ£o usar PropertyNamingPolicy para manter snake_case (tool_choice) e camelCase conforme necessÃ¡rio
+        // Configurar opções de serialização para garantir formato correto
+        // Não usar PropertyNamingPolicy para manter snake_case (tool_choice) e camelCase conforme necessário
         var serializeOptions = new JsonSerializerOptions
         {
             WriteIndented = false,
@@ -230,16 +230,16 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         _logger.LogDebug("Tools JSON (first 500 chars): {ToolsJson}",
             toolsJson.Length > 500 ? toolsJson.Substring(0, 500) + "..." : toolsJson);
 
-        // Deserializar tools para garantir que a estrutura estÃ¡ correta
+        // Deserializar tools para garantir que a estrutura está correta
         using var toolsDoc = JsonDocument.Parse(toolsJson);
         var toolsArray = toolsDoc.RootElement.Clone();
 
-        // Construir request body usando objeto anÃ´nimo - JsonSerializer lida melhor com isso
+        // Construir request body usando objeto anônimo - JsonSerializer lida melhor com isso
         var requestBody = new
         {
             model = model,
             input = inputItems,
-            tools = tools, // Usar tools original, nÃ£o o serializado
+            tools = tools, // Usar tools original, não o serializado
             tool_choice = "auto"
         };
 
@@ -267,12 +267,12 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     }
                     else
                     {
-                        _logger.LogError("Tool NAO tem 'type' ou 'name' no nA-vel raiz! Estrutura: {ToolJson}", firstTool.GetRawText());
+                        _logger.LogError("Tool NÃO tem 'type' ou 'name' no nível raiz! Estrutura: {ToolJson}", firstTool.GetRawText());
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("Tools array estA? vazio ou invA?lido");
+                    _logger.LogWarning("Tools array está vazio ou inválido");
                 }
             }
         }
@@ -297,7 +297,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         // Log para debug
         _logger.LogDebug("OpenAI Response JSON: {Response}", responseJson);
 
-        // Configurar opÃ§Ãµes de deserializaÃ§Ã£o para aceitar camelCase do OpenAI
+        // Configurar opções de deserialização para aceitar camelCase do OpenAI
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
@@ -391,12 +391,12 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                 "approve_workflow_step" => await ExecuteApproveWorkflowStepAsync(ownerUserId, args, cancellationToken),
                 "list_workflow_executions" => await ExecuteListWorkflowExecutionsAsync(ownerUserId, args, cancellationToken),
                 "get_pending_approvals" => await ExecuteGetPendingApprovalsAsync(ownerUserId, cancellationToken),
-                _ => throw new NotSupportedException($"FunÃ§Ã£o nÃ£o suportada: {functionName}")
+                _ => throw new NotSupportedException($"Função não suportada: {functionName}")
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao executar funÃ§Ã£o {FunctionName}. Payload: {Payload}", functionName, argumentsJson);
+            _logger.LogError(ex, "Erro ao executar função {FunctionName}. Payload: {Payload}", functionName, argumentsJson);
             return new { error = ex.Message };
         }
     }
@@ -422,7 +422,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteSearchContactsAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("searchTerm", out var searchTermProp))
-            throw new ArgumentException("searchTerm Ã© obrigatÃ³rio");
+            throw new ArgumentException("searchTerm é obrigatório");
 
         var searchTerm = searchTermProp.GetString() ?? "";
         var page = args.TryGetProperty("page", out var pageProp) ? pageProp.GetInt32() : 1;
@@ -443,7 +443,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetContactAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var contactId = Guid.Parse(idProp.GetString() ?? "");
 
@@ -455,7 +455,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            throw new InvalidOperationException("Contato nÃ£o encontrado");
+            throw new InvalidOperationException("Contato não encontrado");
 
         return result;
     }
@@ -463,7 +463,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteCreateContactAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("firstName", out var firstNameProp))
-            throw new ArgumentException("firstName Ã© obrigatÃ³rio");
+            throw new ArgumentException("firstName é obrigatório");
 
         var command = new CreateContactCommand
         {
@@ -488,27 +488,27 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         if (!args.TryGetProperty("contactId", out var contactIdProp) ||
             !args.TryGetProperty("reason", out var reasonProp) ||
             !args.TryGetProperty("scheduledFor", out var scheduledForProp))
-            throw new ArgumentException("contactId, reason e scheduledFor sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("contactId, reason e scheduledFor são obrigatórios");
 
-        // suggestedMessage Ã© opcional, nÃ£o precisa validar aqui
+        // suggestedMessage é opcional, não precisa validar aqui
 
         var contactIdString = contactIdProp.GetString();
         if (string.IsNullOrWhiteSpace(contactIdString))
-            throw new ArgumentException("contactId nÃ£o pode ser vazio");
+            throw new ArgumentException("contactId não pode ser vazio");
 
         if (!Guid.TryParse(contactIdString, out var contactId))
-            throw new ArgumentException($"contactId invÃ¡lido: '{contactIdString}'. Deve ser um GUID vÃ¡lido. Use a funÃ§Ã£o search_contacts para encontrar o contato por nome primeiro.");
+            throw new ArgumentException($"contactId inválido: '{contactIdString}'. Deve ser um GUID válido. Use a função search_contacts para encontrar o contato por nome primeiro.");
 
         var reason = reasonProp.GetString();
         if (string.IsNullOrWhiteSpace(reason))
-            throw new ArgumentException("reason nÃ£o pode ser vazio");
+            throw new ArgumentException("reason não pode ser vazio");
 
         var scheduledForString = scheduledForProp.GetString();
         if (string.IsNullOrWhiteSpace(scheduledForString))
-            throw new ArgumentException("scheduledFor nÃ£o pode ser vazio");
+            throw new ArgumentException("scheduledFor não pode ser vazio");
 
         if (!DateTimeOffset.TryParse(scheduledForString, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var scheduledForDto))
-            throw new ArgumentException($"scheduledFor invÃ¡lido: '{scheduledForString}'. Deve estar no formato ISO 8601 (ex: 2024-12-25T10:00:00Z)");
+            throw new ArgumentException($"scheduledFor inválido: '{scheduledForString}'. Deve estar no formato ISO 8601 (ex: 2024-12-25T10:00:00Z)");
         var scheduledFor = scheduledForDto.UtcDateTime;
 
         var command = new CreateReminderCommand
@@ -547,7 +547,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetReminderAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var reminderId = Guid.Parse(idProp.GetString() ?? "");
 
@@ -559,17 +559,17 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            throw new InvalidOperationException("Lembrete nÃ£o encontrado");
+            throw new InvalidOperationException("Lembrete não encontrado");
 
         return result;
     }
 
-    // ========== FunÃ§Ãµes de Contatos Adicionais ==========
+    // ========== Funções de Contatos Adicionais ==========
 
     private async Task<object> ExecuteUpdateContactAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new UpdateContactCommand
         {
@@ -593,7 +593,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteContactAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new DeleteContactCommand
         {
@@ -608,7 +608,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteAddContactEmailAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("email", out var emailProp))
-            throw new ArgumentException("contactId e email sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("contactId e email são obrigatórios");
 
         var command = new AddContactEmailCommand
         {
@@ -624,7 +624,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteAddContactPhoneAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("phone", out var phoneProp))
-            throw new ArgumentException("contactId e phone sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("contactId e phone são obrigatórios");
 
         var command = new AddContactPhoneCommand
         {
@@ -640,7 +640,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteAddContactTagAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("tag", out var tagProp))
-            throw new ArgumentException("contactId e tag sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("contactId e tag são obrigatórios");
 
         var command = new AddContactTagCommand
         {
@@ -656,7 +656,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteAddContactRelationshipAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("targetContactId", out var targetProp) || !args.TryGetProperty("type", out var typeProp))
-            throw new ArgumentException("contactId, targetContactId e type sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("contactId, targetContactId e type são obrigatórios");
 
         var command = new AddContactRelationshipCommand
         {
@@ -676,7 +676,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteContactRelationshipAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("relationshipId", out var relIdProp))
-            throw new ArgumentException("relationshipId Ã© obrigatÃ³rio");
+            throw new ArgumentException("relationshipId é obrigatório");
 
         var command = new DeleteRelationshipCommand
         {
@@ -702,12 +702,12 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         return result;
     }
 
-    // ========== FunÃ§Ãµes de Lembretes Adicionais ==========
+    // ========== Funções de Lembretes Adicionais ==========
 
     private async Task<object> ExecuteUpdateReminderStatusAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp) || !args.TryGetProperty("newStatus", out var statusProp))
-            throw new ArgumentException("id e newStatus sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("id e newStatus são obrigatórios");
 
         if (!Enum.TryParse<ReminderStatus>(statusProp.GetString(), out var status))
             throw new ArgumentException("newStatus deve ser Pending, Sent, Dismissed ou Snoozed");
@@ -729,7 +729,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteReminderAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new DeleteReminderCommand
         {
@@ -741,12 +741,12 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         return new { success = true };
     }
 
-    // ========== FunÃ§Ãµes de Notas ==========
+    // ========== Funções de Notas ==========
 
     private async Task<object> ExecuteListContactNotesAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("contactId", out var contactIdProp))
-            throw new ArgumentException("contactId Ã© obrigatÃ³rio");
+            throw new ArgumentException("contactId é obrigatório");
 
         var query = new ListNotesByContactQuery
         {
@@ -761,7 +761,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetNoteAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var query = new GetNoteByIdQuery
         {
@@ -771,7 +771,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            throw new InvalidOperationException("Nota nÃ£o encontrada");
+            throw new InvalidOperationException("Nota não encontrada");
 
         return result;
     }
@@ -779,18 +779,18 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteCreateTextNoteAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("text", out var textProp))
-            throw new ArgumentException("contactId e text sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("contactId e text são obrigatórios");
 
         var contactIdString = contactIdProp.GetString();
         if (string.IsNullOrWhiteSpace(contactIdString))
-            throw new ArgumentException("contactId nÃ£o pode ser vazio");
+            throw new ArgumentException("contactId não pode ser vazio");
 
         if (!Guid.TryParse(contactIdString, out var contactId))
-            throw new ArgumentException($"contactId invÃ¡lido: '{contactIdString}'. Deve ser um GUID vÃ¡lido. Use a funÃ§Ã£o search_contacts para encontrar o contato por nome primeiro.");
+            throw new ArgumentException($"contactId inválido: '{contactIdString}'. Deve ser um GUID válido. Use a função search_contacts para encontrar o contato por nome primeiro.");
 
         var text = textProp.GetString();
         if (string.IsNullOrWhiteSpace(text))
-            throw new ArgumentException("text nÃ£o pode ser vazio");
+            throw new ArgumentException("text não pode ser vazio");
 
         var command = new CreateTextNoteCommand
         {
@@ -809,7 +809,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteUpdateNoteAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new UpdateNoteCommand
         {
@@ -826,7 +826,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteNoteAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new DeleteNoteCommand
         {
@@ -838,15 +838,15 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         return new { success = true };
     }
 
-    // ========== FunÃ§Ãµes de Drafts ==========
+    // ========== Funções de Drafts ==========
 
     private async Task<object> ExecuteCreateDraftAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("documentType", out var typeProp) || !args.TryGetProperty("content", out var contentProp))
-            throw new ArgumentException("documentType e content sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("documentType e content são obrigatórios");
 
         if (!Enum.TryParse<DocumentType>(typeProp.GetString(), out var docType))
-            throw new ArgumentException("documentType invÃ¡lido");
+            throw new ArgumentException("documentType inválido");
 
         var command = new CreateDraftDocumentCommand
         {
@@ -899,7 +899,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetDraftAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var query = new GetDraftByIdQuery
         {
@@ -909,7 +909,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            throw new InvalidOperationException("Draft nÃ£o encontrado");
+            throw new InvalidOperationException("Draft não encontrado");
 
         return result;
     }
@@ -917,7 +917,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteUpdateDraftAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new UpdateDraftDocumentCommand
         {
@@ -945,7 +945,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteApproveDraftAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new ApproveDraftCommand
         {
@@ -960,7 +960,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteSendDraftAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new SendDraftCommand
         {
@@ -975,7 +975,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteDraftAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new DeleteDraftCommand
         {
@@ -987,15 +987,15 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         return new { success = true };
     }
 
-    // ========== FunÃ§Ãµes de Templates ==========
+    // ========== Funções de Templates ==========
 
     private async Task<object> ExecuteCreateTemplateAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("name", out var nameProp) || !args.TryGetProperty("type", out var typeProp) || !args.TryGetProperty("body", out var bodyProp))
-            throw new ArgumentException("name, type e body sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("name, type e body são obrigatórios");
 
         if (!Enum.TryParse<TemplateType>(typeProp.GetString(), out var templateType))
-            throw new ArgumentException("type invÃ¡lido");
+            throw new ArgumentException("type inválido");
 
         var command = new CreateTemplateCommand
         {
@@ -1030,7 +1030,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetTemplateAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var query = new GetTemplateByIdQuery
         {
@@ -1040,7 +1040,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            throw new InvalidOperationException("Template nÃ£o encontrado");
+            throw new InvalidOperationException("Template não encontrado");
 
         return result;
     }
@@ -1048,7 +1048,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteUpdateTemplateAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new UpdateTemplateCommand
         {
@@ -1067,7 +1067,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteTemplateAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new DeleteTemplateCommand
         {
@@ -1079,12 +1079,12 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
         return new { success = true };
     }
 
-    // ========== FunÃ§Ãµes de Letterheads ==========
+    // ========== Funções de Letterheads ==========
 
     private async Task<object> ExecuteCreateLetterheadAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("name", out var nameProp) || !args.TryGetProperty("designData", out var designProp))
-            throw new ArgumentException("name e designData sÃ£o obrigatÃ³rios");
+            throw new ArgumentException("name e designData são obrigatórios");
 
         var command = new CreateLetterheadCommand
         {
@@ -1114,7 +1114,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetLetterheadAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var query = new GetLetterheadByIdQuery
         {
@@ -1124,7 +1124,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            throw new InvalidOperationException("Letterhead nÃ£o encontrado");
+            throw new InvalidOperationException("Letterhead não encontrado");
 
         return result;
     }
@@ -1132,7 +1132,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteUpdateLetterheadAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new UpdateLetterheadCommand
         {
@@ -1150,7 +1150,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteDeleteLetterheadAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var command = new DeleteLetterheadCommand
         {
@@ -1167,7 +1167,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteCreateWorkflowAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("specJson", out var specJsonProp))
-            throw new ArgumentException("specJson Ã© obrigatÃ³rio");
+            throw new ArgumentException("specJson é obrigatório");
 
         var activateImmediately = args.TryGetProperty("activateImmediately", out var activateProp) && activateProp.ValueKind == JsonValueKind.True;
 
@@ -1222,7 +1222,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteGetWorkflowAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         var query = new Queries.Workflow.GetWorkflowByIdQuery
         {
@@ -1232,14 +1232,14 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
         var result = await _mediator.Send(query, cancellationToken);
         if (result == null)
-            return new { error = "Workflow nÃ£o encontrado" };
+            return new { error = "Workflow não encontrado" };
         return result;
     }
 
     private async Task<object> ExecuteRunWorkflowAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("id", out var idProp))
-            throw new ArgumentException("id Ã© obrigatÃ³rio");
+            throw new ArgumentException("id é obrigatório");
 
         string? inputJson = null;
         if (args.TryGetProperty("inputJson", out var inputProp) && inputProp.ValueKind == JsonValueKind.String)
@@ -1258,7 +1258,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
     private async Task<object> ExecuteApproveWorkflowStepAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
         if (!args.TryGetProperty("executionId", out var idProp))
-            throw new ArgumentException("executionId Ã© obrigatÃ³rio");
+            throw new ArgumentException("executionId é obrigatório");
 
         var command = new Commands.Workflow.ApproveWorkflowStepCommand
         {
@@ -1327,15 +1327,15 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_contacts",
-                description = "Lista todos os contatos do usuÃ¡rio autenticado. Suporta paginaÃ§Ã£o e filtros.",
+                description = "Lista todos os contatos do usuário autenticado. Suporta paginação e filtros.",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        page = new { type = new[] { "number", "null" }, description = "NÃºmero da pÃ¡gina (padrÃ£o: 1)" },
-                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da pÃ¡gina (padrÃ£o: 20)" },
-                        includeDeleted = new { type = new[] { "boolean", "null" }, description = "Incluir contatos deletados (padrÃ£o: false)" }
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" },
+                        includeDeleted = new { type = new[] { "boolean", "null" }, description = "Incluir contatos deletados (padrão: false)" }
                     },
                     required = new[] { "page", "pageSize", "includeDeleted" },
                     additionalProperties = false
@@ -1346,15 +1346,15 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "search_contacts",
-                description = "Busca contatos com filtro de texto. Ãštil para encontrar contatos por nome, empresa, email, etc.",
+                description = "Busca contatos com filtro de texto. Útil para encontrar contatos por nome, empresa, email, etc.",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
                         searchTerm = new { type = "string", description = "Termo de busca (nome, empresa, email, etc)" },
-                        page = new { type = new[] { "number", "null" }, description = "NÃºmero da pÃ¡gina (padrÃ£o: 1)" },
-                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da pÃ¡gina (padrÃ£o: 20)" }
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
                     required = new[] { "searchTerm", "page", "pageSize" },
                     additionalProperties = false
@@ -1365,7 +1365,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_contact",
-                description = "ObtÃ©m um contato especÃ­fico por ID",
+                description = "Obtém um contato específico por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1382,21 +1382,21 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "create_contact",
-                description = "Cria um novo contato. Primeiro nome Ã© obrigatÃ³rio, outros campos sÃ£o opcionais.",
+                description = "Cria um novo contato. Primeiro nome é obrigatório, outros campos são opcionais.",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        firstName = new { type = "string", description = "Primeiro nome (obrigatÃ³rio)" },
+                        firstName = new { type = "string", description = "Primeiro nome (obrigatório)" },
                         lastName = new { type = new[] { "string", "null" }, description = "Sobrenome" },
                         jobTitle = new { type = new[] { "string", "null" }, description = "Cargo" },
                         company = new { type = new[] { "string", "null" }, description = "Empresa" },
-                        street = new { type = new[] { "string", "null" }, description = "EndereÃ§o (rua)" },
+                        street = new { type = new[] { "string", "null" }, description = "Endereço (rua)" },
                         city = new { type = new[] { "string", "null" }, description = "Cidade" },
                         state = new { type = new[] { "string", "null" }, description = "Estado" },
                         zipCode = new { type = new[] { "string", "null" }, description = "CEP" },
-                        country = new { type = new[] { "string", "null" }, description = "PaÃ­s" }
+                        country = new { type = new[] { "string", "null" }, description = "País" }
                     },
                     required = new[] { "firstName", "lastName", "jobTitle", "company", "street", "city", "state", "zipCode", "country" },
                     additionalProperties = false
@@ -1408,15 +1408,15 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "create_reminder",
-                description = "Cria um novo lembrete para um contato. Ãštil para agendar follow-ups ou tarefas. IMPORTANTE: Se vocÃª nÃ£o tiver o contactId (GUID) do contato, use primeiro a funÃ§Ã£o search_contacts para encontrar o contato pelo nome e obter seu ID.",
+                description = "Cria um novo lembrete para um contato. Útil para agendar follow-ups ou tarefas. IMPORTANTE: Se você não tiver o contactId (GUID) do contato, use primeiro a função search_contacts para encontrar o contato pelo nome e obter seu ID.",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        contactId = new { type = "string", description = "ID do contato (GUID vÃ¡lido). Se vocÃª nÃ£o tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
-                        reason = new { type = "string", description = "Motivo do lembrete (mÃ¡ximo 500 caracteres)" },
-                        suggestedMessage = new { type = new[] { "string", "null" }, description = "Mensagem sugerida para o lembrete (mÃ¡ximo 2000 caracteres, opcional)" },
+                        contactId = new { type = "string", description = "ID do contato (GUID válido). Se você não tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
+                        reason = new { type = "string", description = "Motivo do lembrete (máximo 500 caracteres)" },
+                        suggestedMessage = new { type = new[] { "string", "null" }, description = "Mensagem sugerida para o lembrete (máximo 2000 caracteres, opcional)" },
                         scheduledFor = new { type = "string", description = "Data e hora agendada (formato ISO 8601, ex: 2024-12-25T10:00:00Z)" }
                     },
                     required = new[] { "contactId", "reason", "scheduledFor", "suggestedMessage" },
@@ -1428,7 +1428,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_reminders",
-                description = "Lista lembretes do usuÃ¡rio autenticado. Suporta filtros por contato, status e data.",
+                description = "Lista lembretes do usuário autenticado. Suporta filtros por contato, status e data.",
                 parameters = new
                 {
                     type = "object",
@@ -1438,8 +1438,8 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                         status = new { type = new[] { "string", "null" }, description = "Filtrar por status (Pending, Sent, Dismissed, Snoozed)", @enum = new[] { "Pending", "Sent", "Dismissed", "Snoozed" } },
                         startDate = new { type = new[] { "string", "null" }, description = "Data inicial (formato ISO 8601)" },
                         endDate = new { type = new[] { "string", "null" }, description = "Data final (formato ISO 8601)" },
-                        page = new { type = new[] { "number", "null" }, description = "NÃºmero da pÃ¡gina (padrÃ£o: 1)" },
-                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da pÃ¡gina (padrÃ£o: 20)" }
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
                     required = new[] { "contactId", "status", "startDate", "endDate", "page", "pageSize" },
                     additionalProperties = false
@@ -1450,7 +1450,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_reminder",
-                description = "ObtÃ©m um lembrete especÃ­fico por ID",
+                description = "Obtém um lembrete específico por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1504,7 +1504,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_contact_notes",
-                description = "Lista todas as notas de um contato especÃ­fico",
+                description = "Lista todas as notas de um contato específico",
                 parameters = new
                 {
                     type = "object",
@@ -1521,7 +1521,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_note",
-                description = "ObtÃ©m uma nota especÃ­fica por ID",
+                description = "Obtém uma nota específica por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1538,14 +1538,14 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "create_text_note",
-                description = "Cria uma nova nota de texto para um contato. IMPORTANTE: Se vocÃª nÃ£o tiver o contactId (GUID) do contato, use primeiro a funÃ§Ã£o search_contacts para encontrar o contato pelo nome e obter seu ID.",
+                description = "Cria uma nova nota de texto para um contato. IMPORTANTE: Se você não tiver o contactId (GUID) do contato, use primeiro a função search_contacts para encontrar o contato pelo nome e obter seu ID.",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        contactId = new { type = "string", description = "ID do contato (GUID). Se vocÃª nÃ£o tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
-                        text = new { type = "string", description = "ConteÃºdo da nota" },
+                        contactId = new { type = "string", description = "ID do contato (GUID). Se você não tiver o GUID, use search_contacts primeiro para encontrar o contato pelo nome." },
+                        text = new { type = "string", description = "Conteúdo da nota" },
                         structuredData = new { type = new[] { "string", "null" }, description = "Dados estruturados em JSON (opcional)" }
                     },
                     required = new[] { "contactId", "text", "structuredData" },
@@ -1564,7 +1564,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     properties = new
                     {
                         id = new { type = "string", description = "ID da nota (GUID)" },
-                        rawContent = new { type = new[] { "string", "null" }, description = "ConteÃºdo bruto da nota" },
+                        rawContent = new { type = new[] { "string", "null" }, description = "Conteúdo bruto da nota" },
                         structuredData = new { type = new[] { "string", "null" }, description = "Dados estruturados em JSON" }
                     },
                     required = new[] { "id", "rawContent", "structuredData" },
@@ -1601,7 +1601,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     properties = new
                     {
                         documentType = new { type = "string", description = "Tipo de documento", @enum = new[] { "Email", "Oficio", "Invite" } },
-                        content = new { type = "string", description = "ConteÃºdo do documento" },
+                        content = new { type = "string", description = "Conteúdo do documento" },
                         contactId = new { type = new[] { "string", "null" }, description = "ID do contato relacionado (GUID, opcional)" },
                         companyId = new { type = new[] { "string", "null" }, description = "ID da empresa relacionada (GUID, opcional)" },
                         templateId = new { type = new[] { "string", "null" }, description = "ID do template usado (GUID, opcional)" },
@@ -1616,7 +1616,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_drafts",
-                description = "Lista drafts do usuÃ¡rio autenticado",
+                description = "Lista drafts do usuário autenticado",
                 parameters = new
                 {
                     type = "object",
@@ -1626,8 +1626,8 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                         companyId = new { type = new[] { "string", "null" }, description = "Filtrar por ID da empresa (GUID)" },
                         documentType = new { type = new[] { "string", "null" }, description = "Filtrar por tipo de documento", @enum = new[] { "Email", "Oficio", "Invite" } },
                         status = new { type = new[] { "string", "null" }, description = "Filtrar por status", @enum = new[] { "Draft", "Approved", "Sent" } },
-                        page = new { type = new[] { "number", "null" }, description = "NÃºmero da pÃ¡gina (padrÃ£o: 1)" },
-                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da pÃ¡gina (padrÃ£o: 20)" }
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
                     required = new[] { "contactId", "companyId", "documentType", "status", "page", "pageSize" },
                     additionalProperties = false
@@ -1638,7 +1638,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_draft",
-                description = "ObtÃ©m um draft especÃ­fico por ID",
+                description = "Obtém um draft específico por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1662,7 +1662,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     properties = new
                     {
                         id = new { type = "string", description = "ID do draft (GUID)" },
-                        content = new { type = new[] { "string", "null" }, description = "ConteÃºdo do documento" },
+                        content = new { type = new[] { "string", "null" }, description = "Conteúdo do documento" },
                         contactId = new { type = new[] { "string", "null" }, description = "ID do contato relacionado (GUID)" },
                         companyId = new { type = new[] { "string", "null" }, description = "ID da empresa relacionada (GUID)" },
                         templateId = new { type = new[] { "string", "null" }, description = "ID do template usado (GUID)" },
@@ -1735,7 +1735,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     type = "object",
                     properties = new
                     {
-                        name = new { type = "string", description = "Nome do template (mÃ¡ximo 200 caracteres)" },
+                        name = new { type = "string", description = "Nome do template (máximo 200 caracteres)" },
                         type = new { type = "string", description = "Tipo de template", @enum = new[] { "Email", "Oficio", "Invite", "Generic" } },
                         body = new { type = "string", description = "Corpo do template" },
                         placeholdersSchema = new { type = new[] { "string", "null" }, description = "Schema JSON dos placeholders (opcional)" }
@@ -1749,16 +1749,16 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_templates",
-                description = "Lista templates do usuÃ¡rio autenticado",
+                description = "Lista templates do usuário autenticado",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
                         type = new { type = new[] { "string", "null" }, description = "Filtrar por tipo", @enum = new[] { "Email", "Oficio", "Invite", "Generic" } },
-                        activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas templates ativos (padrÃ£o: false)" },
-                        page = new { type = new[] { "number", "null" }, description = "NÃºmero da pÃ¡gina (padrÃ£o: 1)" },
-                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da pÃ¡gina (padrÃ£o: 20)" }
+                        activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas templates ativos (padrão: false)" },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
                     required = new[] { "type", "activeOnly", "page", "pageSize" },
                     additionalProperties = false
@@ -1769,7 +1769,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_template",
-                description = "ObtÃ©m um template especÃ­fico por ID",
+                description = "Obtém um template específico por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1796,7 +1796,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                         name = new { type = new[] { "string", "null" }, description = "Nome do template" },
                         body = new { type = new[] { "string", "null" }, description = "Corpo do template" },
                         placeholdersSchema = new { type = new[] { "string", "null" }, description = "Schema JSON dos placeholders" },
-                        active = new { type = new[] { "boolean", "null" }, description = "Se o template estÃ¡ ativo" }
+                        active = new { type = new[] { "boolean", "null" }, description = "Se o template está ativo" }
                     },
                     required = new[] { "id", "name", "body", "placeholdersSchema", "active" },
                     additionalProperties = false
@@ -1831,7 +1831,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     type = "object",
                     properties = new
                     {
-                        name = new { type = "string", description = "Nome do papel timbrado (mÃ¡ximo 200 caracteres)" },
+                        name = new { type = "string", description = "Nome do papel timbrado (máximo 200 caracteres)" },
                         designData = new { type = "string", description = "Dados de design em JSON" }
                     },
                     required = new[] { "name", "designData" },
@@ -1843,15 +1843,15 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_letterheads",
-                description = "Lista papÃ©is timbrados do usuÃ¡rio autenticado",
+                description = "Lista papéis timbrados do usuário autenticado",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas papÃ©is timbrados ativos (padrÃ£o: false)" },
-                        page = new { type = new[] { "number", "null" }, description = "NÃºmero da pÃ¡gina (padrÃ£o: 1)" },
-                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da pÃ¡gina (padrÃ£o: 20)" }
+                        activeOnly = new { type = new[] { "boolean", "null" }, description = "Apenas papéis timbrados ativos (padrão: false)" },
+                        page = new { type = new[] { "number", "null" }, description = "Número da página (padrão: 1)" },
+                        pageSize = new { type = new[] { "number", "null" }, description = "Tamanho da página (padrão: 20)" }
                     },
                     required = new[] { "activeOnly", "page", "pageSize" },
                     additionalProperties = false
@@ -1862,7 +1862,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_letterhead",
-                description = "ObtÃ©m um papel timbrado especÃ­fico por ID",
+                description = "Obtém um papel timbrado específico por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1888,7 +1888,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                         id = new { type = "string", description = "ID do papel timbrado (GUID)" },
                         name = new { type = new[] { "string", "null" }, description = "Nome do papel timbrado" },
                         designData = new { type = new[] { "string", "null" }, description = "Dados de design em JSON" },
-                        isActive = new { type = new[] { "boolean", "null" }, description = "Se o papel timbrado estÃ¡ ativo" }
+                        isActive = new { type = new[] { "boolean", "null" }, description = "Se o papel timbrado está ativo" }
                     },
                     required = new[] { "id", "name", "designData", "isActive" },
                     additionalProperties = false
@@ -1924,7 +1924,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     properties = new
                     {
                         specJson = new { type = "string", description = "JSON do WorkflowSpec contendo: name, description, trigger (type: Webhook/Scheduled/EventBased; para Webhook informe eventName como path), variables, steps (cada step tem id, name, type: Action/Condition, action ou condition)." },
-                        activateImmediately = new { type = new[] { "boolean", "null" }, description = "Se true, ativa o workflow imediatamente apÃ³s criaÃ§Ã£o (padrÃ£o: false)" }
+                        activateImmediately = new { type = new[] { "boolean", "null" }, description = "Se true, ativa o workflow imediatamente após criação (padrão: false)" }
                     },
                     required = new[] { "specJson", "activateImmediately" },
                     additionalProperties = false
@@ -1935,7 +1935,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_workflows",
-                description = "Lista todos os workflows do usuÃ¡rio autenticado",
+                description = "Lista todos os workflows do usuário autenticado",
                 parameters = new
                 {
                     type = "object",
@@ -1952,7 +1952,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_workflow",
-                description = "ObtÃ©m detalhes de um workflow especÃ­fico por ID",
+                description = "Obtém detalhes de um workflow específico por ID",
                 parameters = new
                 {
                     type = "object",
@@ -1987,13 +1987,13 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "approve_workflow_step",
-                description = "Aprova um step de workflow que estÃ¡ aguardando aprovaÃ§Ã£o",
+                description = "Aprova um step de workflow que está aguardando aprovação",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        executionId = new { type = "string", description = "ID da execuÃ§Ã£o (GUID)" }
+                        executionId = new { type = "string", description = "ID da execução (GUID)" }
                     },
                     required = new[] { "executionId" },
                     additionalProperties = false
@@ -2004,14 +2004,14 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "list_workflow_executions",
-                description = "Lista o histÃ³rico de execuÃ§Ãµes de workflows",
+                description = "Lista o histórico de execuções de workflows",
                 parameters = new
                 {
                     type = "object",
                     properties = new
                     {
-                        workflowId = new { type = new[] { "string", "null" }, description = "Filtrar por ID de workflow especÃ­fico (GUID)" },
-                        limit = new { type = new[] { "number", "null" }, description = "Limite de resultados (padrÃ£o: 50)" }
+                        workflowId = new { type = new[] { "string", "null" }, description = "Filtrar por ID de workflow específico (GUID)" },
+                        limit = new { type = new[] { "number", "null" }, description = "Limite de resultados (padrão: 50)" }
                     },
                     required = new[] { "workflowId", "limit" },
                     additionalProperties = false
@@ -2022,7 +2022,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 type = "function",
                 name = "get_pending_approvals",
-                description = "Lista execuÃ§Ãµes de workflow aguardando aprovaÃ§Ã£o do usuÃ¡rio",
+                description = "Lista execuções de workflow aguardando aprovação do usuário",
                 parameters = new
                 {
                     type = "object",
@@ -2048,7 +2048,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
 }
 
-// Classes auxiliares para deserializaÃ§Ã£o da resposta do OpenAI Responses API
+// Classes auxiliares para deserialização da resposta do OpenAI Responses API
 // Usar JsonPropertyName para mapear corretamente os campos do JSON
 public class OpenAIResponse
 {
@@ -2084,7 +2084,7 @@ public class OutputItem
     [System.Text.Json.Serialization.JsonPropertyName("output")]
     public string? Output { get; set; }
 
-    // Para tipo "message" - content Ã© um array de ContentPart
+    // Para tipo "message" - content é um array de ContentPart
     [System.Text.Json.Serialization.JsonPropertyName("content")]
     public List<ContentPart>? Content { get; set; }
 }
@@ -2137,4 +2137,3 @@ public class InputFunctionCallOutput
     [System.Text.Json.Serialization.JsonPropertyName("output")]
     public string Output { get; set; } = string.Empty;
 }
-

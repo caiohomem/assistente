@@ -54,7 +54,7 @@ export default function EditarRascunhoPage() {
   return (
     <LayoutWrapper
       title="Editar Rascunho"
-      subtitle="Atualize o conteA§do do rascunho"
+      subtitle="Atualize o conteúdo do rascunho"
       activeTab="documents"
     >
       <div className="max-w-4xl mx-auto">
@@ -74,7 +74,7 @@ export default function EditarRascunhoPage() {
             </div>
           ) : error || !draft ? (
             <div className="rounded-md bg-destructive/10 p-4">
-              <p className="text-sm text-destructive">{error ?? "Rascunho nAśo encontrado."}</p>
+              <p className="text-sm text-destructive">{error ?? "Rascunho não encontrado."}</p>
               <Link
                 href="/automacao/rascunhos"
                 className="mt-3 inline-block text-sm text-destructive underline"

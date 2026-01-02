@@ -32,13 +32,13 @@ export default function AgentConfigurationPage() {
         setTranscriptionPrompt(config.transcriptionPrompt || '')
         setWorkflowPrompt(config.workflowPrompt || '')
       } catch (err: any) {
-        if (err.message === 'ConfiguraÃ§Ã£o nÃ£o encontrada') {
-          // ConfiguraÃ§Ã£o ainda nÃ£o existe, permitir criar
+        if (err.message === 'Configuração não encontrada') {
+          // Configuração ainda não existe, permitir criar
           setConfiguration(null)
           setOcrPrompt('')
           setWorkflowPrompt('')
         } else {
-          console.error('Erro ao carregar configuraÃ§Ã£o:', err)
+          console.error('Erro ao carregar configuração:', err)
           setError(err.message || t('errorLoading'))
         }
       } finally {
@@ -69,10 +69,10 @@ export default function AgentConfigurationPage() {
       setConfiguration(updated)
       setSuccess(true)
       
-      // Limpar mensagem de sucesso apÃ³s 3 segundos
+      // Limpar mensagem de sucesso após 3 segundos
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
-      console.error('Erro ao salvar configuraÃ§Ã£o:', err)
+      console.error('Erro ao salvar configuração:', err)
       setError(err.message || t('errorSaving'))
     } finally {
       setSaving(false)
@@ -210,7 +210,6 @@ export default function AgentConfigurationPage() {
     </LayoutWrapper>
   )
 }
-
 
 
 

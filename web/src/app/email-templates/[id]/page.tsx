@@ -55,7 +55,7 @@ export default function EmailTemplateDetailsPage() {
     return (
       <LayoutWrapper
         title="Detalhes do Template"
-        subtitle="Carregando informaA§Aµes do template"
+        subtitle="Carregando informações do template"
         activeTab="documents"
       >
         <div className="max-w-4xl mx-auto">
@@ -79,7 +79,7 @@ export default function EmailTemplateDetailsPage() {
           <div className="glass-card p-6">
             <div className="rounded-md bg-destructive/10 p-4">
               <p className="text-sm text-destructive">
-                {error || "Template nAśo encontrado"}
+                {error || "Template não encontrado"}
               </p>
               <Button asChild variant="ghost" className="mt-3">
                 <Link href="/email-templates">Voltar para lista</Link>
@@ -94,7 +94,7 @@ export default function EmailTemplateDetailsPage() {
   return (
     <LayoutWrapper
       title="Detalhes do Template"
-      subtitle="Visualize o conteA§do do template de email"
+      subtitle="Visualize o conteúdo do template de email"
       activeTab="documents"
     >
       <div className="max-w-4xl mx-auto">

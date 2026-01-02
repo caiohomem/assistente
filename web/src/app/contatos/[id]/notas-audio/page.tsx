@@ -40,8 +40,8 @@ export default function NotasAudioPage() {
 
   return (
     <LayoutWrapper
-      title="Notas de A?udio"
-      subtitle="Registre notas de A?udio para o contato"
+      title="Notas de Áudio"
+      subtitle="Registre notas de Áudio para o contato"
       activeTab="notes"
     >
       <div className="max-w-2xl mx-auto">

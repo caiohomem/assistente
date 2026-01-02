@@ -67,13 +67,13 @@ export default function ProtectedPage() {
     return cores[index];
   }, [user?.email, user?.name]);
 
-  const nomeExibido = user?.name || user?.email || "UsuA­rio";
+  const nomeExibido = user?.name || user?.email || "Usuário";
 
   return (
-    <LayoutWrapper title="Perfil" subtitle="Detalhes do usuA­rio" activeTab="settings">
+    <LayoutWrapper title="Perfil" subtitle="Detalhes do usuário" activeTab="settings">
       <div className="max-w-4xl mx-auto">
         <div className="glass-card p-6">
-          <h2 className="text-2xl font-semibold text-foreground mb-6">Perfil do UsuA­rio</h2>
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Perfil do Usuário</h2>
 
           {loading ? (
             <div className="flex items-center justify-center py-8">

@@ -74,7 +74,7 @@ export default function EditarTemplatePage() {
             </div>
           ) : error || !template ? (
             <div className="rounded-md bg-destructive/10 p-4">
-              <p className="text-sm text-destructive">{error ?? "Template nAśo encontrado."}</p>
+              <p className="text-sm text-destructive">{error ?? "Template não encontrado."}</p>
               <Link
                 href="/automacao/templates"
                 className="mt-3 inline-block text-sm text-destructive underline"

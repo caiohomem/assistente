@@ -375,13 +375,13 @@ export default function UploadCartaoPage() {
                 {ocrResult.rawText !== undefined && (
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                      Texto extraA­do (raw)
+                      Texto extraído (raw)
                     </label>
                     <textarea
                       readOnly
                       value={ocrResult.rawText ?? ""}
                       className="w-full h-56 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs font-mono placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
-                      placeholder="Sem texto raw disponA­vel."
+                      placeholder="Sem texto raw disponível."
                     />
                   </div>
                 )}
@@ -396,7 +396,7 @@ export default function UploadCartaoPage() {
                       readOnly
                       value={ocrResult.aiRawResponse ?? ""}
                       className="w-full h-56 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-xs font-mono placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
-                      placeholder="Sem resposta da IA disponA­vel."
+                      placeholder="Sem resposta da IA disponível."
                     />
                   </div>
                 )}

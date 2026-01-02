@@ -99,13 +99,13 @@ export default function ConfiguracoesPage() {
       setTranscriptionPrompt(config.transcriptionPrompt || '')
       setWorkflowPrompt(config.workflowPrompt || '')
     } catch (err: any) {
-      if (err.message === 'ConfiguraÃ§Ã£o nÃ£o encontrada') {
+      if (err.message === 'Configuração não encontrada') {
         setConfiguration(null)
         setOcrPrompt('')
         setTranscriptionPrompt('')
         setWorkflowPrompt('')
       } else {
-        console.error('Erro ao carregar configuraÃ§Ã£o:', err)
+        console.error('Erro ao carregar configuração:', err)
         setErrorAgent(err.message || t('errorLoading'))
       }
     } finally {
@@ -116,9 +116,9 @@ export default function ConfiguracoesPage() {
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {
       case EmailTemplateType.UserCreated:
-        return "UsuÃ¡rio Criado"
+        return "Usuário Criado"
       case EmailTemplateType.PasswordReset:
-        return "RedefiniÃ§Ã£o de Senha"
+        return "Redefinição de Senha"
       case EmailTemplateType.Welcome:
         return "Bem-vindo"
       default:
@@ -202,7 +202,7 @@ export default function ConfiguracoesPage() {
       
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
-      console.error('Erro ao salvar configuraÃ§Ã£o:', err)
+      console.error('Erro ao salvar configuração:', err)
       setErrorAgent(err.message || t('errorSaving'))
     } finally {
       setSaving(false)
@@ -211,8 +211,8 @@ export default function ConfiguracoesPage() {
 
   return (
     <LayoutWrapper 
-      title="ConfiguraÃ§Ãµes" 
-      subtitle="Gerencie templates de email e configuraÃ§Ãµes do agente" 
+      title="Configurações" 
+      subtitle="Gerencie templates de email e configurações do agente" 
       activeTab="settings"
     >
       <div className="space-y-6">
@@ -243,7 +243,7 @@ export default function ConfiguracoesPage() {
           >
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4" />
-              ConfiguraÃ§Ãµes do Agente
+              Configurações do Agente
             </div>
           </button>
         </div>
@@ -264,7 +264,7 @@ export default function ConfiguracoesPage() {
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Templates de Email</h3>
                     <p className="text-sm text-muted-foreground">
-                      Gerencie os templates de email do sistema, incluindo emails de boas-vindas, recuperaÃ§Ã£o de senha e outros.
+                      Gerencie os templates de email do sistema, incluindo emails de boas-vindas, recuperação de senha e outros.
                     </p>
                   </div>
                   <Button asChild variant="glow">
@@ -309,8 +309,8 @@ export default function ConfiguracoesPage() {
                       className="rounded-md border border-border bg-background px-3 py-1 text-sm"
                     >
                       <option value="all">Todos</option>
-                      <option value={EmailTemplateType.UserCreated}>UsuÃ¡rio Criado</option>
-                      <option value={EmailTemplateType.PasswordReset}>RedefiniÃ§Ã£o de Senha</option>
+                      <option value={EmailTemplateType.UserCreated}>Usuário Criado</option>
+                      <option value={EmailTemplateType.PasswordReset}>Redefinição de Senha</option>
                       <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
                     </select>
                   </div>
@@ -406,7 +406,7 @@ export default function ConfiguracoesPage() {
                     <ConfirmDialog
                       isOpen={deleteDialog.isOpen}
                       title="Excluir Template de Email"
-                      message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta aÃ§Ã£o nÃ£o pode ser desfeita.`}
+                      message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta ação não pode ser desfeita.`}
                       confirmText="Excluir"
                       cancelText="Cancelar"
                       onConfirm={handleDeleteConfirm}
@@ -425,14 +425,14 @@ export default function ConfiguracoesPage() {
                           Anterior
                         </button>
                         <span className="text-sm text-muted-foreground">
-                          PÃ¡gina {page} de {totalPages}
+                          Página {page} de {totalPages}
                         </span>
                         <button
                           onClick={() => setPage(Math.min(totalPages, page + 1))}
                           disabled={page === totalPages}
                           className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          PrÃ³xima
+                          Próxima
                         </button>
                       </div>
                     )}
@@ -454,9 +454,9 @@ export default function ConfiguracoesPage() {
               ) : (
                 <>
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">ConfiguraÃ§Ãµes do Agente</h3>
+                    <h3 className="text-lg font-semibold mb-2">Configurações do Agente</h3>
                     <p className="text-sm text-muted-foreground">
-                      Configure os prompts de OCR e transcriÃ§Ã£o usados pelo agente de IA para processar cartÃµes de visita e notas de Ã¡udio.
+                      Configure os prompts de OCR e transcrição usados pelo agente de IA para processar cartões de visita e notas de áudio.
                     </p>
                   </div>
                 <div className="mb-6">
@@ -565,6 +565,5 @@ export default function ConfiguracoesPage() {
     </LayoutWrapper>
   )
 }
-
 
 

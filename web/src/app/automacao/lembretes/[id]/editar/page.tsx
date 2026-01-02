@@ -24,11 +24,11 @@ export default function EditarLembretePage() {
     async function load() {
       if (!reminderId) return;
 
-      // Validar se o ID Ac um GUID vA­lido
+      // Validar se o ID é um GUID válido
       const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!guidRegex.test(reminderId)) {
         if (!isMounted) return;
-        setError("ID do lembrete invA­lido");
+        setError("ID do lembrete inválido");
         setLoading(false);
         return;
       }
@@ -47,9 +47,9 @@ export default function EditarLembretePage() {
         console.error("Erro ao carregar lembrete:", e);
         if (!isMounted) return;
         const errorMessage = e instanceof Error ? e.message : "Erro ao carregar lembrete";
-        // Se for 404, mostrar mensagem mais especA-fica
-        if (errorMessage.includes("404") || errorMessage.includes("nAśo encontrado")) {
-          setError("Lembrete nAśo encontrado. Ele pode ter sido deletado ou vocA¦ nAśo tem permissAśo para visualizA­-lo.");
+        // Se for 404, mostrar mensagem mais específica
+        if (errorMessage.includes("404") || errorMessage.includes("não encontrado")) {
+          setError("Lembrete não encontrado. Ele pode ter sido deletado ou você não tem permissão para visualizá-lo.");
         } else {
           setError(errorMessage);
         }
@@ -89,7 +89,7 @@ export default function EditarLembretePage() {
             </div>
           ) : error || !reminder ? (
             <div className="rounded-md bg-destructive/10 p-4">
-              <p className="text-sm text-destructive">{error ?? "Lembrete nAśo encontrado."}</p>
+              <p className="text-sm text-destructive">{error ?? "Lembrete não encontrado."}</p>
               <Link
                 href="/automacao/lembretes"
                 className="mt-3 inline-block text-sm text-destructive underline"

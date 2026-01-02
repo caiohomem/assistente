@@ -62,9 +62,9 @@ export default function EmailTemplatesPage() {
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {
       case EmailTemplateType.UserCreated:
-        return "UsuA­rio Criado";
+        return "Usuário Criado";
       case EmailTemplateType.PasswordReset:
-        return "RedefiniA§A£o de Senha";
+        return "Redefinição de Senha";
       case EmailTemplateType.Welcome:
         return "Bem-vindo";
       default:
@@ -167,8 +167,8 @@ export default function EmailTemplatesPage() {
                 className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1 text-sm text-zinc-700 dark:text-zinc-300"
               >
                 <option value="all">Todos</option>
-                <option value={EmailTemplateType.UserCreated}>UsuA­rio Criado</option>
-                <option value={EmailTemplateType.PasswordReset}>RedefiniA§A£o de Senha</option>
+                <option value={EmailTemplateType.UserCreated}>Usuário Criado</option>
+                <option value={EmailTemplateType.PasswordReset}>Redefinição de Senha</option>
                 <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
               </select>
             </div>
@@ -275,7 +275,7 @@ export default function EmailTemplatesPage() {
             <ConfirmDialog
               isOpen={deleteDialog.isOpen}
               title="Excluir Template de Email"
-              message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta aA§A£o nA§A£o pode ser desfeita.`}
+              message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta ação não pode ser desfeita.`}
               confirmText="Excluir"
               cancelText="Cancelar"
               onConfirm={handleDeleteConfirm}
@@ -294,14 +294,14 @@ export default function EmailTemplatesPage() {
                   Anterior
                 </button>
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  PA­gina {page} de {totalPages}
+                  Página {page} de {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
                   className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  PrA3xima
+                  Próxima
                 </button>
               </div>
             )}

@@ -222,7 +222,7 @@ export default function DraftsPage() {
             <ConfirmDialog
               isOpen={deleteDialog.isOpen}
               title="Excluir Rascunho"
-              message={`Tem certeza que deseja excluir este rascunho (${deleteDialog.draftType})? Esta aA§A£o nA§A£o pode ser desfeita.`}
+              message={`Tem certeza que deseja excluir este rascunho (${deleteDialog.draftType})? Esta ação não pode ser desfeita.`}
               confirmText="Excluir"
               cancelText="Cancelar"
               onConfirm={handleDeleteConfirm}
@@ -241,14 +241,14 @@ export default function DraftsPage() {
                   Anterior
                 </button>
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  PA­gina {page} de {totalPages}
+                  Página {page} de {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
                   className="rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  PrA3xima
+                  Próxima
                 </button>
               </div>
             )}

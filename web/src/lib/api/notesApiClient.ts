@@ -9,7 +9,7 @@ import type { Note, CreateTextNoteRequest, UpdateNoteRequest } from "../types/no
 export async function listNotesByContactClient(contactId: string): Promise<Note[]> {
   const session = await getBffSession();
   if (!session.authenticated) {
-    throw new Error("NAœo autenticado");
+    throw new Error("Não autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -44,7 +44,7 @@ export async function createTextNoteClient(
 ): Promise<Note> {
   const session = await getBffSession();
   if (!session.authenticated || !session.csrfToken) {
-    throw new Error("NAœo autenticado");
+    throw new Error("Não autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -80,7 +80,7 @@ export async function updateNoteClient(
 ): Promise<Note> {
   const session = await getBffSession();
   if (!session.authenticated || !session.csrfToken) {
-    throw new Error("NAœo autenticado");
+    throw new Error("Não autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -113,7 +113,7 @@ export async function updateNoteClient(
 export async function deleteNoteClient(noteId: string): Promise<void> {
   const session = await getBffSession();
   if (!session.authenticated || !session.csrfToken) {
-    throw new Error("NAœo autenticado");
+    throw new Error("Não autenticado");
   }
 
   const apiBase = getApiBaseUrl();
@@ -135,4 +135,3 @@ export async function deleteNoteClient(noteId: string): Promise<void> {
     throw new Error(message);
   }
 }
-
