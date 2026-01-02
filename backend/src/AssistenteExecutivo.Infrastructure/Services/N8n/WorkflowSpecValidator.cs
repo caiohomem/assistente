@@ -160,8 +160,15 @@ public sealed class WorkflowSpecValidator : IWorkflowSpecValidator
                 }
                 break;
 
+            case TriggerType.Webhook:
+                if (string.IsNullOrWhiteSpace(trigger.EventName))
+                {
+                    errors.Add("Webhook trigger requires a path");
+                }
+                break;
+
             case TriggerType.Manual:
-                // No additional validation needed
+                errors.Add("Manual trigger is not supported. Use Webhook, Scheduled, or EventBased.");
                 break;
         }
     }

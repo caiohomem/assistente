@@ -1,10 +1,14 @@
 using AssistenteExecutivo.Application.Commands.Workflow;
 using AssistenteExecutivo.Application.Interfaces;
+using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Interfaces;
+using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AssistenteExecutivo.Application.Handlers.Workflow;
 
@@ -58,12 +62,41 @@ public class SaveWorkflowSpecCommandHandler : IRequestHandler<SaveWorkflowSpecCo
                 }
             }
 
+            // Parse spec to get trigger
+            var spec = JsonSerializer.Deserialize<WorkflowSpecDto>(request.SpecJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            });
+
+            if (spec == null)
+            {
+                return SaveWorkflowSpecResult.Failed("Failed to parse workflow spec");
+            }
+
+            if (spec.Trigger.Type == TriggerType.Manual)
+            {
+                return SaveWorkflowSpecResult.Failed("Manual trigger is not supported. Use Webhook, Scheduled, or EventBased.");
+            }
+
+            var trigger = spec.Trigger.Type switch
+            {
+                TriggerType.Scheduled => WorkflowTrigger.Scheduled(spec.Trigger.CronExpression ?? "0 9 * * *"),
+                TriggerType.EventBased => WorkflowTrigger.EventBased(
+                    spec.Trigger.EventName ?? "webhook",
+                    spec.Trigger.Config != null ? JsonSerializer.Serialize(spec.Trigger.Config) : null),
+                TriggerType.Webhook => WorkflowTrigger.Webhook(
+                    spec.Trigger.EventName ?? "workflow",
+                    spec.Trigger.Config != null ? JsonSerializer.Serialize(spec.Trigger.Config) : null),
+                _ => throw new ArgumentException($"Unsupported trigger type: {spec.Trigger.Type}")
+            };
+
             // Create workflow entity
             var workflow = new Domain.Entities.Workflow(
                 name: request.Name,
                 ownerUserId: tenantId,
                 specJson: request.SpecJson,
-                trigger: Domain.ValueObjects.WorkflowTrigger.Manual(),
+                trigger: trigger,
                 clock: _clock);
 
             workflow.SetIdempotencyKey(request.IdempotencyKey);

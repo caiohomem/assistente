@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  LayoutDashboard, 
-  Users, 
-  CreditCard, 
-  Mic, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Users,
+  CreditCard,
+  Mic,
+  FileText,
   Network,
   MessageSquare,
   Settings,
@@ -14,7 +14,9 @@ import {
   Menu,
   X,
   Bell,
-  Coins
+  Coins,
+  Building2,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
@@ -29,10 +31,12 @@ interface SidebarProps {
 const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { id: "contacts", label: "Contatos", icon: Users, path: "/contatos" },
+  { id: "companies", label: "Empresas", icon: Building2, path: "/empresas" },
   { id: "cards", label: "Cartões", icon: CreditCard, path: "/contatos/upload-cartao" },
   { id: "notes", label: "Notas", icon: Mic, path: "/contatos/notas" },
   { id: "documents", label: "Documentos", icon: FileText, path: "/documentos" },
   { id: "reminders", label: "Lembretes", icon: Bell, path: "/automacao/lembretes" },
+  { id: "workflows", label: "Workflows", icon: Zap, path: "/workflows" },
   { id: "network", label: "Rede", icon: Network, path: "/contatos/rede" },
   { id: "assistant", label: "Assistente IA", icon: Sparkles, path: "/assistente" },
   { id: "credits", label: "Créditos", icon: Coins, path: "/creditos" },

@@ -66,6 +66,12 @@ public class CreateWorkflowFromSpecCommandHandler : IRequestHandler<CreateWorkfl
             return CreateWorkflowResult.Failed("Failed to parse workflow spec or name is missing");
         }
 
+        if (spec.Trigger.Type == Domain.Enums.TriggerType.Manual)
+        {
+            _logger.LogWarning("Manual trigger is not supported for workflow creation");
+            return CreateWorkflowResult.Failed("Manual trigger is not supported. Use Webhook, Scheduled, or EventBased.");
+        }
+
         // 3. Check for duplicate name
         if (await _workflowRepository.ExistsByNameAndOwnerAsync(spec.Name, request.OwnerUserId, cancellationToken))
         {
@@ -134,12 +140,14 @@ public class CreateWorkflowFromSpecCommandHandler : IRequestHandler<CreateWorkfl
         // 6. Create trigger value object
         var trigger = spec.Trigger.Type switch
         {
-            Domain.Enums.TriggerType.Manual => WorkflowTrigger.Manual(),
             Domain.Enums.TriggerType.Scheduled => WorkflowTrigger.Scheduled(spec.Trigger.CronExpression ?? "0 9 * * *"),
             Domain.Enums.TriggerType.EventBased => WorkflowTrigger.EventBased(
                 spec.Trigger.EventName ?? "webhook",
                 spec.Trigger.Config != null ? JsonSerializer.Serialize(spec.Trigger.Config) : null),
-            _ => WorkflowTrigger.Manual()
+            Domain.Enums.TriggerType.Webhook => WorkflowTrigger.Webhook(
+                spec.Trigger.EventName ?? "workflow",
+                spec.Trigger.Config != null ? JsonSerializer.Serialize(spec.Trigger.Config) : null),
+            _ => throw new ArgumentException($"Unsupported trigger type: {spec.Trigger.Type}")
         };
 
         // 7. Create domain entity

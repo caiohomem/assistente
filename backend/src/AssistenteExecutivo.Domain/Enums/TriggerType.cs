@@ -18,5 +18,10 @@ public enum TriggerType
     /// <summary>
     /// Workflow is triggered by a system event (e.g., contact.created).
     /// </summary>
-    EventBased = 3
+    EventBased = 3,
+
+    /// <summary>
+    /// Workflow is triggered by an HTTP webhook.
+    /// </summary>
+    Webhook = 4
 }

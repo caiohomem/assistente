@@ -495,12 +495,13 @@ public sealed class AuthController : ControllerBase
         }
 
         // Auto-refresh access token if close to expiration.
-        // Aumentado para 3 minutos (180 segundos) para reduzir refresh automático frequente
-        // que pode causar perda de dados em formulários
+        // Em localhost, aumentar a janela para 10 minutos (600s) para reduzir refresh automatico frequente.
+        // Em ambientes normais, manter 3 minutos (180s) para evitar expiracao durante uso ativo.
         var expiresAtUnix = BffSessionStore.GetExpiresAtUnix(HttpContext.Session);
         var refreshToken = HttpContext.Session.GetString(BffSessionKeys.RefreshToken);
         var shouldRefresh = false;
         var tokenExpired = false;
+        var refreshWindowSeconds = IsLocalhostRequest() ? 600 : 180;
 
         if (expiresAtUnix is not null && !string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -515,9 +516,9 @@ public sealed class AuthController : ControllerBase
                 _logger.LogInformation("Access token já expirou. Tentando refresh. ExpiresAt: {ExpiresAt}, Now: {Now}",
                     expiresAtUnix.Value, now);
             }
-            // Verificar se o token expira em menos de 3 minutos (180 segundos)
-            // Isso reduz a frequência de refresh automático e evita perda de dados em formulários
-            else if (expiresAtUnix.Value - now <= 180)
+            // Verificar se o token expira em menos da janela configurada
+            // Isso reduz a frequencia de refresh automatico e evita perda de dados em formularios
+            else if (expiresAtUnix.Value - now <= refreshWindowSeconds)
             {
                 shouldRefresh = true;
                 _logger.LogInformation("Access token expira em breve. Fazendo refresh preventivo. ExpiresAt: {ExpiresAt}, Now: {Now}, SecondsUntilExpiry: {SecondsUntilExpiry}",

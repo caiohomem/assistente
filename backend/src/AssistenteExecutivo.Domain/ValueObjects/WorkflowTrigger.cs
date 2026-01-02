@@ -57,6 +57,19 @@ public class WorkflowTrigger : ValueObject
         return new WorkflowTrigger(TriggerType.EventBased, eventName: eventName, configJson: configJson);
     }
 
+    /// <summary>
+    /// Creates a webhook trigger.
+    /// </summary>
+    /// <param name="path">Webhook path (e.g., "flows/run")</param>
+    /// <param name="configJson">Optional JSON configuration for webhook behavior</param>
+    public static WorkflowTrigger Webhook(string path, string? configJson = null)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Webhook path is required", nameof(path));
+
+        return new WorkflowTrigger(TriggerType.Webhook, eventName: path, configJson: configJson);
+    }
+
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Type;

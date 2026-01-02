@@ -6,6 +6,7 @@ export interface AgentConfiguration {
   configurationId: string;
   ocrPrompt: string;
   transcriptionPrompt?: string;
+  workflowPrompt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -13,6 +14,7 @@ export interface AgentConfiguration {
 export interface UpdateAgentConfigurationRequest {
   ocrPrompt: string;
   transcriptionPrompt?: string;
+  workflowPrompt?: string;
 }
 
 /**
@@ -64,7 +66,6 @@ export async function updateAgentConfiguration(
 
   return res.json();
 }
-
 
 
 

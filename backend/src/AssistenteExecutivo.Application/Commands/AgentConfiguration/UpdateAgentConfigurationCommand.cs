@@ -1,4 +1,4 @@
-using AssistenteExecutivo.Application.DTOs;
+﻿using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Domain.Interfaces;
 using MediatR;
@@ -9,6 +9,7 @@ public class UpdateAgentConfigurationCommand : IRequest<AgentConfigurationDto>
 {
     public string OcrPrompt { get; set; } = string.Empty;
     public string? TranscriptionPrompt { get; set; }
+    public string? WorkflowPrompt { get; set; }
 }
 
 public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgentConfigurationCommand, AgentConfigurationDto>
@@ -36,11 +37,12 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
 
         if (existing != null)
         {
-            // Atualizar configuração existente
+            // Atualizar configuracao existente
             existing.UpdatePrompts(
                 request.OcrPrompt,
                 _clock,
-                request.TranscriptionPrompt);
+                request.TranscriptionPrompt,
+                request.WorkflowPrompt);
             await _repository.UpdateAsync(existing, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -49,19 +51,21 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
                 ConfigurationId = existing.ConfigurationId,
                 OcrPrompt = existing.OcrPrompt,
                 TranscriptionPrompt = existing.TranscriptionPrompt,
+                WorkflowPrompt = existing.WorkflowPrompt,
                 CreatedAt = existing.CreatedAt,
                 UpdatedAt = existing.UpdatedAt
             };
         }
         else
         {
-            // Criar nova configuração
+            // Criar nova configuracao
             var configurationId = _idGenerator.NewGuid();
             var newConfiguration = Domain.Entities.AgentConfiguration.Create(
                 configurationId,
                 request.OcrPrompt,
                 _clock,
-                request.TranscriptionPrompt);
+                request.TranscriptionPrompt,
+                request.WorkflowPrompt);
 
             await _repository.AddAsync(newConfiguration, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -71,10 +75,10 @@ public class UpdateAgentConfigurationCommandHandler : IRequestHandler<UpdateAgen
                 ConfigurationId = newConfiguration.ConfigurationId,
                 OcrPrompt = newConfiguration.OcrPrompt,
                 TranscriptionPrompt = newConfiguration.TranscriptionPrompt,
+                WorkflowPrompt = newConfiguration.WorkflowPrompt,
                 CreatedAt = newConfiguration.CreatedAt,
                 UpdatedAt = newConfiguration.UpdatedAt
             };
         }
     }
 }
-

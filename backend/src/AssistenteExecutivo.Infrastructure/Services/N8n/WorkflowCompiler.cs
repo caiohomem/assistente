@@ -207,6 +207,18 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                     ["httpMethod"] = "POST"
                 }
             },
+            TriggerType.Webhook => new N8nNode
+            {
+                Name = "Trigger",
+                Type = "n8n-nodes-base.webhook",
+                TypeVersion = 1,
+                Position = new[] { 250, 300 },
+                Parameters = new Dictionary<string, object>
+                {
+                    ["path"] = trigger.EventName ?? "workflow",
+                    ["httpMethod"] = "POST"
+                }
+            },
             _ => throw new ArgumentException($"Unknown trigger type: {trigger.Type}")
         };
     }

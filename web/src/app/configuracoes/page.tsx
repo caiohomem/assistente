@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -49,6 +49,7 @@ export default function ConfiguracoesPage() {
   const [configuration, setConfiguration] = useState<AgentConfiguration | null>(null)
   const [ocrPrompt, setOcrPrompt] = useState('')
   const [transcriptionPrompt, setTranscriptionPrompt] = useState('')
+  const [workflowPrompt, setWorkflowPrompt] = useState('')
   const [errorAgent, setErrorAgent] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -96,13 +97,15 @@ export default function ConfiguracoesPage() {
       setConfiguration(config)
       setOcrPrompt(config.ocrPrompt)
       setTranscriptionPrompt(config.transcriptionPrompt || '')
+      setWorkflowPrompt(config.workflowPrompt || '')
     } catch (err: any) {
-      if (err.message === 'Configuração não encontrada') {
+      if (err.message === 'ConfiguraÃ§Ã£o nÃ£o encontrada') {
         setConfiguration(null)
         setOcrPrompt('')
         setTranscriptionPrompt('')
+        setWorkflowPrompt('')
       } else {
-        console.error('Erro ao carregar configuração:', err)
+        console.error('Erro ao carregar configuraÃ§Ã£o:', err)
         setErrorAgent(err.message || t('errorLoading'))
       }
     } finally {
@@ -113,9 +116,9 @@ export default function ConfiguracoesPage() {
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {
       case EmailTemplateType.UserCreated:
-        return "Usuário Criado"
+        return "UsuÃ¡rio Criado"
       case EmailTemplateType.PasswordReset:
-        return "Redefinição de Senha"
+        return "RedefiniÃ§Ã£o de Senha"
       case EmailTemplateType.Welcome:
         return "Bem-vindo"
       default:
@@ -190,7 +193,8 @@ export default function ConfiguracoesPage() {
 
       const updated = await updateAgentConfiguration({
         ocrPrompt: ocrPrompt.trim(),
-        transcriptionPrompt: transcriptionPrompt.trim() || undefined
+        transcriptionPrompt: transcriptionPrompt.trim() || undefined,
+        workflowPrompt: workflowPrompt.trim() || undefined
       })
 
       setConfiguration(updated)
@@ -198,7 +202,7 @@ export default function ConfiguracoesPage() {
       
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
-      console.error('Erro ao salvar configuração:', err)
+      console.error('Erro ao salvar configuraÃ§Ã£o:', err)
       setErrorAgent(err.message || t('errorSaving'))
     } finally {
       setSaving(false)
@@ -207,8 +211,8 @@ export default function ConfiguracoesPage() {
 
   return (
     <LayoutWrapper 
-      title="Configurações" 
-      subtitle="Gerencie templates de email e configurações do agente" 
+      title="ConfiguraÃ§Ãµes" 
+      subtitle="Gerencie templates de email e configuraÃ§Ãµes do agente" 
       activeTab="settings"
     >
       <div className="space-y-6">
@@ -239,7 +243,7 @@ export default function ConfiguracoesPage() {
           >
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4" />
-              Configurações do Agente
+              ConfiguraÃ§Ãµes do Agente
             </div>
           </button>
         </div>
@@ -260,7 +264,7 @@ export default function ConfiguracoesPage() {
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Templates de Email</h3>
                     <p className="text-sm text-muted-foreground">
-                      Gerencie os templates de email do sistema, incluindo emails de boas-vindas, recuperação de senha e outros.
+                      Gerencie os templates de email do sistema, incluindo emails de boas-vindas, recuperaÃ§Ã£o de senha e outros.
                     </p>
                   </div>
                   <Button asChild variant="glow">
@@ -305,8 +309,8 @@ export default function ConfiguracoesPage() {
                       className="rounded-md border border-border bg-background px-3 py-1 text-sm"
                     >
                       <option value="all">Todos</option>
-                      <option value={EmailTemplateType.UserCreated}>Usuário Criado</option>
-                      <option value={EmailTemplateType.PasswordReset}>Redefinição de Senha</option>
+                      <option value={EmailTemplateType.UserCreated}>UsuÃ¡rio Criado</option>
+                      <option value={EmailTemplateType.PasswordReset}>RedefiniÃ§Ã£o de Senha</option>
                       <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
                     </select>
                   </div>
@@ -402,7 +406,7 @@ export default function ConfiguracoesPage() {
                     <ConfirmDialog
                       isOpen={deleteDialog.isOpen}
                       title="Excluir Template de Email"
-                      message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta ação não pode ser desfeita.`}
+                      message={`Tem certeza que deseja excluir o template "${deleteDialog.templateName}"? Esta aÃ§Ã£o nÃ£o pode ser desfeita.`}
                       confirmText="Excluir"
                       cancelText="Cancelar"
                       onConfirm={handleDeleteConfirm}
@@ -421,14 +425,14 @@ export default function ConfiguracoesPage() {
                           Anterior
                         </button>
                         <span className="text-sm text-muted-foreground">
-                          Página {page} de {totalPages}
+                          PÃ¡gina {page} de {totalPages}
                         </span>
                         <button
                           onClick={() => setPage(Math.min(totalPages, page + 1))}
                           disabled={page === totalPages}
                           className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Próxima
+                          PrÃ³xima
                         </button>
                       </div>
                     )}
@@ -450,9 +454,9 @@ export default function ConfiguracoesPage() {
               ) : (
                 <>
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">Configurações do Agente</h3>
+                    <h3 className="text-lg font-semibold mb-2">ConfiguraÃ§Ãµes do Agente</h3>
                     <p className="text-sm text-muted-foreground">
-                      Configure os prompts de OCR e transcrição usados pelo agente de IA para processar cartões de visita e notas de áudio.
+                      Configure os prompts de OCR e transcriÃ§Ã£o usados pelo agente de IA para processar cartÃµes de visita e notas de Ã¡udio.
                     </p>
                   </div>
                 <div className="mb-6">
@@ -488,6 +492,24 @@ export default function ConfiguracoesPage() {
                     rows={20}
                     className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 font-mono text-sm transition-all"
                     placeholder={t('transcriptionPromptPlaceholder')}
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label htmlFor="workflowPrompt" className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    <Bot className="w-4 h-4" />
+                    {t('workflowPromptLabel')}
+                  </label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {t('workflowPromptHint')}
+                  </p>
+                  <textarea
+                    id="workflowPrompt"
+                    value={workflowPrompt}
+                    onChange={(e) => setWorkflowPrompt(e.target.value)}
+                    rows={12}
+                    className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 font-mono text-sm transition-all"
+                    placeholder={t('workflowPromptPlaceholder')}
                   />
                 </div>
 
@@ -543,4 +565,6 @@ export default function ConfiguracoesPage() {
     </LayoutWrapper>
   )
 }
+
+
 

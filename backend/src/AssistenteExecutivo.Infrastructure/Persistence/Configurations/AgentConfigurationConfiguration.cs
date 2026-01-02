@@ -23,6 +23,9 @@ public class AgentConfigurationConfiguration : IEntityTypeConfiguration<AgentCon
         builder.Property(c => c.TranscriptionPrompt)
             .HasColumnName("TranscriptionPrompt");
 
+        builder.Property(c => c.WorkflowPrompt)
+            .HasColumnName("WorkflowPrompt");
+
         builder.Property(c => c.CreatedAt)
             .HasColumnName("CreatedAt")
             .IsRequired();
@@ -37,7 +40,6 @@ public class AgentConfigurationConfiguration : IEntityTypeConfiguration<AgentCon
             .HasDatabaseName("IX_AgentConfigurations_ConfigurationId");
     }
 }
-
 
 
 

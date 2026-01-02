@@ -65,7 +65,8 @@ public sealed class AgentConfigurationController : ControllerBase
         var command = new UpdateAgentConfigurationCommand
         {
             OcrPrompt = dto.OcrPrompt,
-            TranscriptionPrompt = dto.TranscriptionPrompt
+            TranscriptionPrompt = dto.TranscriptionPrompt,
+            WorkflowPrompt = dto.WorkflowPrompt
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -78,4 +79,3 @@ public sealed class AgentConfigurationController : ControllerBase
         return Ok(result);
     }
 }
-

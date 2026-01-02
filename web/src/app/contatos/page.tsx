@@ -8,7 +8,7 @@ import { ContactsListClient } from "./ContactsListClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ContactForm, ContactFormData } from "@/components/ContactForm";
 import { createContactClient } from "@/lib/api/contactsApiClient";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ContactsPage() {
@@ -23,6 +23,7 @@ export default function ContactsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const showNewContact = searchParams.get("novo") === "true";
+  const companyFilter = searchParams.get("empresa") || "";
 
   useEffect(() => {
     let isMounted = true;
@@ -89,9 +90,32 @@ export default function ContactsPage() {
     );
   }
 
+  const subtitle = companyFilter
+    ? `Contatos da empresa ${companyFilter}`
+    : "Gerencie sua rede de relacionamentos";
+
   return (
-    <LayoutWrapper title="Contatos" subtitle="Gerencie sua rede de relacionamentos" activeTab="contacts">
+    <LayoutWrapper title="Contatos" subtitle={subtitle} activeTab="contacts">
       <div className="space-y-6">
+        {/* Company filter banner */}
+        {companyFilter && (
+          <div className="glass-card p-4 bg-primary/5 border-primary/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary" />
+              <span className="text-sm">
+                Filtrando por: <span className="font-medium">{companyFilter}</span>
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/contatos")}
+            >
+              Ver todos
+            </Button>
+          </div>
+        )}
+
         {/* Formulário de Novo Contato - aparece quando ?novo=true */}
         {showNewContact && (
           <div className="glass-card p-6 animate-slide-up">
@@ -116,7 +140,7 @@ export default function ContactsPage() {
         )}
 
         {/* Lista de Contatos - sempre visível */}
-        <ContactsListClient initialData={initialData} />
+        <ContactsListClient initialData={initialData} initialCompanyFilter={companyFilter} />
       </div>
     </LayoutWrapper>
   );

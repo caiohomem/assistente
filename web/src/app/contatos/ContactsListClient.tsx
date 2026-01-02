@@ -1,25 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Contact } from "@/lib/types/contact";
 import { listContactsClient, searchContactsClient, ListContactsParams, SearchContactsParams, ListContactsResult } from "@/lib/api/contactsApiClient";
 import { ContactCard } from "@/components/ContactCard";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, Building2, X, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ContactsListClientProps {
   initialData: ListContactsResult;
+  initialCompanyFilter?: string;
 }
 
-export function ContactsListClient({ initialData }: ContactsListClientProps) {
-  const [contacts, setContacts] = useState<Contact[]>(initialData.contacts);
+export function ContactsListClient({ initialData, initialCompanyFilter }: ContactsListClientProps) {
+  const router = useRouter();
+  const [allContacts, setAllContacts] = useState<Contact[]>(initialData.contacts);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [companyFilter, setCompanyFilter] = useState(initialCompanyFilter || "");
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(initialData.page);
   const [totalPages, setTotalPages] = useState(initialData.totalPages);
   const [total, setTotal] = useState(initialData.total);
   const [pageSize] = useState(initialData.pageSize);
+
+  // Extract unique companies from contacts
+  const availableCompanies = useMemo(() => {
+    const companies = new Set<string>();
+    allContacts.forEach((contact) => {
+      if (contact.company && contact.company.trim()) {
+        companies.add(contact.company.trim());
+      }
+    });
+    return Array.from(companies).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [allContacts]);
+
+  // Filter contacts by company (client-side filtering)
+  const contacts = useMemo(() => {
+    if (!companyFilter) return allContacts;
+    return allContacts.filter(
+      (c) => c.company && c.company.toLowerCase() === companyFilter.toLowerCase()
+    );
+  }, [allContacts, companyFilter]);
 
   const loadContacts = async (page: number, search?: string) => {
     setLoading(true);
@@ -39,16 +64,34 @@ export function ContactsListClient({ initialData }: ContactsListClientProps) {
         };
         result = await listContactsClient(params);
       }
-      setContacts(result.contacts);
+      setAllContacts(result.contacts);
       setCurrentPage(result.page);
       setTotalPages(result.totalPages);
       setTotal(result.total);
     } catch (error) {
       console.error("Erro ao carregar contatos:", error);
-      // TODO: Mostrar mensagem de erro ao usuário
     } finally {
       setLoading(false);
     }
+  };
+
+  // Update URL when company filter changes
+  const handleCompanyFilterChange = (company: string) => {
+    setCompanyFilter(company);
+    setShowCompanyDropdown(false);
+    // Update URL
+    const params = new URLSearchParams(window.location.search);
+    if (company) {
+      params.set("empresa", company);
+    } else {
+      params.delete("empresa");
+    }
+    const newUrl = params.toString() ? `/contatos?${params.toString()}` : "/contatos";
+    router.push(newUrl, { scroll: false });
+  };
+
+  const clearCompanyFilter = () => {
+    handleCompanyFilterChange("");
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -71,50 +114,131 @@ export function ContactsListClient({ initialData }: ContactsListClientProps) {
     });
   };
 
+  // Count filtered results
+  const filteredTotal = contacts.length;
+
   return (
     <>
       {/* Info */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {total} {total === 1 ? "contato encontrado" : "contatos encontrados"}
+          {filteredTotal} {filteredTotal === 1 ? "contato encontrado" : "contatos encontrados"}
+          {companyFilter && (
+            <span className="ml-1">
+              em <span className="font-medium text-foreground">{companyFilter}</span>
+            </span>
+          )}
         </p>
+        {companyFilter && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearCompanyFilter}
+            className="text-xs"
+          >
+            <X className="w-3 h-3 mr-1" />
+            Limpar filtro
+          </Button>
+        )}
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nome, email, telefone, empresa..."
-              className="w-full rounded-xl border border-border bg-secondary/50 backdrop-blur-sm pl-11 pr-4 py-3 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-secondary/80 placeholder:text-muted-foreground/70"
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={loading}
-            variant="glow"
-          >
-            {loading ? "Buscando..." : "Buscar"}
-          </Button>
-          {searchTerm && (
+      {/* Search and Filters */}
+      <div className="mb-6 space-y-3">
+        {/* Search */}
+        <form onSubmit={handleSearch}>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nome, email, telefone..."
+                className="w-full rounded-xl border border-border bg-secondary/50 backdrop-blur-sm pl-11 pr-4 py-3 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-secondary/80 placeholder:text-muted-foreground/70"
+              />
+            </div>
             <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setSearchTerm("");
-                setCurrentPage(1);
-                loadContacts(1);
-              }}
+              type="submit"
+              disabled={loading}
+              variant="glow"
             >
-              Limpar
+              {loading ? "Buscando..." : "Buscar"}
             </Button>
-          )}
-        </div>
-      </form>
+            {searchTerm && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                  loadContacts(1);
+                }}
+              >
+                Limpar
+              </Button>
+            )}
+          </div>
+        </form>
+
+        {/* Company Filter */}
+        {availableCompanies.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200",
+                companyFilter
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
+              )}
+            >
+              <Building2 className="w-4 h-4" />
+              {companyFilter || "Filtrar por empresa"}
+              <ChevronDown className={cn(
+                "w-4 h-4 transition-transform",
+                showCompanyDropdown && "rotate-180"
+              )} />
+            </button>
+
+            {showCompanyDropdown && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowCompanyDropdown(false)}
+                />
+                {/* Dropdown */}
+                <div className="absolute top-full left-0 mt-2 w-64 max-h-60 overflow-auto z-50 rounded-xl border border-border bg-card shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => handleCompanyFilterChange("")}
+                    className={cn(
+                      "w-full px-4 py-2 text-left text-sm hover:bg-secondary/50 transition-colors",
+                      !companyFilter && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    Todas as empresas
+                  </button>
+                  {availableCompanies.map((company) => (
+                    <button
+                      key={company}
+                      type="button"
+                      onClick={() => handleCompanyFilterChange(company)}
+                      className={cn(
+                        "w-full px-4 py-2 text-left text-sm hover:bg-secondary/50 transition-colors truncate",
+                        companyFilter === company && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      {company}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Contacts Grid */}
       {loading && contacts.length === 0 ? (

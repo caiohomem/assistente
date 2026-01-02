@@ -21,7 +21,7 @@ public class WorkflowSpecDto
 /// </summary>
 public class TriggerSpecDto
 {
-    public TriggerType Type { get; set; } = TriggerType.Manual;
+    public TriggerType Type { get; set; } = TriggerType.Webhook;
     public string? CronExpression { get; set; }
     public string? EventName { get; set; }
     public Dictionary<string, object>? Config { get; set; }

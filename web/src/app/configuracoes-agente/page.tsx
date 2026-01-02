@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -17,6 +17,7 @@ export default function AgentConfigurationPage() {
   const [configuration, setConfiguration] = useState<AgentConfiguration | null>(null)
   const [ocrPrompt, setOcrPrompt] = useState('')
   const [transcriptionPrompt, setTranscriptionPrompt] = useState('')
+  const [workflowPrompt, setWorkflowPrompt] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -29,13 +30,15 @@ export default function AgentConfigurationPage() {
         setConfiguration(config)
         setOcrPrompt(config.ocrPrompt)
         setTranscriptionPrompt(config.transcriptionPrompt || '')
+        setWorkflowPrompt(config.workflowPrompt || '')
       } catch (err: any) {
-        if (err.message === 'Configuração não encontrada') {
-          // Configuração ainda não existe, permitir criar
+        if (err.message === 'ConfiguraÃ§Ã£o nÃ£o encontrada') {
+          // ConfiguraÃ§Ã£o ainda nÃ£o existe, permitir criar
           setConfiguration(null)
           setOcrPrompt('')
+          setWorkflowPrompt('')
         } else {
-          console.error('Erro ao carregar configuração:', err)
+          console.error('Erro ao carregar configuraÃ§Ã£o:', err)
           setError(err.message || t('errorLoading'))
         }
       } finally {
@@ -59,16 +62,17 @@ export default function AgentConfigurationPage() {
 
       const updated = await updateAgentConfiguration({
         ocrPrompt: ocrPrompt.trim(),
-        transcriptionPrompt: transcriptionPrompt.trim() || undefined
+        transcriptionPrompt: transcriptionPrompt.trim() || undefined,
+        workflowPrompt: workflowPrompt.trim() || undefined
       })
 
       setConfiguration(updated)
       setSuccess(true)
       
-      // Limpar mensagem de sucesso após 3 segundos
+      // Limpar mensagem de sucesso apÃ³s 3 segundos
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
-      console.error('Erro ao salvar configuração:', err)
+      console.error('Erro ao salvar configuraÃ§Ã£o:', err)
       setError(err.message || t('errorSaving'))
     } finally {
       setSaving(false)
@@ -130,6 +134,24 @@ export default function AgentConfigurationPage() {
               rows={20}
               className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 font-mono text-sm transition-all"
               placeholder={t('transcriptionPromptPlaceholder')}
+            />
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="workflowPrompt" className="block text-sm font-medium mb-2 flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              {t('workflowPromptLabel')}
+            </label>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t('workflowPromptHint')}
+            </p>
+            <textarea
+              id="workflowPrompt"
+              value={workflowPrompt}
+              onChange={(e) => setWorkflowPrompt(e.target.value)}
+              rows={12}
+              className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary/50 font-mono text-sm transition-all"
+              placeholder={t('workflowPromptPlaceholder')}
             />
           </div>
 

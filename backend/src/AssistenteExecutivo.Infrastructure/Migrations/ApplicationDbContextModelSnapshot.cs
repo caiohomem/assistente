@@ -42,6 +42,10 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("TranscriptionPrompt");
 
+                    b.Property<string>("WorkflowPrompt")
+                        .HasColumnType("text")
+                        .HasColumnName("WorkflowPrompt");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("UpdatedAt");

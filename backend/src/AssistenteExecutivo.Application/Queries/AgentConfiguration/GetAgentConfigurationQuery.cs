@@ -31,10 +31,10 @@ public class GetAgentConfigurationQueryHandler : IRequestHandler<GetAgentConfigu
             ConfigurationId = configuration.ConfigurationId,
             OcrPrompt = configuration.OcrPrompt,
             TranscriptionPrompt = configuration.TranscriptionPrompt,
+            WorkflowPrompt = configuration.WorkflowPrompt,
             CreatedAt = configuration.CreatedAt,
             UpdatedAt = configuration.UpdatedAt
         };
     }
 }
-
 
