@@ -269,7 +269,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
     private N8nNode CreateActionNode(StepSpecDto step, int positionY)
     {
         var action = step.Action!;
-        var (nodeType, parameters) = MapActionToN8nNode(action);
+        var (nodeType, parameters, credentials) = MapActionToN8nNode(action);
 
         return new N8nNode
         {
@@ -277,21 +277,16 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
             Type = nodeType,
             TypeVersion = 1,
             Position = new[] { 500, positionY },
-            Parameters = parameters
+            Parameters = parameters,
+            Credentials = credentials
         };
     }
 
-    private (string NodeType, Dictionary<string, object> Parameters) MapActionToN8nNode(ActionSpecDto action)
+    private (string NodeType, Dictionary<string, object> Parameters, Dictionary<string, object>? Credentials) MapActionToN8nNode(ActionSpecDto action)
     {
         return action.ActionType switch
         {
-            ActionType.SendEmail => ("n8n-nodes-base.emailSend", new Dictionary<string, object>
-            {
-                ["fromEmail"] = action.Parameters.GetValueOrDefault("from", ""),
-                ["toEmail"] = action.Parameters.GetValueOrDefault("to", ""),
-                ["subject"] = action.Parameters.GetValueOrDefault("subject", ""),
-                ["text"] = action.Parameters.GetValueOrDefault("body", "")
-            }),
+            ActionType.SendEmail => CreateMailjetEmailAction(action),
 
             ActionType.HttpRequest => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
             {
@@ -300,12 +295,12 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["sendBody"] = action.Parameters.ContainsKey("body"),
                 ["bodyContentType"] = "json",
                 ["body"] = action.Parameters.GetValueOrDefault("body", "")
-            }),
+            }, null),
 
             ActionType.Wait => ("n8n-nodes-base.wait", new Dictionary<string, object>
             {
                 ["amount"] = action.Parameters.GetValueOrDefault("seconds", 5)
-            }),
+            }, null),
 
             ActionType.SetVariable => ("n8n-nodes-base.set", new Dictionary<string, object>
             {
@@ -320,7 +315,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                         }
                     }
                 }
-            }),
+            }, null),
 
             ActionType.CreateDocument => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
             {
@@ -329,7 +324,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["sendBody"] = true,
                 ["bodyContentType"] = "json",
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
-            }),
+            }, null),
 
             ActionType.SendWhatsApp => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
             {
@@ -342,7 +337,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                     to = action.Parameters.GetValueOrDefault("to", ""),
                     message = action.Parameters.GetValueOrDefault("message", "")
                 }, _jsonOptions)
-            }),
+            }, null),
 
             ActionType.ScheduleMeeting => ("n8n-nodes-base.googleCalendar", new Dictionary<string, object>
             {
@@ -351,7 +346,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["summary"] = action.Parameters.GetValueOrDefault("title", ""),
                 ["start"] = action.Parameters.GetValueOrDefault("startTime", ""),
                 ["end"] = action.Parameters.GetValueOrDefault("endTime", "")
-            }),
+            }, null),
 
             ActionType.CreateReminder => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
             {
@@ -360,7 +355,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["sendBody"] = true,
                 ["bodyContentType"] = "json",
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
-            }),
+            }, null),
 
             ActionType.UpdateContact => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
             {
@@ -369,7 +364,7 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["sendBody"] = true,
                 ["bodyContentType"] = "json",
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
-            }),
+            }, null),
 
             ActionType.CreateNote => ("n8n-nodes-base.httpRequest", new Dictionary<string, object>
             {
@@ -378,10 +373,119 @@ public sealed class WorkflowCompiler : IWorkflowCompiler
                 ["sendBody"] = true,
                 ["bodyContentType"] = "json",
                 ["body"] = JsonSerializer.Serialize(action.Parameters, _jsonOptions)
-            }),
+            }, null),
 
             _ => throw new ArgumentException($"Unknown action type: {action.ActionType}")
         };
+    }
+
+    private (string NodeType, Dictionary<string, object> Parameters, Dictionary<string, object>? Credentials) CreateMailjetEmailAction(ActionSpecDto action)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            ["fromEmail"] = GetStringParameter(action.Parameters, "", "fromEmail", "from"),
+            ["toEmail"] = GetStringParameter(action.Parameters, "", "toEmail", "to"),
+            ["subject"] = GetStringParameter(action.Parameters, "", "subject"),
+            ["text"] = GetStringParameter(action.Parameters, "", "text", "body"),
+            ["additionalFields"] = action.Parameters.GetValueOrDefault("additionalFields", new Dictionary<string, object>())
+        };
+
+        var credentials = BuildMailjetCredentials(action.Parameters);
+
+        return ("n8n-nodes-base.mailjet", parameters, credentials);
+    }
+
+    private static Dictionary<string, object>? BuildMailjetCredentials(Dictionary<string, object> parameters)
+    {
+        if (TryConvertToDictionary(parameters.GetValueOrDefault("credentials"), out var directCredentials))
+        {
+            return directCredentials;
+        }
+
+        var credentialId = GetStringParameter(parameters, "", "credentialId", "mailjetCredentialId");
+        var credentialName = GetStringParameter(parameters, "Mailjet Email account", "credentialName", "mailjetCredentialName");
+
+        if (string.IsNullOrWhiteSpace(credentialId) && string.IsNullOrWhiteSpace(credentialName))
+        {
+            return null;
+        }
+
+        return new Dictionary<string, object>
+        {
+            ["mailjetEmailApi"] = new Dictionary<string, object>
+            {
+                ["id"] = credentialId,
+                ["name"] = credentialName
+            }
+        };
+    }
+
+    private static bool TryConvertToDictionary(object? value, out Dictionary<string, object>? dictionary)
+    {
+        dictionary = null;
+
+        if (value is Dictionary<string, object> dict)
+        {
+            dictionary = dict;
+            return true;
+        }
+
+        if (value is JsonElement element && element.ValueKind == JsonValueKind.Object)
+        {
+            var deserialized = JsonSerializer.Deserialize<Dictionary<string, object>>(element.GetRawText());
+            if (deserialized != null)
+            {
+                dictionary = deserialized;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetStringParameter(Dictionary<string, object> parameters, string defaultValue, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (parameters.TryGetValue(key, out var value))
+            {
+                var stringValue = ConvertToString(value);
+                if (!string.IsNullOrEmpty(stringValue))
+                {
+                    return stringValue;
+                }
+            }
+        }
+
+        return defaultValue;
+    }
+
+    private static string ConvertToString(object? value)
+    {
+        if (value == null)
+        {
+            return string.Empty;
+        }
+
+        if (value is string str)
+        {
+            return str;
+        }
+
+        if (value is JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString() ?? string.Empty,
+                JsonValueKind.Number => element.ToString(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                JsonValueKind.Object or JsonValueKind.Array => element.GetRawText(),
+                _ => string.Empty
+            };
+        }
+
+        return value.ToString() ?? string.Empty;
     }
 
     private string MapConditionType(ConditionType conditionType)
@@ -418,6 +522,7 @@ public class N8nNode
     public int TypeVersion { get; set; } = 1;
     public int[] Position { get; set; } = new[] { 0, 0 };
     public Dictionary<string, object> Parameters { get; set; } = new();
+    public Dictionary<string, object>? Credentials { get; set; }
 }
 
 public class N8nConnectionSet
