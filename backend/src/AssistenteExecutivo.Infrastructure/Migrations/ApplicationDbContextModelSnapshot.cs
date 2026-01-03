@@ -1512,7 +1512,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("AgreementPartyPartyId");
 
-                            b1.ToTable("AgreementParties");
+                            b1.ToTable("AgreementParties", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("AgreementPartyPartyId");
@@ -1586,7 +1586,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("CaptureJobJobId");
 
-                            b1.ToTable("CaptureJobs");
+                            b1.ToTable("CaptureJobs", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("CaptureJobJobId");
@@ -1651,7 +1651,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("CommissionAgreementAgreementId");
 
-                            b1.ToTable("CommissionAgreements");
+                            b1.ToTable("CommissionAgreements", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("CommissionAgreementAgreementId");
@@ -1663,6 +1663,44 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Contact", b =>
                 {
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("ContactId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("City")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("AddressCity");
+
+                            b1.Property<string>("Country")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("AddressCountry");
+
+                            b1.Property<string>("State")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("AddressState");
+
+                            b1.Property<string>("Street")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("AddressStreet");
+
+                            b1.Property<string>("ZipCode")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("AddressZipCode");
+
+                            b1.HasKey("ContactId");
+
+                            b1.ToTable("Contacts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContactId");
+                        });
+
                     b.OwnsMany("AssistenteExecutivo.Domain.ValueObjects.EmailAddress", "Emails", b1 =>
                         {
                             b1.Property<Guid>("ContactId")
@@ -1696,44 +1734,6 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                                 .HasMaxLength(100)
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("LastName");
-
-                            b1.HasKey("ContactId");
-
-                            b1.ToTable("Contacts");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ContactId");
-                        });
-
-                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Address", "Address", b1 =>
-                        {
-                            b1.Property<Guid>("ContactId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("City")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
-                                .HasColumnName("AddressCity");
-
-                            b1.Property<string>("Country")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
-                                .HasColumnName("AddressCountry");
-
-                            b1.Property<string>("State")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
-                                .HasColumnName("AddressState");
-
-                            b1.Property<string>("Street")
-                                .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
-                                .HasColumnName("AddressStreet");
-
-                            b1.Property<string>("ZipCode")
-                                .HasMaxLength(20)
-                                .HasColumnType("character varying(20)")
-                                .HasColumnName("AddressZipCode");
 
                             b1.HasKey("ContactId");
 
@@ -1817,7 +1817,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("CreditTransactionTransactionId");
 
-                            b1.ToTable("CreditTransactions");
+                            b1.ToTable("CreditTransactions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("CreditTransactionTransactionId");
@@ -1861,7 +1861,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("EscrowTransactionTransactionId");
 
-                            b1.ToTable("EscrowTransactions");
+                            b1.ToTable("EscrowTransactions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("EscrowTransactionTransactionId");
@@ -1902,7 +1902,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("MediaAssetMediaId");
 
-                            b1.ToTable("MediaAssets");
+                            b1.ToTable("MediaAssets", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaAssetMediaId");
@@ -1937,7 +1937,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("MilestoneId");
 
-                            b1.ToTable("Milestones");
+                            b1.ToTable("Milestones", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MilestoneId");
@@ -1990,7 +1990,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("PlanId");
 
-                            b1.ToTable("Plans");
+                            b1.ToTable("Plans", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PlanId");
@@ -2049,7 +2049,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("UserProfileUserId");
 
-                            b1.ToTable("UserProfiles");
+                            b1.ToTable("UserProfiles", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserProfileUserId");
@@ -2071,7 +2071,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                             b1.HasIndex("Value")
                                 .IsUnique();
 
-                            b1.ToTable("UserProfiles");
+                            b1.ToTable("UserProfiles", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserProfileUserId");
@@ -2093,7 +2093,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                             b1.HasIndex("Value")
                                 .IsUnique();
 
-                            b1.ToTable("UserProfiles");
+                            b1.ToTable("UserProfiles", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserProfileUserId");
@@ -2136,7 +2136,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("WorkflowId");
 
-                            b1.ToTable("Workflows");
+                            b1.ToTable("Workflows", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("WorkflowId");
