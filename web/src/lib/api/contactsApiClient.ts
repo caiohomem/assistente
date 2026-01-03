@@ -439,6 +439,7 @@ export async function addRelationshipClient(
   const backendRequest = {
     targetContactId: request.targetContactId,
     type: request.type,
+    relationshipTypeId: request.relationshipTypeId || null,
     description: request.description || null,
     strength: request.strength ?? null,
     isConfirmed: request.isConfirmed ?? null,

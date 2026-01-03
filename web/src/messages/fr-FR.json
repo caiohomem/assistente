@@ -140,6 +140,8 @@
     "successCreating": "Relation créée avec succès",
     "cannotRelateToSelf": "Impossible de créer une relation avec vous-même",
     "duplicateRelationship": "Une relation avec ce contact existe déjà",
+    "errorLoadingTypes": "Erreur lors du chargement des types de relation.",
+    "noTypesAvailable": "Aucun type disponible. Créez-les dans les Paramètres.",
     "types": {
       "colleague": "Collègue",
       "friend": "Ami",
@@ -148,6 +150,30 @@
       "supplier": "Fournisseur",
       "partner": "Partenaire",
       "other": "Autre"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Types de Relation",
+    "title": "Gérer les types de relation",
+    "description": "Créez et modifiez les catégories qui décrivent comment vos contacts sont liés.",
+    "createLabel": "Nom du type",
+    "editLabel": "Modifier le type de relation",
+    "namePlaceholder": "Ex. : Mentor, Partenaire stratégique...",
+    "save": "Enregistrer le type",
+    "saving": "Enregistrement...",
+    "cancelEdit": "Annuler",
+    "loading": "Chargement des types de relation...",
+    "emptyState": "Aucun type de relation pour le moment.",
+    "defaultBadge": "Par défaut",
+    "updatedAt": "Mis à jour le {date}",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleting": "Suppression...",
+    "errors": {
+      "loading": "Erreur lors du chargement des types de relation.",
+      "nameRequired": "Indiquez un nom pour le type.",
+      "save": "Erreur lors de l'enregistrement du type de relation.",
+      "delete": "Erreur lors de la suppression du type de relation."
     }
   },
   "errors": {

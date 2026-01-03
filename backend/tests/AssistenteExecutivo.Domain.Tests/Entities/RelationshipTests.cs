@@ -17,7 +17,8 @@ public class RelationshipTests
         var description = "Works at same company";
 
         // Act
-        var relationship = new Relationship(relationshipId, sourceContactId, targetContactId, type, description);
+        var relationshipTypeId = Guid.NewGuid();
+        var relationship = new Relationship(relationshipId, sourceContactId, targetContactId, type, description, relationshipTypeId);
 
         // Assert
         relationship.RelationshipId.Should().Be(relationshipId);
@@ -25,6 +26,7 @@ public class RelationshipTests
         relationship.TargetContactId.Should().Be(targetContactId);
         relationship.Type.Should().Be(type);
         relationship.Description.Should().Be(description);
+        relationship.RelationshipTypeId.Should().Be(relationshipTypeId);
         relationship.Strength.Should().Be(0.0f);
         relationship.IsConfirmed.Should().BeFalse();
     }
@@ -250,6 +252,28 @@ public class RelationshipTests
         relationship.Description.Should().Be("description");
     }
 
+    [Fact]
+    public void Constructor_EmptyRelationshipTypeId_ShouldThrow()
+    {
+        // Act & Assert
+        var act = () => new Relationship(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "colleague", null, Guid.Empty);
+        act.Should().Throw<DomainException>()
+            .WithMessage("*RelationshipTypeIdObrigatorio*");
+    }
+
+    [Fact]
+    public void Constructor_WithRelationshipTypeId_ShouldStore()
+    {
+        // Arrange
+        var relationshipTypeId = Guid.NewGuid();
+
+        // Act
+        var relationship = new Relationship(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "colleague", null, relationshipTypeId);
+
+        // Assert
+        relationship.RelationshipTypeId.Should().Be(relationshipTypeId);
+    }
+
     private Relationship CreateRelationship()
     {
         return new Relationship(
@@ -260,8 +284,3 @@ public class RelationshipTests
             "Test relationship");
     }
 }
-
-
-
-
-

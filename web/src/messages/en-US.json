@@ -367,6 +367,8 @@
     "successCreating": "Relationship created successfully",
     "cannotRelateToSelf": "Cannot create relationship with yourself",
     "duplicateRelationship": "Relationship with this contact already exists",
+    "errorLoadingTypes": "Error loading relationship types.",
+    "noTypesAvailable": "No types available. Create them in Settings.",
     "types": {
       "colleague": "Colleague",
       "friend": "Friend",
@@ -375,6 +377,30 @@
       "supplier": "Supplier",
       "partner": "Partner",
       "other": "Other"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Relationship Types",
+    "title": "Manage relationship types",
+    "description": "Create and edit the categories that describe how your contacts relate to each other.",
+    "createLabel": "Type name",
+    "editLabel": "Edit relationship type",
+    "namePlaceholder": "Ex: Mentor, Strategic Partner...",
+    "save": "Save type",
+    "saving": "Saving...",
+    "cancelEdit": "Cancel editing",
+    "loading": "Loading relationship types...",
+    "emptyState": "No relationship types yet.",
+    "defaultBadge": "Default",
+    "updatedAt": "Updated on {date}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "errors": {
+      "loading": "Error loading relationship types.",
+      "nameRequired": "Enter a name for the relationship type.",
+      "save": "Error saving relationship type.",
+      "delete": "Error deleting relationship type."
     }
   },
   "notes": {
@@ -452,4 +478,3 @@
     "reactivateErrorRetry": "Error reactivating user. Please try again."
   }
 }
-

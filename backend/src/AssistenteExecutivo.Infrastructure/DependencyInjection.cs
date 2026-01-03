@@ -112,6 +112,7 @@ public static class DependencyInjection
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IContactRepository, ContactRepository>();
         services.AddScoped<IRelationshipRepository, RelationshipRepository>();
+        services.AddScoped<IRelationshipTypeRepository, RelationshipTypeRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<INoteRepository, NoteRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();

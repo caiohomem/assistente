@@ -10,17 +10,20 @@ public class AddContactRelationshipCommandHandler : IRequestHandler<AddContactRe
 {
     private readonly IContactRepository _contactRepository;
     private readonly IRelationshipRepository _relationshipRepository;
+    private readonly IRelationshipTypeRepository _relationshipTypeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
 
     public AddContactRelationshipCommandHandler(
         IContactRepository contactRepository,
         IRelationshipRepository relationshipRepository,
+        IRelationshipTypeRepository relationshipTypeRepository,
         IUnitOfWork unitOfWork,
         IClock clock)
     {
         _contactRepository = contactRepository;
         _relationshipRepository = relationshipRepository;
+        _relationshipTypeRepository = relationshipTypeRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
     }
@@ -30,7 +33,24 @@ public class AddContactRelationshipCommandHandler : IRequestHandler<AddContactRe
         if (request.OwnerUserId == Guid.Empty)
             throw new DomainException("Domain:OwnerUserIdObrigatorio");
 
-        if (string.IsNullOrWhiteSpace(request.Type))
+        string? relationshipTypeName = request.Type;
+        Guid? relationshipTypeId = request.RelationshipTypeId;
+
+        if (relationshipTypeId.HasValue)
+        {
+            var relationshipType = await _relationshipTypeRepository.GetByIdAsync(
+                relationshipTypeId.Value,
+                request.OwnerUserId,
+                cancellationToken);
+
+            if (relationshipType == null)
+                throw new DomainException("Domain:RelationshipTypeNaoEncontrado");
+
+            relationshipTypeName = relationshipType.Name;
+            relationshipTypeId = relationshipType.RelationshipTypeId;
+        }
+
+        if (string.IsNullOrWhiteSpace(relationshipTypeName))
             throw new DomainException("Domain:RelationshipTypeObrigatorio");
 
         var contact = await _contactRepository.GetByIdAsync(request.ContactId, request.OwnerUserId, cancellationToken);
@@ -61,11 +81,12 @@ public class AddContactRelationshipCommandHandler : IRequestHandler<AddContactRe
         var relationship = contact.AddRelationship(
             relationshipId,
             request.TargetContactId,
-            request.Type,
+            relationshipTypeName,
             request.Description,
             _clock,
             request.Strength,
-            request.IsConfirmed);
+            request.IsConfirmed,
+            relationshipTypeId);
 
         // Garanta que o EF trate o relacionamento como nova entidade (INSERT), mesmo com PK preenchida.
         await _relationshipRepository.AddAsync(relationship, cancellationToken);

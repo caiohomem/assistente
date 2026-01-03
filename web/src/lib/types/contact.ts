@@ -11,6 +11,7 @@ export interface Relationship {
   sourceContactId: string;
   targetContactId: string;
   type: string;
+  relationshipTypeId?: string | null;
   description?: string | null;
   strength: number;
   isConfirmed: boolean;
@@ -69,7 +70,8 @@ export interface AddContactTagRequest {
 
 export interface AddContactRelationshipRequest {
   targetContactId: string;
-  type: string;
+  type?: string;
+  relationshipTypeId?: string;
   description?: string | null;
   strength?: number;
   isConfirmed?: boolean;
@@ -97,7 +99,6 @@ export interface NetworkGraph {
   nodes: GraphNode[];
   edges: GraphEdge[];
 }
-
 
 
 

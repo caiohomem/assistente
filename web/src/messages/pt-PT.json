@@ -195,6 +195,8 @@
     "successCreating": "Relacionamento criado com sucesso",
     "cannotRelateToSelf": "Não é possível criar relacionamento consigo mesmo",
     "duplicateRelationship": "Já existe um relacionamento com este contacto",
+    "errorLoadingTypes": "Erro ao carregar tipos de relacionamento.",
+    "noTypesAvailable": "Nenhum tipo disponível. Crie um novo nas Configurações.",
     "types": {
       "colleague": "Colega",
       "friend": "Amigo",
@@ -203,6 +205,30 @@
       "supplier": "Fornecedor",
       "partner": "Parceiro",
       "other": "Outro"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Tipos de Relacionamento",
+    "title": "Gerir tipos de relacionamento",
+    "description": "Crie e edite categorias que descrevem como os seus contactos se relacionam.",
+    "createLabel": "Nome do tipo",
+    "editLabel": "Editar tipo de relacionamento",
+    "namePlaceholder": "Ex.: Mentor, Parceiro Estratégico...",
+    "save": "Guardar tipo",
+    "saving": "A guardar...",
+    "cancelEdit": "Cancelar edição",
+    "loading": "A carregar tipos de relacionamento...",
+    "emptyState": "Ainda não existem tipos de relacionamento.",
+    "defaultBadge": "Padrão",
+    "updatedAt": "Atualizado em {date}",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "deleting": "A excluir...",
+    "errors": {
+      "loading": "Erro ao carregar tipos de relacionamento.",
+      "nameRequired": "Indique um nome para o tipo.",
+      "save": "Erro ao guardar tipo de relacionamento.",
+      "delete": "Erro ao excluir tipo de relacionamento."
     }
   },
   "errors": {

@@ -1,5 +1,6 @@
 using AssistenteExecutivo.Application.Commands.Auth;
 using AssistenteExecutivo.Application.Interfaces;
+using AssistenteExecutivo.Domain.Constants;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.Notifications;
@@ -19,6 +20,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
     private readonly IConfiguration _configuration;
     private readonly ILogger<RegisterUserCommandHandler> _logger;
     private readonly IEmailService _emailService;
+    private readonly IRelationshipTypeRepository _relationshipTypeRepository;
 
     public RegisterUserCommandHandler(
         IUserProfileRepository userProfileRepository,
@@ -27,7 +29,8 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         IClock clock,
         IConfiguration configuration,
         ILogger<RegisterUserCommandHandler> logger,
-        IEmailService emailService)
+        IEmailService emailService,
+        IRelationshipTypeRepository relationshipTypeRepository)
     {
         _userProfileRepository = userProfileRepository;
         _unitOfWork = unitOfWork;
@@ -36,6 +39,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         _configuration = configuration;
         _logger = logger;
         _emailService = emailService;
+        _relationshipTypeRepository = relationshipTypeRepository;
     }
 
     public async Task<RegisterUserResult> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -88,6 +92,8 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         await _userProfileRepository.AddAsync(userProfile, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await EnsureDefaultRelationshipTypesAsync(userId, cancellationToken);
+
         _logger.LogInformation("UserProfile criado com sucesso para {Email} (UserId={UserId}, KeycloakSubject={KeycloakSubject})",
             request.Email, userId, keycloakSubject.Value);
 
@@ -134,5 +140,18 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
             RealmId = realmId
         };
     }
-}
 
+    private async Task EnsureDefaultRelationshipTypesAsync(Guid ownerUserId, CancellationToken cancellationToken)
+    {
+        var existing = await _relationshipTypeRepository.GetByOwnerAsync(ownerUserId, cancellationToken);
+        if (existing.Count > 0)
+            return;
+
+        var defaults = RelationshipTypeDefaults.Names
+            .Select(name => new RelationshipType(Guid.NewGuid(), ownerUserId, name, _clock, isDefault: true))
+            .ToList();
+
+        await _relationshipTypeRepository.AddRangeAsync(defaults, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+}

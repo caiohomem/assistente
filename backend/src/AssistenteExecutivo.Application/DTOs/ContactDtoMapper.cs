@@ -31,6 +31,7 @@ public static class ContactDtoMapper
                 SourceContactId = r.SourceContactId,
                 TargetContactId = r.TargetContactId,
                 Type = r.Type,
+                RelationshipTypeId = r.RelationshipTypeId,
                 Description = r.Description,
                 Strength = r.Strength,
                 IsConfirmed = r.IsConfirmed
@@ -40,5 +41,4 @@ public static class ContactDtoMapper
         };
     }
 }
-
 

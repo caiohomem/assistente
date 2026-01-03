@@ -211,6 +211,8 @@
     "successCreating": "Relazione creata con successo",
     "cannotRelateToSelf": "Impossibile creare una relazione con te stesso",
     "duplicateRelationship": "Esiste già una relazione con questo contatto",
+    "errorLoadingTypes": "Errore durante il caricamento dei tipi di relazione.",
+    "noTypesAvailable": "Nessun tipo disponibile. Creali in Impostazioni.",
     "types": {
       "colleague": "Collega",
       "friend": "Amico",
@@ -219,6 +221,30 @@
       "supplier": "Fornitore",
       "partner": "Partner",
       "other": "Altro"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Tipi di Relazione",
+    "title": "Gestisci i tipi di relazione",
+    "description": "Crea e modifica le categorie che descrivono come i tuoi contatti sono collegati.",
+    "createLabel": "Nome del tipo",
+    "editLabel": "Modifica tipo di relazione",
+    "namePlaceholder": "Es.: Mentore, Partner Strategico...",
+    "save": "Salva tipo",
+    "saving": "Salvataggio...",
+    "cancelEdit": "Annulla modifica",
+    "loading": "Caricamento tipi di relazione...",
+    "emptyState": "Nessun tipo di relazione ancora disponibile.",
+    "defaultBadge": "Predefinito",
+    "updatedAt": "Aggiornato il {date}",
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "deleting": "Eliminazione...",
+    "errors": {
+      "loading": "Errore durante il caricamento dei tipi di relazione.",
+      "nameRequired": "Inserisci un nome per il tipo.",
+      "save": "Errore durante il salvataggio del tipo di relazione.",
+      "delete": "Errore durante l'eliminazione del tipo di relazione."
     }
   },
   "errors": {

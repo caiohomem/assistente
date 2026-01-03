@@ -1,11 +1,11 @@
 ﻿"use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { LayoutWrapper } from "@/components/LayoutWrapper"
 import { Button } from "@/components/ui/button"
-import { Mail, Bot, Save, CheckCircle2, AlertCircle, Clock, Plus } from "lucide-react"
+import { Mail, Bot, Save, CheckCircle2, AlertCircle, Clock, Plus, Share2 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
@@ -18,8 +18,15 @@ import {
 } from "@/lib/api/emailTemplatesApiClient"
 import { EmailTemplateType } from "@/lib/types/emailTemplates"
 import { getAgentConfiguration, updateAgentConfiguration, type AgentConfiguration } from "@/lib/api/agentConfigurationApi"
+import {
+  listRelationshipTypesClient,
+  createRelationshipTypeClient,
+  updateRelationshipTypeClient,
+  deleteRelationshipTypeClient,
+} from "@/lib/api/relationshipTypesApiClient"
+import { RelationshipType } from "@/lib/types/relationshipType"
 
-type TabType = "email-templates" | "agent"
+type TabType = "email-templates" | "agent" | "relationship-types"
 
 const getErrorMessage = (error: unknown): string | undefined => {
   if (error instanceof Error) {
@@ -31,6 +38,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
 export default function ConfiguracoesPage() {
   const router = useRouter()
   const t = useTranslations('agentConfiguration')
+  const tRelationshipTypes = useTranslations("relationshipTypes")
   const [activeTab, setActiveTab] = useState<TabType>("email-templates")
 
   // Email Templates State
@@ -59,6 +67,14 @@ export default function ConfiguracoesPage() {
   const [workflowPrompt, setWorkflowPrompt] = useState('')
   const [errorAgent, setErrorAgent] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  // Relationship Types State
+  const [relationshipTypes, setRelationshipTypes] = useState<RelationshipType[]>([])
+  const [loadingRelationshipTypes, setLoadingRelationshipTypes] = useState(true)
+  const [relationshipTypesError, setRelationshipTypesError] = useState<string | null>(null)
+  const [relationshipTypeName, setRelationshipTypeName] = useState("")
+  const [editingRelationshipType, setEditingRelationshipType] = useState<RelationshipType | null>(null)
+  const [savingRelationshipType, setSavingRelationshipType] = useState(false)
+  const [deletingRelationshipTypeId, setDeletingRelationshipTypeId] = useState<string | null>(null)
 
   // Load email templates
   const loadTemplates = useCallback(async () => {
@@ -108,6 +124,22 @@ export default function ConfiguracoesPage() {
     }
   }, [t])
 
+  const loadRelationshipTypes = useCallback(async () => {
+    try {
+      setLoadingRelationshipTypes(true)
+      setRelationshipTypesError(null)
+      const result = await listRelationshipTypesClient()
+      setRelationshipTypes(result)
+    } catch (error: unknown) {
+      console.error("Erro ao carregar tipos de relacionamento:", error)
+      setRelationshipTypesError(
+        error instanceof Error ? error.message : tRelationshipTypes("errors.loading"),
+      )
+    } finally {
+      setLoadingRelationshipTypes(false)
+    }
+  }, [tRelationshipTypes])
+
   useEffect(() => {
     if (activeTab === "email-templates") {
       loadTemplates()
@@ -120,6 +152,12 @@ export default function ConfiguracoesPage() {
       loadAgentConfiguration()
     }
   }, [activeTab, loadAgentConfiguration])
+
+  useEffect(() => {
+    if (activeTab === "relationship-types") {
+      loadRelationshipTypes()
+    }
+  }, [activeTab, loadRelationshipTypes])
 
   const getTypeLabel = (type: EmailTemplateType): string => {
     switch (type) {
@@ -217,6 +255,67 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  const handleEditRelationshipType = (type: RelationshipType) => {
+    setEditingRelationshipType(type)
+    setRelationshipTypeName(type.name)
+    setRelationshipTypesError(null)
+  }
+
+  const handleCancelRelationshipTypeEdit = () => {
+    setEditingRelationshipType(null)
+    setRelationshipTypeName("")
+    setRelationshipTypesError(null)
+  }
+
+  const handleRelationshipTypeSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmedName = relationshipTypeName.trim()
+    if (!trimmedName) {
+      setRelationshipTypesError(tRelationshipTypes("errors.nameRequired"))
+      return
+    }
+
+    try {
+      setSavingRelationshipType(true)
+      setRelationshipTypesError(null)
+
+      if (editingRelationshipType) {
+        const updated = await updateRelationshipTypeClient(editingRelationshipType.relationshipTypeId, trimmedName)
+        setRelationshipTypes((prev) =>
+          prev.map((type) => (type.relationshipTypeId === updated.relationshipTypeId ? updated : type)),
+        )
+      } else {
+        const created = await createRelationshipTypeClient(trimmedName)
+        setRelationshipTypes((prev) => [...prev, created])
+      }
+
+      setRelationshipTypeName("")
+      setEditingRelationshipType(null)
+    } catch (error: unknown) {
+      console.error("Erro ao salvar tipo de relacionamento:", error)
+      setRelationshipTypesError(error instanceof Error ? error.message : tRelationshipTypes("errors.save"))
+    } finally {
+      setSavingRelationshipType(false)
+    }
+  }
+
+  const handleDeleteRelationshipType = async (relationshipTypeId: string) => {
+    try {
+      setDeletingRelationshipTypeId(relationshipTypeId)
+      setRelationshipTypesError(null)
+      await deleteRelationshipTypeClient(relationshipTypeId)
+      setRelationshipTypes((prev) => prev.filter((type) => type.relationshipTypeId !== relationshipTypeId))
+      if (editingRelationshipType?.relationshipTypeId === relationshipTypeId) {
+        handleCancelRelationshipTypeEdit()
+      }
+    } catch (error: unknown) {
+      console.error("Erro ao excluir tipo de relacionamento:", error)
+      setRelationshipTypesError(error instanceof Error ? error.message : tRelationshipTypes("errors.delete"))
+    } finally {
+      setDeletingRelationshipTypeId(null)
+    }
+  }
+
   return (
     <LayoutWrapper 
       title="Configurações" 
@@ -252,6 +351,20 @@ export default function ConfiguracoesPage() {
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4" />
               Configurações do Agente
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("relationship-types")}
+            className={cn(
+              "px-4 py-2 text-sm font-medium transition-colors relative whitespace-nowrap",
+              activeTab === "relationship-types"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Share2 className="w-4 h-4" />
+              {tRelationshipTypes("tabTitle")}
             </div>
           </button>
         </div>
@@ -448,6 +561,107 @@ export default function ConfiguracoesPage() {
                 )}
               </>
             )}
+            </div>
+          )}
+
+          {/* Relationship Types Tab */}
+          {activeTab === "relationship-types" && (
+            <div className="space-y-6">
+              <div className="flex flex-col gap-2">
+                <h3 className="text-lg font-semibold">{tRelationshipTypes("title")}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {tRelationshipTypes("description")}
+                </p>
+              </div>
+
+              {relationshipTypesError && (
+                <div className="border-destructive/50 bg-destructive/10 p-4 rounded-lg">
+                  <p className="text-sm text-destructive">{relationshipTypesError}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleRelationshipTypeSubmit} className="space-y-4 border border-border rounded-xl p-4 bg-background/50">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    {editingRelationshipType ? tRelationshipTypes("editLabel") : tRelationshipTypes("createLabel")}
+                  </label>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <input
+                      type="text"
+                      value={relationshipTypeName}
+                      onChange={(e) => setRelationshipTypeName(e.target.value)}
+                      placeholder={tRelationshipTypes("namePlaceholder")}
+                      className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={savingRelationshipType}>
+                        {savingRelationshipType ? tRelationshipTypes("saving") : tRelationshipTypes("save")}
+                      </Button>
+                      {editingRelationshipType && (
+                        <Button type="button" variant="outline" onClick={handleCancelRelationshipTypeEdit}>
+                          {tRelationshipTypes("cancelEdit")}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </form>
+
+              {loadingRelationshipTypes ? (
+                <div className="p-12 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">{tRelationshipTypes("loading")}</p>
+                </div>
+              ) : relationshipTypes.length === 0 ? (
+                <div className="border border-dashed border-border rounded-xl p-8 text-center">
+                  <p className="text-muted-foreground">{tRelationshipTypes("emptyState")}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {relationshipTypes.map((type) => (
+                    <div
+                      key={type.relationshipTypeId}
+                      className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-4 md:flex-row md:items-center md:justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{type.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          {type.isDefault && (
+                            <span className="rounded-full border border-border px-2 py-0.5">
+                              {tRelationshipTypes("defaultBadge")}
+                            </span>
+                          )}
+                          <span>
+                            {tRelationshipTypes("updatedAt", {
+                              date: new Date(type.updatedAt).toLocaleDateString("pt-BR"),
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleEditRelationshipType(type)}
+                          disabled={savingRelationshipType && editingRelationshipType?.relationshipTypeId === type.relationshipTypeId}
+                        >
+                          {tRelationshipTypes("edit")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          onClick={() => handleDeleteRelationshipType(type.relationshipTypeId)}
+                          disabled={deletingRelationshipTypeId === type.relationshipTypeId}
+                        >
+                          {deletingRelationshipTypeId === type.relationshipTypeId
+                            ? tRelationshipTypes("deleting")
+                            : tRelationshipTypes("delete")}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

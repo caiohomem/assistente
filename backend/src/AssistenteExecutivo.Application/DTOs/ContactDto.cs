@@ -33,11 +33,11 @@ public class RelationshipDto
     public Guid SourceContactId { get; set; }
     public Guid TargetContactId { get; set; }
     public string Type { get; set; } = string.Empty;
+    public Guid? RelationshipTypeId { get; set; }
     public string? Description { get; set; }
     public float Strength { get; set; }
     public bool IsConfirmed { get; set; }
 }
-
 
 
 

@@ -5,21 +5,13 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { addRelationshipClient } from "@/lib/api/contactsApiClient";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
+import { listRelationshipTypesClient } from "@/lib/api/relationshipTypesApiClient";
 import { Contact, AddContactRelationshipRequest } from "@/lib/types/contact";
+import type { RelationshipType } from "@/lib/types/relationshipType";
 
 interface NovoRelacionamentoClientProps {
   contactId: string;
 }
-
-const RELATIONSHIP_TYPES = [
-  { value: "colleague", labelKey: "types.colleague" },
-  { value: "friend", labelKey: "types.friend" },
-  { value: "family", labelKey: "types.family" },
-  { value: "client", labelKey: "types.client" },
-  { value: "supplier", labelKey: "types.supplier" },
-  { value: "partner", labelKey: "types.partner" },
-  { value: "other", labelKey: "types.other" },
-];
 
 export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClientProps) {
   const router = useRouter();
@@ -28,12 +20,15 @@ export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClient
 
   const [loading, setLoading] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(true);
+  const [loadingRelationshipTypes, setLoadingRelationshipTypes] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [relationshipTypes, setRelationshipTypes] = useState<RelationshipType[]>([]);
   
   const [formData, setFormData] = useState<AddContactRelationshipRequest>({
     targetContactId: "",
-    type: "colleague",
+    type: "",
+    relationshipTypeId: "",
     description: null,
     strength: 0.5,
     isConfirmed: false,
@@ -55,6 +50,30 @@ export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClient
     }
     loadContacts();
   }, [contactId, t]);
+
+  useEffect(() => {
+    async function loadRelationshipTypes() {
+      try {
+        setLoadingRelationshipTypes(true);
+        const types = await listRelationshipTypesClient();
+        setRelationshipTypes(types);
+        if (types.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            relationshipTypeId: prev.relationshipTypeId || types[0].relationshipTypeId,
+            type: prev.type || types[0].name,
+          }));
+        }
+      } catch (err) {
+        console.error("Erro ao carregar tipos de relacionamento:", err);
+        setError(tRel("errorLoadingTypes"));
+      } finally {
+        setLoadingRelationshipTypes(false);
+      }
+    }
+
+    loadRelationshipTypes();
+  }, [tRel]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +107,16 @@ export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClient
       return;
     }
 
+    if (
+      relationshipTypes.length > 0 &&
+      (!formData.relationshipTypeId || formData.relationshipTypeId.trim() === "")
+    ) {
+      setError(tRel("selectType"));
+      return;
+    }
+
     if (!formData.type || formData.type.trim() === "") {
-      setError("Tipo de relacionamento é obrigatório");
+      setError(tRel("selectType"));
       return;
     }
 
@@ -166,18 +193,33 @@ export function NovoRelacionamentoClient({ contactId }: NovoRelacionamentoClient
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
           {tRel("type")} <span className="text-red-500">*</span>
         </label>
-        <select
-          value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          required
-        >
-          {RELATIONSHIP_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {tRel(type.labelKey)}
-            </option>
-          ))}
-        </select>
+        {loadingRelationshipTypes ? (
+          <div className="text-sm text-zinc-500 dark:text-zinc-400">{t("common.loading")}</div>
+        ) : relationshipTypes.length === 0 ? (
+          <div className="rounded-md border border-dashed border-zinc-300 dark:border-zinc-600 px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-800">
+            {tRel("noTypesAvailable")}
+          </div>
+        ) : (
+          <select
+            value={formData.relationshipTypeId}
+            onChange={(e) => {
+              const selected = relationshipTypes.find((type) => type.relationshipTypeId === e.target.value);
+              setFormData({
+                ...formData,
+                relationshipTypeId: e.target.value,
+                type: selected?.name || "",
+              });
+            }}
+            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            required
+          >
+            {relationshipTypes.map((type) => (
+              <option key={type.relationshipTypeId} value={type.relationshipTypeId}>
+                {type.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Description */}

@@ -59,5 +59,22 @@ public class RelationshipRepository : IRelationshipRepository
         _context.Relationships.Remove(relationship);
         await Task.CompletedTask;
     }
-}
 
+    public async Task UpdateRelationshipTypeNameAsync(Guid relationshipTypeId, string typeName, CancellationToken cancellationToken = default)
+    {
+        await _context.Relationships
+            .Where(r => r.RelationshipTypeId == relationshipTypeId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.Type, typeName.Trim()),
+                cancellationToken);
+    }
+
+    public async Task RemoveRelationshipTypeReferenceAsync(Guid relationshipTypeId, CancellationToken cancellationToken = default)
+    {
+        await _context.Relationships
+            .Where(r => r.RelationshipTypeId == relationshipTypeId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.RelationshipTypeId, (Guid?)null),
+                cancellationToken);
+    }
+}

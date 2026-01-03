@@ -704,15 +704,28 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
     private async Task<object> ExecuteAddContactRelationshipAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
-        if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("targetContactId", out var targetProp) || !args.TryGetProperty("type", out var typeProp))
-            throw new ArgumentException("contactId, targetContactId e type são obrigatórios");
+        if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("targetContactId", out var targetProp))
+            throw new ArgumentException("contactId e targetContactId são obrigatórios");
+
+        Guid? relationshipTypeId = null;
+        if (args.TryGetProperty("relationshipTypeId", out var relationshipTypeIdProp) &&
+            Guid.TryParse(relationshipTypeIdProp.GetString(), out var parsedTypeId))
+        {
+            relationshipTypeId = parsedTypeId;
+        }
+
+        var typeValue = args.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : null;
+
+        if (!relationshipTypeId.HasValue && string.IsNullOrWhiteSpace(typeValue))
+            throw new ArgumentException("relationshipTypeId ou type são obrigatórios");
 
         var command = new AddContactRelationshipCommand
         {
             ContactId = Guid.Parse(contactIdProp.GetString() ?? ""),
             OwnerUserId = ownerUserId,
             TargetContactId = Guid.Parse(targetProp.GetString() ?? ""),
-            Type = typeProp.GetString() ?? "",
+            Type = typeValue ?? string.Empty,
+            RelationshipTypeId = relationshipTypeId,
             Description = args.TryGetProperty("description", out var descProp) ? descProp.GetString() : null,
             Strength = args.TryGetProperty("strength", out var strengthProp) ? strengthProp.GetSingle() : null,
             IsConfirmed = args.TryGetProperty("isConfirmed", out var confirmedProp) && confirmedProp.GetBoolean()

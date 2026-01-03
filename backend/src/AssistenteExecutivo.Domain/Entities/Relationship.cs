@@ -11,7 +11,8 @@ public class Relationship
         Guid sourceContactId,
         Guid targetContactId,
         string type,
-        string? description = null)
+        string? description = null,
+        Guid? relationshipTypeId = null)
     {
         if (relationshipId == Guid.Empty)
             throw new DomainException("Domain:RelationshipIdObrigatorio");
@@ -28,11 +29,15 @@ public class Relationship
         if (string.IsNullOrWhiteSpace(type))
             throw new DomainException("Domain:RelationshipTypeObrigatorio");
 
+        if (relationshipTypeId.HasValue && relationshipTypeId == Guid.Empty)
+            throw new DomainException("Domain:RelationshipTypeIdObrigatorio");
+
         RelationshipId = relationshipId;
         SourceContactId = sourceContactId;
         TargetContactId = targetContactId;
         Type = type.Trim();
         Description = description?.Trim();
+        RelationshipTypeId = relationshipTypeId;
         Strength = 0.0f; // Calculado posteriormente
         IsConfirmed = false;
     }
@@ -41,6 +46,7 @@ public class Relationship
     public Guid SourceContactId { get; private set; }
     public Guid TargetContactId { get; private set; }
     public string Type { get; private set; } = null!;
+    public Guid? RelationshipTypeId { get; private set; }
     public string? Description { get; private set; }
     public float Strength { get; private set; }
     public bool IsConfirmed { get; private set; }
@@ -63,5 +69,4 @@ public class Relationship
         Description = description?.Trim();
     }
 }
-
 

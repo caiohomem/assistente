@@ -33,6 +33,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Letterhead> Letterheads { get; set; }
     public DbSet<Workflow> Workflows { get; set; }
     public DbSet<WorkflowExecution> WorkflowExecutions { get; set; }
+    public DbSet<RelationshipType> RelationshipTypes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,4 +128,3 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         // via ApplyConfigurationsFromAssembly acima
     }
 }
-

@@ -310,6 +310,7 @@ public sealed class ContactsController : ControllerBase
             OwnerUserId = ownerUserId,
             TargetContactId = request.TargetContactId,
             Type = request.Type,
+            RelationshipTypeId = request.RelationshipTypeId,
             Description = request.Description,
             Strength = request.Strength,
             IsConfirmed = request.IsConfirmed
@@ -393,9 +394,9 @@ public sealed class ContactsController : ControllerBase
 
     public sealed record AddRelationshipRequest(
         [Required] Guid TargetContactId,
-        [Required] string Type,
+        string? Type,
+        Guid? RelationshipTypeId,
         string? Description,
         float? Strength = null,
         bool? IsConfirmed = null);
 }
-

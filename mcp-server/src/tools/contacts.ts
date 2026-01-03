@@ -244,14 +244,26 @@ export function createContactTools(apiClient: ApiClient): Tool[] {
           },
           type: {
             type: 'string',
-            description: 'Tipo de relacionamento (ex: "colleague", "friend", "family")',
+            description: 'Tipo de relacionamento. Opcional se relationshipTypeId for informado.',
+          },
+          relationshipTypeId: {
+            type: 'string',
+            description: 'ID do tipo de relacionamento salvo pelo usuário (GUID)',
           },
           description: {
             type: 'string',
             description: 'Descrição do relacionamento',
           },
+          strength: {
+            type: 'number',
+            description: 'Força do relacionamento (0.0 a 1.0)',
+          },
+          isConfirmed: {
+            type: 'boolean',
+            description: 'Se o relacionamento está confirmado',
+          },
         },
-        required: ['contactId', 'targetContactId', 'type'],
+        required: ['contactId', 'targetContactId'],
       },
     },
     {
@@ -346,7 +358,10 @@ export async function handleContactTool(
       await apiClient.post(`/api/contacts/${args.contactId}/relationships`, {
         targetContactId: args.targetContactId,
         type: args.type,
+        relationshipTypeId: args.relationshipTypeId,
         description: args.description,
+        strength: args.strength,
+        isConfirmed: args.isConfirmed,
       });
       return { success: true, message: 'Relacionamento adicionado com sucesso' };
 
@@ -358,7 +373,6 @@ export async function handleContactTool(
       throw new Error(`Ferramenta desconhecida: ${name}`);
   }
 }
-
 
 
 
