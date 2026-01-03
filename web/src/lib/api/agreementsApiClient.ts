@@ -37,13 +37,24 @@ export async function addAgreementPartyClient(
   agreementId: string,
   party: AgreementWizardPartyInput,
 ) {
+  const roleMap: Record<string, number> = {
+    Seller: 1,
+    Buyer: 2,
+    Broker: 3,
+    Agent: 4,
+    Witness: 5,
+  };
+  const roleValue =
+    typeof party.role === "number"
+      ? party.role
+      : roleMap[party.role ?? "Agent"] ?? 4;
   const payload = {
     partyId: party.partyId,
     contactId: party.contactId,
     partyName: party.partyName,
     email: party.email,
     splitPercentage: party.splitPercentage,
-    role: party.role ?? "Agent",
+    role: roleValue,
   };
   return apiClient.post<void>(`/api/commission-agreements/${agreementId}/parties`, payload);
 }
