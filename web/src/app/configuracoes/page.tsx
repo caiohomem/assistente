@@ -641,7 +641,7 @@ export default function ConfiguracoesPage() {
                       <div className="flex gap-2">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="ghost"
                           onClick={() => handleEditRelationshipType(type)}
                           disabled={savingRelationshipType && editingRelationshipType?.relationshipTypeId === type.relationshipTypeId}
                         >
