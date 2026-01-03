@@ -6,6 +6,13 @@ import type {
   CreateCommissionAgreementInput,
 } from "@/lib/types/agreements";
 
+const normalizeAgreement = (raw: any): CommissionAgreementDto => {
+  return {
+    ...raw,
+    agreementId: raw.agreementId ?? raw.AgreementId ?? raw.id ?? raw.Id,
+  } as CommissionAgreementDto;
+};
+
 export async function listCommissionAgreementsClient(params?: { status?: string }) {
   const query = new URLSearchParams();
   if (params?.status) {
@@ -13,11 +20,13 @@ export async function listCommissionAgreementsClient(params?: { status?: string 
   }
   const q = query.toString();
   const path = q ? `/api/commission-agreements?${q}` : "/api/commission-agreements";
-  return apiClient.get<CommissionAgreementDto[]>(path);
+  const data = await apiClient.get<any[]>(path);
+  return data.map(normalizeAgreement);
 }
 
 export async function getCommissionAgreementClient(agreementId: string) {
-  return apiClient.get<CommissionAgreementDto>(`/api/commission-agreements/${agreementId}`);
+  const data = await apiClient.get<any>(`/api/commission-agreements/${agreementId}`);
+  return normalizeAgreement(data);
 }
 
 export async function createCommissionAgreementClient(input: CreateCommissionAgreementInput) {
