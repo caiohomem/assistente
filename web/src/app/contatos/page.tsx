@@ -8,7 +8,7 @@ import { ContactsListClient } from "./ContactsListClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ContactForm, ContactFormData } from "@/components/ContactForm";
 import { createContactClient } from "@/lib/api/contactsApiClient";
-import { ArrowLeft, Building2 } from "lucide-react";
+import { ArrowLeft, Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ContactsPage() {
@@ -80,6 +80,10 @@ export default function ContactsPage() {
     router.push("/contatos");
   };
 
+  const handleOpenNewContact = () => {
+    router.push("/contatos?novo=true");
+  };
+
   if (loading) {
     return (
       <LayoutWrapper title="Contatos" subtitle="Gerencie sua rede de relacionamentos" activeTab="contacts">
@@ -97,6 +101,20 @@ export default function ContactsPage() {
   return (
     <LayoutWrapper title="Contatos" subtitle={subtitle} activeTab="contacts">
       <div className="space-y-6">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Gerencie seus contatos e crie novos registros sempre que precisar.
+          </p>
+          <Button
+            variant="glow"
+            className="gap-2 rounded-2xl"
+            onClick={handleOpenNewContact}
+          >
+            <Plus className="w-4 h-4" />
+            Novo Contato
+          </Button>
+        </div>
+
         {/* Company filter banner */}
         {companyFilter && (
           <div className="glass-card p-4 bg-primary/5 border-primary/20 flex items-center justify-between">
@@ -145,7 +163,6 @@ export default function ContactsPage() {
     </LayoutWrapper>
   );
 }
-
 
 
 
