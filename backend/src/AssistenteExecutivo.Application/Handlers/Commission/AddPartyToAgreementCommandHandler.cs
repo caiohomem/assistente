@@ -12,17 +12,20 @@ namespace AssistenteExecutivo.Application.Handlers.Commission;
 public class AddPartyToAgreementCommandHandler : IRequestHandler<AddPartyToAgreementCommand, Unit>
 {
     private readonly ICommissionAgreementRepository _agreementRepository;
+    private readonly IApplicationDbContext _dbContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IPublisher _publisher;
 
     public AddPartyToAgreementCommandHandler(
         ICommissionAgreementRepository agreementRepository,
+        IApplicationDbContext dbContext,
         IUnitOfWork unitOfWork,
         IClock clock,
         IPublisher publisher)
     {
         _agreementRepository = agreementRepository;
+        _dbContext = dbContext;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _publisher = publisher;
@@ -39,7 +42,7 @@ public class AddPartyToAgreementCommandHandler : IRequestHandler<AddPartyToAgree
         EnsureOwner(agreement, request.RequestedBy);
 
         var split = Percentage.Create(request.SplitPercentage);
-        agreement.AddParty(
+        var party = agreement.AddParty(
             request.PartyId == Guid.Empty ? Guid.NewGuid() : request.PartyId,
             request.ContactId,
             request.CompanyId,
@@ -49,7 +52,9 @@ public class AddPartyToAgreementCommandHandler : IRequestHandler<AddPartyToAgree
             request.Role,
             _clock);
 
-        await _agreementRepository.UpdateAsync(agreement, cancellationToken);
+        // Explicitly add the new party to the DbContext to ensure it's tracked as Added
+        _dbContext.AgreementParties.Add(party);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await PublishDomainEventsAsync(agreement, cancellationToken);
         agreement.ClearDomainEvents();

@@ -28,6 +28,7 @@ import type {
 } from "@/lib/types/agreements";
 import type { EscrowAccountDto } from "@/lib/types/escrow";
 import { getMilestoneStatusLabel, getRoleLabel, getStatusLabel } from "@/lib/types/agreements";
+import { ApiError, extractApiFieldErrors } from "@/lib/api/types";
 
 export default function AgreementDetailPage() {
   const params = useParams();
@@ -46,6 +47,9 @@ export default function AgreementDetailPage() {
     splitPercentage: 0,
     role: "Agent",
   });
+  const [partyErrors, setPartyErrors] = useState<
+    Partial<Record<keyof AgreementWizardPartyInput, string>>
+  >({});
   const [milestoneForm, setMilestoneForm] = useState<AgreementWizardMilestoneInput>({
     description: "",
     value: 0,
@@ -89,15 +93,29 @@ export default function AgreementDetailPage() {
 
   async function handleAddParty() {
     if (!agreementId) return;
+    setPartyErrors({});
+    setError(null);
     if (!partyForm.partyName || partyForm.splitPercentage <= 0) {
-      setError("Informe nome e percentual da parte.");
+      setPartyErrors({
+        partyName: !partyForm.partyName ? "Informe o nome da parte." : undefined,
+        splitPercentage:
+          partyForm.splitPercentage <= 0 ? "Informe um percentual válido." : undefined,
+      });
       return;
     }
     try {
       await addAgreementPartyClient(agreementId, { ...partyForm, partyId: crypto.randomUUID() });
       setPartyForm({ partyName: "", email: "", splitPercentage: 0, role: "Agent" });
+      setPartyErrors({});
       await loadAgreement();
     } catch (err) {
+      if (err instanceof ApiError) {
+        const fieldErrors = extractApiFieldErrors(err.payload);
+        if (Object.keys(fieldErrors).length > 0) {
+          setPartyErrors(fieldErrors as Partial<Record<keyof AgreementWizardPartyInput, string>>);
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : "Falha ao adicionar a parte.");
     }
   }
@@ -342,21 +360,33 @@ export default function AgreementDetailPage() {
             <div className="mt-4 border-t border-border/40 pt-4 space-y-2">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Adicionar</p>
               <input
-                className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
+                className={`w-full rounded-xl border bg-background/60 px-3 py-2 text-sm ${
+                  partyErrors.partyName ? "border-red-300" : "border-border"
+                }`}
                 placeholder="Nome da parte"
                 value={partyForm.partyName}
                 onChange={(e) => setPartyForm((prev) => ({ ...prev, partyName: e.target.value }))}
               />
+              {partyErrors.partyName && (
+                <p className="text-xs text-red-500">{partyErrors.partyName}</p>
+              )}
               <input
-                className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
+                className={`w-full rounded-xl border bg-background/60 px-3 py-2 text-sm ${
+                  partyErrors.email ? "border-red-300" : "border-border"
+                }`}
                 placeholder="Email"
                 value={partyForm.email}
                 onChange={(e) => setPartyForm((prev) => ({ ...prev, email: e.target.value }))}
               />
+              {partyErrors.email && (
+                <p className="text-xs text-red-500">{partyErrors.email}</p>
+              )}
               <div className="flex gap-3">
                 <input
                   type="number"
-                  className="flex-1 rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
+                  className={`flex-1 rounded-xl border bg-background/60 px-3 py-2 text-sm ${
+                    partyErrors.splitPercentage ? "border-red-300" : "border-border"
+                  }`}
                   placeholder="%"
                   value={partyForm.splitPercentage}
                   onChange={(e) =>
@@ -364,7 +394,9 @@ export default function AgreementDetailPage() {
                   }
                 />
                 <select
-                  className="flex-1 rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
+                  className={`flex-1 rounded-xl border bg-background/60 px-3 py-2 text-sm ${
+                    partyErrors.role ? "border-red-300" : "border-border"
+                  }`}
                   value={partyForm.role}
                   onChange={(e) =>
                     setPartyForm((prev) => ({ ...prev, role: e.target.value as any }))
@@ -377,6 +409,12 @@ export default function AgreementDetailPage() {
                   <option value="Witness">Witness</option>
                 </select>
               </div>
+              {partyErrors.splitPercentage && (
+                <p className="text-xs text-red-500">{partyErrors.splitPercentage}</p>
+              )}
+              {partyErrors.role && (
+                <p className="text-xs text-red-500">{partyErrors.role}</p>
+              )}
               <Button className="w-full" onClick={handleAddParty}>
                 Adicionar parte
               </Button>

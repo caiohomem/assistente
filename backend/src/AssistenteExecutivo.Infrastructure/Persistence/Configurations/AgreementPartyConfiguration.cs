@@ -11,6 +11,9 @@ public class AgreementPartyConfiguration : IEntityTypeConfiguration<AgreementPar
         builder.ToTable("AgreementParties");
         builder.HasKey(p => p.PartyId);
 
+        builder.Property(p => p.AgreementId)
+            .IsRequired();
+
         builder.Property(p => p.PartyName)
             .IsRequired()
             .HasMaxLength(200);

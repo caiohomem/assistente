@@ -11,17 +11,20 @@ namespace AssistenteExecutivo.Application.Handlers.Milestones;
 public class CreateMilestoneCommandHandler : IRequestHandler<CreateMilestoneCommand, Guid>
 {
     private readonly ICommissionAgreementRepository _agreementRepository;
+    private readonly IApplicationDbContext _dbContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IPublisher _publisher;
 
     public CreateMilestoneCommandHandler(
         ICommissionAgreementRepository agreementRepository,
+        IApplicationDbContext dbContext,
         IUnitOfWork unitOfWork,
         IClock clock,
         IPublisher publisher)
     {
         _agreementRepository = agreementRepository;
+        _dbContext = dbContext;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _publisher = publisher;
@@ -51,7 +54,9 @@ public class CreateMilestoneCommandHandler : IRequestHandler<CreateMilestoneComm
             request.DueDate,
             _clock);
 
-        await _agreementRepository.UpdateAsync(agreement, cancellationToken);
+        // Explicitly add the new milestone to the DbContext to ensure it's tracked as Added
+        _dbContext.Milestones.Add(milestone);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await PublishDomainEventsAsync(agreement, cancellationToken);

@@ -14,6 +14,7 @@ public class RequestAIProposalCommandHandler : IRequestHandler<RequestAIProposal
 {
     private readonly INegotiationSessionRepository _sessionRepository;
     private readonly INegotiationAIService _aiService;
+    private readonly IApplicationDbContext _dbContext;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IPublisher _publisher;
@@ -21,12 +22,14 @@ public class RequestAIProposalCommandHandler : IRequestHandler<RequestAIProposal
     public RequestAIProposalCommandHandler(
         INegotiationSessionRepository sessionRepository,
         INegotiationAIService aiService,
+        IApplicationDbContext dbContext,
         IUnitOfWork unitOfWork,
         IClock clock,
         IPublisher publisher)
     {
         _sessionRepository = sessionRepository;
         _aiService = aiService;
+        _dbContext = dbContext;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _publisher = publisher;
@@ -74,14 +77,16 @@ public class RequestAIProposalCommandHandler : IRequestHandler<RequestAIProposal
         });
 
         var proposalId = Guid.NewGuid();
-        session.SubmitProposal(
+        var proposal = session.SubmitProposal(
             proposalId,
             null,
             ProposalSource.AI,
             content,
             _clock);
 
-        await _sessionRepository.UpdateAsync(session, cancellationToken);
+        // Explicitly add the new proposal to the DbContext to ensure it's tracked as Added
+        _dbContext.NegotiationProposals.Add(proposal);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         await PublishDomainEventsAsync(session, cancellationToken);
         session.ClearDomainEvents();

@@ -29,17 +29,34 @@ export const extractApiErrorMessage = (data: unknown): string | undefined => {
   if (typeof data === "object" && data !== null) {
     const payload = data as ApiErrorResponse
 
+    // For ASP.NET validation errors, prioritize field error messages over generic title
+    if (payload.errors && typeof payload.errors === "object" && !Array.isArray(payload.errors)) {
+      const entries = Object.entries(payload.errors as Record<string, unknown>)
+      const messages: string[] = []
+      for (const [field, value] of entries) {
+        if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+          messages.push(value[0])
+        } else if (typeof value === "string" && value.trim().length > 0) {
+          messages.push(value)
+        }
+      }
+      if (messages.length > 0) {
+        return messages.join(" ")
+      }
+    }
+
     if (payload.message && payload.message.trim().length > 0) {
       return payload.message
     }
     if (payload.error && payload.error.trim().length > 0) {
       return payload.error
     }
-    if (payload.title && payload.title.trim().length > 0) {
-      return payload.title
-    }
     if (payload.detail && payload.detail.trim().length > 0) {
       return payload.detail
+    }
+    // Only use title if no specific error messages found (ASP.NET generic title is not helpful)
+    if (payload.title && payload.title.trim().length > 0 && payload.title !== "One or more validation errors occurred.") {
+      return payload.title
     }
     if (Array.isArray(payload.errors) && payload.errors.length > 0) {
       const first = payload.errors[0]
@@ -55,9 +72,47 @@ export const extractApiErrorMessage = (data: unknown): string | undefined => {
   return undefined
 }
 
+export class ApiError extends Error {
+  status: number
+  payload?: unknown
+
+  constructor(message: string, status: number, payload?: unknown) {
+    super(message)
+    this.name = "ApiError"
+    this.status = status
+    this.payload = payload
+  }
+}
+
+export const extractApiFieldErrors = (data: unknown): Record<string, string> => {
+  if (typeof data !== "object" || data === null) {
+    return {}
+  }
+
+  const payload = data as ApiErrorResponse
+  const fieldErrors: Record<string, string> = {}
+
+  if (payload.errors && typeof payload.errors === "object" && !Array.isArray(payload.errors)) {
+    const entries = Object.entries(payload.errors as Record<string, unknown>)
+    for (const [field, value] of entries) {
+      if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+        const camelField = field.length > 0 ? `${field[0].toLowerCase()}${field.slice(1)}` : field
+        fieldErrors[camelField] = value[0]
+        continue
+      }
+      if (typeof value === "string" && value.trim().length > 0) {
+        const camelField = field.length > 0 ? `${field[0].toLowerCase()}${field.slice(1)}` : field
+        fieldErrors[camelField] = value
+      }
+    }
+  }
+
+  return fieldErrors
+}
+
 const readResponseBody = async (res: Response): Promise<unknown> => {
   const contentType = res.headers.get("content-type") ?? ""
-  if (contentType.includes("application/json")) {
+  if (contentType.includes("application/json") || contentType.includes("application/problem+json")) {
     try {
       return await res.json()
     } catch {

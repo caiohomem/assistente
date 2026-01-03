@@ -40,7 +40,7 @@ public class AgreementParty
     }
 
     public Guid PartyId { get; private set; }
-    public Guid? AgreementId { get; private set; }
+    public Guid AgreementId { get; private set; }
     public Guid? ContactId { get; private set; }
     public Guid? CompanyId { get; private set; }
     public string PartyName { get; private set; } = string.Empty;
@@ -103,5 +103,13 @@ public class AgreementParty
 
         ContactId = contactId;
         CompanyId = companyId;
+    }
+
+    internal void SetAgreementId(Guid agreementId)
+    {
+        if (agreementId == Guid.Empty)
+            throw new DomainException("Domain:AgreementIdObrigatorio");
+
+        AgreementId = agreementId;
     }
 }

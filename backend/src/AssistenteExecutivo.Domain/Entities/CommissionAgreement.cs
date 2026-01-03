@@ -112,6 +112,7 @@ public class CommissionAgreement
             role,
             clock);
 
+        party.SetAgreementId(AgreementId);
         _parties.Add(party);
         UpdatedAt = clock.UtcNow;
 

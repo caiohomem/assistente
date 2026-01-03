@@ -47,7 +47,11 @@ public class CommissionAgreementRepository : ICommissionAgreementRepository
 
     public Task UpdateAsync(CommissionAgreement agreement, CancellationToken cancellationToken = default)
     {
-        _context.CommissionAgreements.Update(agreement);
+        var entry = _context.Entry(agreement);
+        if (entry.State == EntityState.Detached)
+        {
+            _context.CommissionAgreements.Update(agreement);
+        }
         return Task.CompletedTask;
     }
 }

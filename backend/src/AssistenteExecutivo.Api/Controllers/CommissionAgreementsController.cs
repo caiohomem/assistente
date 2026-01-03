@@ -250,7 +250,6 @@ public record AddAgreementPartyRequest
     public Guid? CompanyId { get; init; }
     [Required]
     public string PartyName { get; init; } = string.Empty;
-    [EmailAddress]
     public string? Email { get; init; }
     [Range(0, 100)]
     public decimal SplitPercentage { get; init; }

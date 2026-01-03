@@ -1,5 +1,5 @@
 import { getApiBaseUrl, getBffSession, BffSession } from "@/lib/bff";
-import { extractApiErrorMessage } from "./types";
+import { ApiError, extractApiErrorMessage } from "./types";
 
 /**
  * Cliente HTTP para fazer requisições diretas à API (sem proxy do Next.js).
@@ -94,7 +94,7 @@ export class ApiClient {
 
     // Processar resposta
     const contentType = res.headers.get("content-type") ?? "";
-    const isJson = contentType.includes("application/json");
+    const isJson = contentType.includes("application/json") || contentType.includes("application/problem+json");
     const data = isJson ? await res.json() : undefined;
 
     if (!res.ok) {
@@ -106,8 +106,13 @@ export class ApiClient {
         return undefined as TResponse; // Não lançar erro para evitar loop
       }
 
+      // Debug: log error response for troubleshooting
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ApiClient] Error response:", { status: res.status, contentType, data });
+      }
+
       const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
-      throw new Error(message);
+      throw new ApiError(message, res.status, data);
     }
 
     // Se não há conteúdo, retornar void
