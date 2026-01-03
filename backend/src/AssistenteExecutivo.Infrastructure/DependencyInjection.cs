@@ -5,6 +5,7 @@ using AssistenteExecutivo.Infrastructure.Persistence.Repositories;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using AssistenteExecutivo.Infrastructure.Services;
 using AssistenteExecutivo.Infrastructure.Services.N8n;
+using AssistenteExecutivo.Infrastructure.Services.Negotiations;
 using AssistenteExecutivo.Infrastructure.Services.OpenAI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -127,11 +128,16 @@ public static class DependencyInjection
         services.AddScoped<ILetterheadRepository, LetterheadRepository>();
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IWorkflowExecutionRepository, WorkflowExecutionRepository>();
+        services.AddScoped<ICommissionAgreementRepository, CommissionAgreementRepository>();
+        services.AddScoped<IEscrowAccountRepository, EscrowAccountRepository>();
+        services.AddScoped<IMilestoneRepository, MilestoneRepository>();
+        services.AddScoped<INegotiationSessionRepository, NegotiationSessionRepository>();
 
         // n8n Services
         services.AddScoped<IWorkflowSpecValidator, WorkflowSpecValidator>();
         services.AddScoped<IWorkflowCompiler, WorkflowCompiler>();
         services.AddScoped<IN8nProvider, N8nProvider>();
+        services.AddScoped<INegotiationAIService, OpenAINegotiationAIService>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();

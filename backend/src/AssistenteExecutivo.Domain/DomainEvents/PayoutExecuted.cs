@@ -1,12 +1,9 @@
-using AssistenteExecutivo.Domain.Enums;
-
 namespace AssistenteExecutivo.Domain.DomainEvents;
 
-public record PayoutRequested(
+public record PayoutExecuted(
     Guid EscrowAccountId,
     Guid TransactionId,
-    Guid? PartyId,
     decimal Amount,
     string Currency,
-    PayoutApprovalType ApprovalType,
+    string? StripeTransferId,
     DateTime OccurredAt) : IDomainEvent;

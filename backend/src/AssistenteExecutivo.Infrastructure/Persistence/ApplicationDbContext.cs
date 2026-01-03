@@ -34,6 +34,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Workflow> Workflows { get; set; }
     public DbSet<WorkflowExecution> WorkflowExecutions { get; set; }
     public DbSet<RelationshipType> RelationshipTypes { get; set; }
+    public DbSet<CommissionAgreement> CommissionAgreements { get; set; }
+    public DbSet<AgreementParty> AgreementParties { get; set; }
+    public DbSet<Milestone> Milestones { get; set; }
+    public DbSet<EscrowAccount> EscrowAccounts { get; set; }
+    public DbSet<EscrowTransaction> EscrowTransactions { get; set; }
+    public DbSet<NegotiationSession> NegotiationSessions { get; set; }
+    public DbSet<NegotiationProposal> NegotiationProposals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
