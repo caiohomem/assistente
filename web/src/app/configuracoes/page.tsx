@@ -598,7 +598,7 @@ export default function ConfiguracoesPage() {
                         {savingRelationshipType ? tRelationshipTypes("saving") : tRelationshipTypes("save")}
                       </Button>
                       {editingRelationshipType && (
-                        <Button type="button" variant="outline" onClick={handleCancelRelationshipTypeEdit}>
+                        <Button type="button" variant="ghost" onClick={handleCancelRelationshipTypeEdit}>
                           {tRelationshipTypes("cancelEdit")}
                         </Button>
                       )}
