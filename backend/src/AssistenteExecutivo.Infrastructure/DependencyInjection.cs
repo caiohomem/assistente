@@ -1,10 +1,12 @@
 using AssistenteExecutivo.Application.Interfaces;
+using AssistenteExecutivo.Domain.DomainServices;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Infrastructure.Persistence.Repositories;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using AssistenteExecutivo.Infrastructure.Services;
 using AssistenteExecutivo.Infrastructure.Services.N8n;
+using AssistenteExecutivo.Infrastructure.Services.Payments;
 using AssistenteExecutivo.Infrastructure.Services.Negotiations;
 using AssistenteExecutivo.Infrastructure.Services.OpenAI;
 using Microsoft.EntityFrameworkCore;
@@ -133,11 +135,18 @@ public static class DependencyInjection
         services.AddScoped<IMilestoneRepository, MilestoneRepository>();
         services.AddScoped<INegotiationSessionRepository, NegotiationSessionRepository>();
 
+        services.Configure<StripeOptions>(configuration.GetSection("Stripe"));
+
+        // Domain services
+        services.AddScoped<CommissionAgreementRulesService>();
+        services.AddScoped<EscrowPayoutDomainService>();
+
         // n8n Services
         services.AddScoped<IWorkflowSpecValidator, WorkflowSpecValidator>();
         services.AddScoped<IWorkflowCompiler, WorkflowCompiler>();
         services.AddScoped<IN8nProvider, N8nProvider>();
         services.AddScoped<INegotiationAIService, OpenAINegotiationAIService>();
+        services.AddScoped<IPaymentGateway, StripePaymentGateway>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();

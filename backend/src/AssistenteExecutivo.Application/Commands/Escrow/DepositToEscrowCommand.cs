@@ -1,8 +1,9 @@
+using AssistenteExecutivo.Application.DTOs;
 using MediatR;
 
 namespace AssistenteExecutivo.Application.Commands.Escrow;
 
-public class DepositToEscrowCommand : IRequest<Guid>
+public class DepositToEscrowCommand : IRequest<EscrowDepositResult>
 {
     public Guid EscrowAccountId { get; set; }
     public Guid TransactionId { get; set; }

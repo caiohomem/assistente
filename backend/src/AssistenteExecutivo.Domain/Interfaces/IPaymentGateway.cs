@@ -36,7 +36,7 @@ public interface IPaymentGateway
         string destinationAccountId,
         CancellationToken cancellationToken = default);
 
-    Task ConnectAccountAsync(
+    Task<string> ConnectAccountAsync(
         Guid ownerUserId,
         string authorizationCode,
         CancellationToken cancellationToken = default);

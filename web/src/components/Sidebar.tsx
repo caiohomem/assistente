@@ -13,6 +13,8 @@ import {
   Coins,
   Building2,
   Zap,
+  Handshake,
+  PanelsTopLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
@@ -33,6 +35,8 @@ const menuItems = [
   { id: "documents", label: "Documentos", icon: FileText, path: "/documentos" },
   { id: "reminders", label: "Lembretes", icon: Bell, path: "/automacao/lembretes" },
   { id: "workflows", label: "Workflows", icon: Zap, path: "/workflows" },
+  { id: "agreements", label: "Acordos", icon: Handshake, path: "/acordos" },
+  { id: "negotiations", label: "Negociações", icon: PanelsTopLeft, path: "/negociacoes" },
   { id: "network", label: "Rede", icon: Network, path: "/contatos/rede" },
   { id: "assistant", label: "Assistente IA", icon: Sparkles, path: "/assistente" },
   { id: "credits", label: "Créditos", icon: Coins, path: "/creditos" },

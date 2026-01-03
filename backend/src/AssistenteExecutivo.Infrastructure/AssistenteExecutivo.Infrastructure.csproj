@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.1" />
     <PackageReference Include="OpenAI" Version="2.8.0" />
+    <PackageReference Include="Stripe.net" Version="42.1.0" />
   </ItemGroup>
 
   <ItemGroup>
