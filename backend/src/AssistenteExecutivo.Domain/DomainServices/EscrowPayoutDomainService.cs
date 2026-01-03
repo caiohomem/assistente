@@ -25,8 +25,11 @@ public class EscrowPayoutDomainService
         if (milestone.AgreementId != agreement.AgreementId)
             throw new DomainException("Domain:MilestoneNaoPertenceAoAcordo");
 
-        if (milestone.Status != MilestoneStatus.Completed)
-            throw new DomainException("Domain:MilestonePrecisaEstarCompleto");
+        if (milestone.Status == MilestoneStatus.Completed && milestone.ReleasedPayoutTransactionId.HasValue)
+            throw new DomainException("Domain:MilestoneJaTevePayoutLiberado");
+
+        if (milestone.Status != MilestoneStatus.Pending && milestone.Status != MilestoneStatus.Completed)
+            throw new DomainException("Domain:MilestonePrecisaEstarPendenteOuCompleto");
 
         if (requestedAmount > milestone.Value)
             throw new DomainException("Domain:ValorPayoutNaoPodeUltrapassarMilestone");

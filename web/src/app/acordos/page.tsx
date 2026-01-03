@@ -579,7 +579,7 @@ export default function CommissionAgreementsPage() {
                 Etapa {wizardStepIndex + 1} de {wizardSteps.length}
               </div>
               <div className="flex gap-3">
-                <Button type="button" variant="outline" disabled={wizardStepIndex === 0} onClick={handlePreviousStep}>
+                <Button type="button" variant="ghost" disabled={wizardStepIndex === 0} onClick={handlePreviousStep}>
                   Voltar
                 </Button>
                 {wizardStepIndex < wizardSteps.length - 1 ? (
@@ -660,7 +660,7 @@ export default function CommissionAgreementsPage() {
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       onClick={() => router.push(`/acordos/${agreement.agreementId}`)}
                     >
                       Abrir

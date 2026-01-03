@@ -288,7 +288,7 @@ export default function AgreementDetailPage({
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => router.push("/acordos")}>
+              <Button variant="ghost" onClick={() => router.push("/acordos")}>
                 Voltar para lista
               </Button>
               {agreement.status === 2 || agreement.status === "Active" ? (
@@ -375,7 +375,7 @@ export default function AgreementDetailPage({
                   Status: {escrowAccount.status}
                 </p>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   className="w-full mb-3"
                   onClick={() => router.push(`/escrow/${escrowAccount.escrowAccountId}`)}
                 >
@@ -475,7 +475,7 @@ export default function AgreementDetailPage({
                 />
                 <Button
                   className="w-full"
-                  variant="outline"
+                  variant="ghost"
                   onClick={handleMilestoneComplete}
                   disabled={!selectedMilestone}
                 >
@@ -515,7 +515,7 @@ export default function AgreementDetailPage({
               value={disputeReason}
               onChange={(e) => setDisputeReason(e.target.value)}
             />
-            <Button variant="outline" onClick={handleDispute}>
+            <Button variant="ghost" onClick={handleDispute}>
               Abrir disputa
             </Button>
           </div>

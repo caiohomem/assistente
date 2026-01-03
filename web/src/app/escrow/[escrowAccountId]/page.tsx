@@ -81,7 +81,7 @@ export default function EscrowLedgerPage({
               </p>
             </div>
             <div className="flex items-end justify-end">
-              <Button variant="outline" onClick={() => router.push(`/acordos/${account.agreementId}`)}>
+              <Button variant="ghost" onClick={() => router.push(`/acordos/${account.agreementId}`)}>
                 Voltar para o acordo
               </Button>
             </div>

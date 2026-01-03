@@ -309,7 +309,7 @@ export default function NegotiationsPage() {
                         )}
                         {proposal.status === "Pending" || proposal.status === 1 ? (
                           <div className="flex items-center gap-3">
-                            <Button variant="outline" size="sm" onClick={() => handleAcceptProposal(proposal)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleAcceptProposal(proposal)}>
                               Aceitar
                             </Button>
                             <div className="flex-1 flex gap-2">
