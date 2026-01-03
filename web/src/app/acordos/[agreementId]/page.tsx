@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,13 +29,13 @@ import type {
 import type { EscrowAccountDto } from "@/lib/types/escrow";
 import { getMilestoneStatusLabel, getRoleLabel, getStatusLabel } from "@/lib/types/agreements";
 
-export default function AgreementDetailPage({
-  params,
-}: {
-  params: { agreementId: string };
-}) {
+export default function AgreementDetailPage() {
+  const params = useParams();
   const router = useRouter();
-  const { agreementId } = params;
+  const agreementId = useMemo(() => {
+    const value = params?.agreementId;
+    return Array.isArray(value) ? value[0] : value;
+  }, [params]);
   const [agreement, setAgreement] = useState<CommissionAgreementDto | null>(null);
   const [escrowAccount, setEscrowAccount] = useState<EscrowAccountDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,12 +61,14 @@ export default function AgreementDetailPage({
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!agreementId) return;
     loadAgreement();
   }, [agreementId]);
 
   async function loadAgreement() {
     setLoading(true);
     setError(null);
+    if (!agreementId) return;
     try {
       const data = await getCommissionAgreementClient(agreementId);
       setAgreement(data);
@@ -86,6 +88,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleAddParty() {
+    if (!agreementId) return;
     if (!partyForm.partyName || partyForm.splitPercentage <= 0) {
       setError("Informe nome e percentual da parte.");
       return;
@@ -100,6 +103,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleAddMilestone() {
+    if (!agreementId) return;
     if (!milestoneForm.description || milestoneForm.value <= 0 || !milestoneForm.dueDate) {
       setError("Descrição, valor e data são obrigatórios para o milestone.");
       return;
@@ -122,6 +126,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleCompleteAgreement() {
+    if (!agreementId) return;
     try {
       await completeAgreementClient(agreementId);
       setMessage("Acordo concluído com sucesso.");
@@ -132,6 +137,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleDispute() {
+    if (!agreementId) return;
     if (!disputeReason) {
       setError("Informe o motivo da disputa.");
       return;
@@ -146,6 +152,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleCancel() {
+    if (!agreementId) return;
     if (!cancelReason) {
       setError("Informe o motivo do cancelamento.");
       return;
@@ -160,6 +167,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleMilestoneComplete() {
+    if (!agreementId) return;
     if (!selectedMilestone) {
       setError("Selecione um milestone para concluir.");
       return;
@@ -177,6 +185,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleMilestonePayout() {
+    if (!agreementId) return;
     if (!selectedMilestone) {
       setError("Selecione um milestone para pagar.");
       return;
@@ -199,6 +208,7 @@ export default function AgreementDetailPage({
   }
 
   async function handleCreateEscrow() {
+    if (!agreementId) return;
     if (!agreement) return;
     try {
       const response = await createEscrowAccountClient({
@@ -224,6 +234,16 @@ export default function AgreementDetailPage({
       return `${currency} ${value.toFixed(2)}`;
     }
   };
+
+  if (!agreementId) {
+    return (
+      <LayoutWrapper title="Detalhes do acordo" subtitle="" activeTab="agreements">
+        <div className="text-sm text-destructive">
+          {error ?? "Acordo não encontrado. Volte para a lista."}
+        </div>
+      </LayoutWrapper>
+    );
+  }
 
   if (loading) {
     return (
