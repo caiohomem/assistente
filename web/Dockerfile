@@ -22,8 +22,12 @@ CMD ["sh", "-c", "if [ ! -x node_modules/.bin/next ]; then npm ci; fi; NODE_OPTI
 FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=8080
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
 EXPOSE 8080
-CMD ["npm", "run", "start", "--", "-p", "8080"]
+
+# Copy standalone output (with standalone, .next contains server.js and all dependencies)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Run the standalone server
+CMD ["node", "server.js"]
