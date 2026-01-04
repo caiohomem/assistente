@@ -1,121 +1,230 @@
 {
   "landing": {
     "header": {
-      "navFeatures": "Recursos",
-      "navPricing": "Preços",
+      "navProblem": "O Desafio",
+      "navSolution": "A Solução",
+      "navProof": "Provas",
+      "navPricing": "Planos",
       "navLogin": "Entrar",
-      "navRegister": "Registrar",
-      "ctaStart": "Começar Agora",
+      "ctaStart": "Começar Grátis",
       "selectLanguage": "Selecionar idioma"
     },
     "hero": {
-      "title": "Seu Assistente Executivo",
-      "titleHighlight": "Inteligente",
-      "subtitle": "Gerencie contatos, anotações e tarefas com inteligência artificial. Transforme sua produtividade com ferramentas profissionais.",
-      "ctaPrimary": "Começar Gratuitamente",
-      "ctaSecondary": "Saiba Mais"
+      "title": "Seu deal estava pronto...",
+      "titleHighlight": "até ele desistir",
+      "subtitle": "Inteligência artificial potencializa cada movimento. Relacionamentos complexos visualizados. Acordos executados com segurança. Feche mais deals, nunca perca uma oportunidade.",
+      "ctaPrimary": "Comece Grátis",
+      "ctaSecondary": "Agendar Demo",
+      "proof": "10.000+ deals fechados • Powered by AI • 50+ empresas confiam em nós"
     },
-    "features": {
-      "title": "Recursos Poderosos",
-      "subtitle": "Tudo que você precisa para gerenciar seus contatos e aumentar sua produtividade",
+    "problem": {
+      "title": "Você enfrenta isto todos os dias?",
+      "subtitle": "Executives e gestores lidam com relacionamentos complexos. Sem ferramentas certas, oportunidades somem.",
       "items": [
         {
-          "title": "Gestão de Contatos",
-          "description": "Organize e gerencie todos os seus contatos profissionais em um só lugar"
+          "title": "Relacionamentos Complexos",
+          "description": "Múltiplas partes, conexões indiretas, caminhos de relacionamento escondidos. Você perde oportunidades porque não vê a rede completa.",
+          "icon": "network"
         },
         {
-          "title": "Anotações Inteligentes",
-          "description": "Crie e organize anotações com categorização automática e busca avançada"
+          "title": "Tarefas Repetitivas",
+          "description": "Emails, documentos, follow-ups — feitos manualmente. Consumem 10+ horas por semana que poderiam ser em negociação.",
+          "icon": "clock"
         },
         {
-          "title": "Sistema de Créditos",
-          "description": "Controle flexível de uso com sistema de créditos e relatórios detalhados"
+          "title": "Acordos Arriscados",
+          "description": "Sem rastreamento de milestones, sem garantia de pagamento, sem visibilidade de quem aceitou o quê. Risco financeiro real.",
+          "icon": "alert"
+        }
+      ]
+    },
+    "solution": {
+      "title": "Como Aumentamos Seu Resultado",
+      "subtitle": "Inteligência Artificial em cada pilar — visão, automação, segurança",
+      "pillars": [
+        {
+          "title": "🧠 Intelligence (Powered by GPT-4 Vision)",
+          "description": "IA visualiza sua rede de relacionamentos, enriquece perfis automaticamente, detecta riscos em segundos. Veja toda sua rede. Descubra caminhos. Identifique oportunidades.",
+          "benefits": [
+            "Grafo inteligente — IA mapeia e sugere conexões estratégicas",
+            "Enriquecimento automático com IA — LinkedIn, dados públicos processados",
+            "KYC com IA — verifica riscos, fraudes, compliance automaticamente",
+            "Cartão de visita → contato em segundos — OCR com visão"
+          ],
+          "icon": "brain"
         },
         {
-          "title": "Segurança Avançada",
-          "description": "Seus dados protegidos com criptografia e autenticação segura"
+          "title": "⚡ Automation (Powered by GPT + Whisper + TTS)",
+          "description": "IA transcreve, redige, resume, negocia — 10+ horas economizadas por semana. Fale, IA executa.",
+          "benefits": [
+            "Notas de voz com IA — fala para resumo + tarefas estruturadas",
+            "Drafts com IA — emails personalizados em segundos",
+            "Lembretes inteligentes — IA decide melhor momento de contato",
+            "Assistente AI — chat que executa ações (criar contato, atualizar, automatizar)",
+            "Síntese de voz — respostas em áudio"
+          ],
+          "icon": "zap"
         },
         {
-          "title": "Performance Otimizada",
-          "description": "Interface rápida e responsiva para máxima produtividade"
+          "title": "🛡️ Security (AI-Enhanced Trust)",
+          "description": "IA valida acordos, detecta padrões de risco, negocia termos intermediários. Feche com confiança absoluta.",
+          "benefits": [
+            "Acordos validados por IA — analisa termos legais automaticamente",
+            "Negociação com IA — sugere termos intermediários baseado em histórico",
+            "Escrow monitorado por IA — detecta padrões anômalos de risco",
+            "Rastreamento completo — timeline de quien aceitou, quando, por quê"
+          ],
+          "icon": "shield"
+        }
+      ]
+    },
+    "workflow": {
+      "title": "Como Funciona na Prática",
+      "subtitle": "Seu fluxo de trabalho transformado por AI",
+      "steps": [
+        {
+          "number": "1",
+          "title": "Fale",
+          "description": "Grave uma nota de voz durante a reunião. O sistema escuta tudo em português."
         },
         {
-          "title": "Suporte Dedicado",
-          "description": "Equipe pronta para ajudar você a aproveitar ao máximo a plataforma"
+          "number": "2",
+          "title": "IA Processa",
+          "description": "Whisper transcreve • GPT-4 resume • Tarefas são extraídas • Acordos são analisados"
+        },
+        {
+          "number": "3",
+          "title": "Você Recebe",
+          "description": "Resumo executivo • Tarefas estruturadas • Lembretes inteligentes • Próximos passos claros"
+        },
+        {
+          "number": "4",
+          "title": "Sistema Age",
+          "description": "Contatos criados • Documentos redigidos • Emails enviados • Acordos rastreados"
+        }
+      ]
+    },
+    "aiFeatures": {
+      "title": "Tecnologia de IA que Diferencia",
+      "subtitle": "Não é apenas AI — é AI especializada no seu problema",
+      "features": [
+        {
+          "name": "Chat Assistente Inteligente",
+          "description": "Conversa natural em português. Executa ações (criar contato, atualizar, gerar documento). Function calling automático."
+        },
+        {
+          "name": "Speech-to-Text com Whisper",
+          "description": "Transcreve áudio de reuniões em português. Detecta automáticamente o idioma. Até 25MB por arquivo."
+        },
+        {
+          "name": "Análise com GPT-4 Vision",
+          "description": "Fotografa cartão de visita → extrai nome, email, telefone, empresa, cargo. Sem digitação manual."
+        },
+        {
+          "name": "Summarization Inteligente",
+          "description": "Transcrição bruta → resumo executivo + tarefas com prazos + contexto."
+        },
+        {
+          "name": "Geração de Acordos com IA",
+          "description": "Propostas de negociação → IA sugere termos intermediários → rascunho de contrato automático."
+        },
+        {
+          "name": "Síntese de Voz (TTS)",
+          "description": "Respostas em áudio. Perfeito para executivos ocupados. Vozes naturais."
+        }
+      ]
+    },
+    "proof": {
+      "title": "Quem Confía em Nós",
+      "subtitle": "Executivos e equipes que fecham mais deals, mais rápido",
+      "caseStudies": [
+        {
+          "company": "TechVentures",
+          "role": "VP de Parcerias",
+          "result": "30% mais deals em 90 dias",
+          "quote": "O grafo de relacionamentos mudou como fazemos networking. Descobrimos conexões que não víamos antes.",
+          "author": "Carlos M."
+        },
+        {
+          "company": "Consultoria &Co",
+          "role": "Sócio-Gerente",
+          "result": "10h economizadas por semana",
+          "quote": "Os lembretes inteligentes garantem que nunca perdemos uma oportunidade de follow-up. Relacionamentos mais fortes.",
+          "author": "Marina L."
+        },
+        {
+          "company": "Real Estate Group",
+          "role": "Diretor de Operações",
+          "result": "100% acordos com escrow",
+          "quote": "Fechamos acordos complexos com múltiplas partes com segurança. O escrow resolveu nosso problema de confiança.",
+          "author": "Roberto P."
         }
       ]
     },
     "pricing": {
-      "title": "Planos e Preços",
-      "subtitle": "Escolha o plano ideal para suas necessidades",
+      "title": "Escolha Como Começar",
+      "subtitle": "Você escolhe. Você cresce. Ative novos módulos conforme suas necessidades evoluem.",
       "plans": [
         {
           "name": "Básico",
           "price": "R$ 29/mês",
+          "tagline": "Comece aqui",
+          "description": "Para quem está começando",
           "features": [
             "Até 100 contatos",
-            "500 anotações",
+            "Anotações & Áudio",
             "1.000 créditos/mês",
             "Suporte por email",
-            "Atualizações regulares"
+            "Começar grátis por 14 dias"
           ]
         },
         {
           "name": "Profissional",
           "price": "R$ 79/mês",
           "highlighted": true,
+          "tagline": "Feche mais deals",
+          "description": "Para equipes que crescem",
           "features": [
             "Contatos ilimitados",
-            "Anotações ilimitadas",
+            "Acordos & Escrow",
+            "Intelligence (Grafo, KYC)",
+            "Automação (Lembretes, Drafts, Templates)",
+            "Documentos & Letterheads",
             "5.000 créditos/mês",
-            "Suporte prioritário",
-            "Recursos avançados",
-            "API access"
+            "Suporte prioritário (24h)"
           ]
         },
         {
-          "name": "Empresarial",
+          "name": "Enterprise",
           "price": "Sob consulta",
+          "tagline": "Controle total",
+          "description": "Para empresas que exigem poder",
           "features": [
             "Tudo do Profissional",
+            "Módulos customizados",
             "Créditos ilimitados",
-            "Suporte 24/7",
-            "Treinamento personalizado",
-            "Gerenciamento de equipe",
-            "SLA garantido"
+            "Suporte dedicado 24/7",
+            "Treinamento incluído",
+            "SLA garantido",
+            "Gerenciamento de equipe avançado"
           ]
         }
       ],
-      "credits": [
-        {
-          "name": "Pacote Básico",
-          "amount": 1000,
-          "price": "R$ 29",
-          "description": "1.000 créditos para uso mensal"
-        },
-        {
-          "name": "Pacote Profissional",
-          "amount": 5000,
-          "price": "R$ 79",
-          "description": "5.000 créditos para uso mensal"
-        },
-        {
-          "name": "Pacote Empresarial",
-          "amount": -1,
-          "price": "Sob consulta",
-          "description": "Créditos ilimitados"
-        }
-      ],
-      "popular": "Popular",
-      "selectPlan": "Selecionar Plano",
-      "errorLoadingPlans": "Não foi possível carregar os planos do servidor. Exibindo informações padrão."
+      "selectPlan": "Começar Agora",
+      "errorLoadingPlans": "Não foi possível carregar os planos. Exibindo informações padrão."
+    },
+    "cta": {
+      "title": "Pronto para fechar mais deals?",
+      "subtitle": "Comece grátis. Sem cartão de crédito.",
+      "button": "Comece Agora",
+      "secondary": "Agendar Demo"
     },
     "footer": {
-      "description": "Transforme sua produtividade com ferramentas profissionais de gestão de contatos e anotações.",
+      "description": "Assistente Executivo: inteligência, automação e segurança para executivos que fecham deals.",
       "product": "Produto",
       "support": "Suporte",
-      "navFeatures": "Recursos",
-      "navPricing": "Preços",
+      "navFeatures": "Solução",
+      "navPricing": "Planos",
       "navLogin": "Entrar",
       "documentation": "Documentação",
       "contact": "Contato",

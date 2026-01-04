@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getEmailTemplateByIdClient } from "@/lib/api/emailTemplatesApiClient";
 import { EmailTemplateDetailsClient } from "./EmailTemplateDetailsClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -25,12 +24,6 @@ export default function EmailTemplateDetailsPage() {
       if (!templateId) return;
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/email-templates/${templateId}`)}`;
-          return;
-        }
-
         const t = await getEmailTemplateByIdClient(templateId);
         if (!isMounted) return;
         setTemplate(t);

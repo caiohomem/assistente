@@ -116,6 +116,9 @@ export function NovoEmailTemplateClient() {
           <option value={EmailTemplateType.UserCreated}>Usuário Criado</option>
           <option value={EmailTemplateType.PasswordReset}>Redefinição de Senha</option>
           <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
+          <option value={EmailTemplateType.AgreementProposal}>Acordo - Proposta</option>
+          <option value={EmailTemplateType.AgreementReminder}>Acordo - Lembrete</option>
+          <option value={EmailTemplateType.AgreementApproved}>Acordo - Aprovado</option>
         </select>
         {errors.templateType && (
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.templateType}</p>

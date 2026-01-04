@@ -14,12 +14,8 @@ export default function ProtectedPage() {
     async function load() {
       try {
         const s = await getBffSession();
-        if (!s.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/protected")}`;
-          return;
-        }
         if (!isMounted) return;
-        setSession(s);
+        setSession(s.authenticated ? s : null);
       } finally {
         if (isMounted) setLoading(false);
       }

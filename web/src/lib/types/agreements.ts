@@ -1,4 +1,11 @@
-export type AgreementStatus = "Draft" | "Active" | "Completed" | "Disputed" | "Canceled" | number;
+export type AgreementStatus =
+  | "Draft"
+  | "Active"
+  | "Completed"
+  | "Disputed"
+  | "Canceled"
+  | "PendingAcceptance"
+  | number;
 export type PartyRole = "Seller" | "Buyer" | "Broker" | "Agent" | "Witness" | number;
 export type MilestoneStatus = "Pending" | "Completed" | "Overdue" | number;
 
@@ -10,6 +17,7 @@ export interface AgreementPartyDto {
   email?: string | null;
   splitPercentage: number;
   role: PartyRole;
+  stripeAccountId?: string | null;
   hasAccepted: boolean;
   acceptedAt?: string | null;
 }
@@ -53,6 +61,7 @@ export const AgreementStatusLabels: Record<number, string> = {
   3: "Completed",
   4: "Disputed",
   5: "Canceled",
+  6: "Aguardando aceite",
 };
 
 export const PartyRoleLabels: Record<number, string> = {
@@ -72,6 +81,9 @@ export const MilestoneStatusLabels: Record<number, string> = {
 export const getStatusLabel = (value: AgreementStatus) => {
   if (typeof value === "number") {
     return AgreementStatusLabels[value] ?? `#${value}`;
+  }
+  if (value === "PendingAcceptance") {
+    return "Aguardando aceite";
   }
   return value;
 };
@@ -113,4 +125,16 @@ export interface AgreementWizardMilestoneInput {
   value: number;
   currency?: string;
   dueDate: string;
+}
+
+export interface AgreementAcceptanceStatusDto {
+  agreementId: string;
+  totalParties: number;
+  acceptedParties: number;
+  pendingParties: number;
+  daysElapsed: number;
+  maxDays: number;
+  allAccepted: boolean;
+  isExpired: boolean;
+  status: string;
 }

@@ -1,4 +1,6 @@
 using AssistenteExecutivo.Domain.Exceptions;
+using DotLiquid;
+using DotLiquid.Exceptions;
 using System.Text.RegularExpressions;
 
 namespace AssistenteExecutivo.Domain.Notifications;
@@ -61,7 +63,7 @@ public class EmailTemplate
     {
         var requiredPlaceholders = GetPlaceholders();
         var missingPlaceholders = requiredPlaceholders
-            .Where(p => !values.ContainsKey(p) || values[p] == null || string.IsNullOrWhiteSpace(values[p].ToString()))
+            .Where(p => !values.ContainsKey(p) || values[p] == null)
             .ToList();
 
         if (missingPlaceholders.Any())
@@ -79,14 +81,7 @@ public class EmailTemplate
         if (!string.IsNullOrWhiteSpace(validation))
             throw new DomainException($"Template de email com campos obrigatórios faltando: {validation}");
 
-        var content = HtmlBody;
-        foreach (var value in values)
-        {
-            var placeholder = $"{{{{ {value.Key} }}}}";
-            content = content.Replace(placeholder, value.Value?.ToString() ?? string.Empty);
-        }
-
-        return content;
+        return RenderLiquid(HtmlBody, values);
     }
 
     /// <summary>
@@ -94,14 +89,21 @@ public class EmailTemplate
     /// </summary>
     public string ApplySubject(Dictionary<string, object> values)
     {
-        var subject = Subject;
-        foreach (var value in values)
-        {
-            var placeholder = $"{{{{ {value.Key} }}}}";
-            subject = subject.Replace(placeholder, value.Value?.ToString() ?? string.Empty);
-        }
+        return RenderLiquid(Subject, values);
+    }
 
-        return subject;
+    private static string RenderLiquid(string templateText, Dictionary<string, object> values)
+    {
+        try
+        {
+            var template = Template.Parse(templateText);
+            var hash = Hash.FromDictionary(values);
+            return template.Render(hash);
+        }
+        catch (SyntaxException ex)
+        {
+            throw new DomainException($"Template de email inválido: {ex.Message}");
+        }
     }
 
     public void Deactivate()
@@ -143,6 +145,9 @@ public enum EmailTemplateType
 {
     UserCreated = 1,
     PasswordReset = 2,
-    Welcome = 3
+    Welcome = 3,
+    AgreementProposal = 4,
+    AgreementReminder = 5,
+    AgreementApproved = 6
 }
 

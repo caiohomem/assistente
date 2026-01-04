@@ -71,8 +71,8 @@ public class TriggerMilestonePayoutCommandHandlerTests
             null,
             _clock);
 
-        agreement.AddParty(Guid.NewGuid(), null, null, "Parte A", null, Percentage.Create(60), PartyRole.Agent, _clock);
-        agreement.AddParty(Guid.NewGuid(), null, null, "Parte B", null, Percentage.Create(40), PartyRole.Agent, _clock);
+        agreement.AddParty(Guid.NewGuid(), null, null, "Parte A", null, Percentage.Create(60), PartyRole.Agent, null, _clock);
+        agreement.AddParty(Guid.NewGuid(), null, null, "Parte B", null, Percentage.Create(40), PartyRole.Agent, null, _clock);
         milestone = agreement.AddMilestone(Guid.NewGuid(), "Entrega", Money.Create(1000, "BRL"), DateTime.UtcNow.AddDays(1), _clock);
 
         escrowAccount = EscrowAccount.Create(Guid.NewGuid(), agreement.AgreementId, agreement.OwnerUserId, "BRL", _clock);

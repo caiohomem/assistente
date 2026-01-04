@@ -67,6 +67,12 @@ export default function EmailTemplatesPage() {
         return "Redefinição de Senha";
       case EmailTemplateType.Welcome:
         return "Bem-vindo";
+      case EmailTemplateType.AgreementProposal:
+        return "Acordo - Proposta";
+      case EmailTemplateType.AgreementReminder:
+        return "Acordo - Lembrete";
+      case EmailTemplateType.AgreementApproved:
+        return "Acordo - Aprovado";
       default:
         return "Desconhecido";
     }
@@ -170,6 +176,9 @@ export default function EmailTemplatesPage() {
                 <option value={EmailTemplateType.UserCreated}>Usuário Criado</option>
                 <option value={EmailTemplateType.PasswordReset}>Redefinição de Senha</option>
                 <option value={EmailTemplateType.Welcome}>Bem-vindo</option>
+                <option value={EmailTemplateType.AgreementProposal}>Acordo - Proposta</option>
+                <option value={EmailTemplateType.AgreementReminder}>Acordo - Lembrete</option>
+                <option value={EmailTemplateType.AgreementApproved}>Acordo - Aprovado</option>
               </select>
             </div>
           </div>

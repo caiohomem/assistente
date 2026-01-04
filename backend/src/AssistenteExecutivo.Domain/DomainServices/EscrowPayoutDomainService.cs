@@ -1,3 +1,4 @@
+using System.Linq;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Exceptions;
@@ -68,5 +69,43 @@ public class EscrowPayoutDomainService
             return PayoutApprovalType.Disputed;
 
         return PayoutApprovalType.ApprovalRequired;
+    }
+
+    public void EnsureAllPartiesHaveStripeAccounts(CommissionAgreement agreement)
+    {
+        if (agreement == null)
+            throw new DomainException("Domain:AcordoObrigatorio");
+
+        var partiesWithoutStripe = agreement.Parties
+            .Where(p => string.IsNullOrWhiteSpace(p.StripeAccountId))
+            .ToList();
+
+        if (partiesWithoutStripe.Any())
+            throw new DomainException("Domain:AlgumasPartesNaoPossuemContaStripe");
+    }
+
+    public List<(Guid PartyId, Money Amount, string StripeAccountId)> CalculatePayoutSplits(
+        CommissionAgreement agreement,
+        Money totalAmount)
+    {
+        if (agreement == null)
+            throw new DomainException("Domain:AcordoObrigatorio");
+        if (totalAmount == null)
+            throw new DomainException("Domain:ValorPayoutObrigatorio");
+
+        var splits = new List<(Guid, Money, string)>();
+
+        foreach (var party in agreement.Parties)
+        {
+            if (string.IsNullOrWhiteSpace(party.StripeAccountId))
+                continue;
+
+            var splitAmount = totalAmount.Amount * (party.SplitPercentage.Value / 100m);
+            var partyAmount = Money.Create(splitAmount, totalAmount.Currency);
+
+            splits.Add((party.PartyId, partyAmount, party.StripeAccountId));
+        }
+
+        return splits;
     }
 }

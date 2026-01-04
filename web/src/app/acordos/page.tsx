@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
@@ -11,16 +12,21 @@ import {
   listCommissionAgreementsClient,
   activateAgreementClient,
 } from "@/lib/api/agreementsApiClient";
-import {
+import { getRoleLabel, getStatusLabel } from "@/lib/types/agreements";
+import type {
   AgreementWizardMilestoneInput,
   AgreementWizardPartyInput,
   CommissionAgreementDto,
-  getRoleLabel,
-  getStatusLabel,
+  PartyRole,
 } from "@/lib/types/agreements";
 import { cn } from "@/lib/utils";
+import NumericInput from "@/components/NumericInput";
 
 const wizardSteps = ["Detalhes", "Partes", "Milestones", "Resumo"] as const;
+
+type CreateCommissionAgreementResponse =
+  | { agreementId: string }
+  | { sessionId?: string; id?: string };
 
 type WizardStep = (typeof wizardSteps)[number];
 
@@ -28,7 +34,7 @@ interface WizardState {
   title: string;
   description: string;
   terms: string;
-  totalValue: number;
+  totalValue?: number;
   currency: string;
   parties: AgreementWizardPartyInput[];
   milestones: AgreementWizardMilestoneInput[];
@@ -38,13 +44,28 @@ const defaultWizardState: WizardState = {
   title: "",
   description: "",
   terms: "",
-  totalValue: 0,
+  totalValue: undefined,
   currency: "BRL",
   parties: [],
   milestones: [],
 };
 
+type NewPartyForm = Omit<AgreementWizardPartyInput, "splitPercentage"> & { splitPercentage?: number };
+type NewMilestoneForm = Omit<AgreementWizardMilestoneInput, "value"> & { value?: number };
+
+const currencyOptions = [
+  { code: "BRL", label: "🇧🇷 BRL (R$)" },
+  { code: "USD", label: "🇺🇸 USD ($)" },
+  { code: "EUR", label: "🇪🇺 EUR (€)" },
+  { code: "GBP", label: "🇬🇧 GBP (£)" },
+  { code: "JPY", label: "🇯🇵 JPY (¥)" },
+  { code: "CAD", label: "🇨🇦 CAD ($)" },
+  { code: "AUD", label: "🇦🇺 AUD ($)" },
+  { code: "CHF", label: "🇨🇭 CHF (CHF)" },
+];
+
 export default function CommissionAgreementsPage() {
+  const locale = useLocale();
   const router = useRouter();
   const [agreements, setAgreements] = useState<CommissionAgreementDto[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -54,16 +75,16 @@ export default function CommissionAgreementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [newParty, setNewParty] = useState<AgreementWizardPartyInput>({
+  const [newParty, setNewParty] = useState<NewPartyForm>({
     partyName: "",
     email: "",
-    splitPercentage: 0,
+    splitPercentage: undefined,
     role: "Agent",
   });
 
-  const [newMilestone, setNewMilestone] = useState<AgreementWizardMilestoneInput>({
+  const [newMilestone, setNewMilestone] = useState<NewMilestoneForm>({
     description: "",
-    value: 0,
+    value: undefined,
     currency: "BRL",
     dueDate: "",
   });
@@ -112,35 +133,48 @@ export default function CommissionAgreementsPage() {
   }
 
   function addParty() {
-    if (!newParty.partyName || newParty.splitPercentage <= 0) {
-      setError("Informe nome e percentual válido para a parte.");
+    const splitPercentage = newParty.splitPercentage ?? 0;
+    if (!newParty.partyName || !newParty.email || splitPercentage <= 0 || splitPercentage > 100) {
+      setError("Informe nome, e-mail e percentual válido (maior que 0 e no máximo 100).");
       return;
     }
+    const partyToAdd: AgreementWizardPartyInput = {
+      ...newParty,
+      splitPercentage,
+      partyId: crypto.randomUUID(),
+    };
     setWizardState((prev) => ({
       ...prev,
-      parties: [...prev.parties, { ...newParty, partyId: crypto.randomUUID() }],
+      parties: [...prev.parties, partyToAdd],
     }));
     setNewParty({
       partyName: "",
       email: "",
-      splitPercentage: 0,
+      splitPercentage: undefined,
       role: "Agent",
     });
     setError(null);
   }
 
   function addMilestone() {
-    if (!newMilestone.description || newMilestone.value <= 0 || !newMilestone.dueDate) {
+    const milestoneValue = newMilestone.value ?? 0;
+    if (!newMilestone.description || milestoneValue <= 0 || !newMilestone.dueDate) {
       setError("Informe descrição, valor e data para o milestone.");
       return;
     }
+    const milestoneToAdd: AgreementWizardMilestoneInput = {
+      ...newMilestone,
+      value: milestoneValue,
+      currency: newMilestone.currency || wizardState.currency,
+      milestoneId: crypto.randomUUID(),
+    };
     setWizardState((prev) => ({
       ...prev,
-      milestones: [...prev.milestones, { ...newMilestone, milestoneId: crypto.randomUUID() }],
+      milestones: [...prev.milestones, milestoneToAdd],
     }));
     setNewMilestone({
       description: "",
-      value: 0,
+      value: undefined,
       currency: wizardState.currency,
       dueDate: "",
     });
@@ -165,7 +199,9 @@ export default function CommissionAgreementsPage() {
     setError(null);
     setSuccessMessage(null);
 
-    if (!wizardState.title || wizardState.totalValue <= 0) {
+    const enteredTotalValue = wizardState.totalValue ?? 0;
+
+    if (!wizardState.title || enteredTotalValue <= 0) {
       setError("Título e valor total são obrigatórios.");
       return;
     }
@@ -180,22 +216,22 @@ export default function CommissionAgreementsPage() {
       return;
     }
 
-    if (Math.round(milestonesTotal) !== Math.round(wizardState.totalValue)) {
+    if (Math.round(milestonesTotal) !== Math.round(enteredTotalValue)) {
       setError("A soma dos milestones deve fechar com o valor total do acordo.");
       return;
     }
 
     setLoadingWizard(true);
     try {
-      const response = await createCommissionAgreementClient({
+      const response = (await createCommissionAgreementClient({
         title: wizardState.title,
         description: wizardState.description,
         terms: wizardState.terms,
-        totalValue: wizardState.totalValue,
+        totalValue: enteredTotalValue,
         currency: wizardState.currency,
-      });
+      })) as CreateCommissionAgreementResponse;
       const agreementId =
-        "agreementId" in response ? response.agreementId : (response as any).id ?? "";
+        "agreementId" in response ? response.agreementId : response.id ?? "";
 
       if (!agreementId) {
         throw new Error("Erro ao criar acordo.");
@@ -223,16 +259,20 @@ export default function CommissionAgreementsPage() {
     }
   }
 
-  const formatCurrency = (value: number, currency: string) => {
+  const formatCurrency = (value: number | undefined, currency: string) => {
+    if (value === undefined) {
+      return "-";
+    }
     try {
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency,
-      }).format(value);
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+    }).format(value);
     } catch {
       return `${currency} ${value.toFixed(2)}`;
     }
   };
+
 
   async function handleActivateAgreement(agreementId: string) {
     try {
@@ -313,24 +353,29 @@ export default function CommissionAgreementsPage() {
                     <label className="text-sm font-medium text-muted-foreground">
                       Valor total
                     </label>
-                    <input
-                      type="number"
-                      className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
+                    <NumericInput
                       value={wizardState.totalValue}
-                      onChange={(e) =>
-                        setWizardState({ ...wizardState, totalValue: Number(e.target.value) })
+                      onValueChange={(val) =>
+                        setWizardState((prev) => ({ ...prev, totalValue: val }))
                       }
+                      className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Moeda</label>
-                    <input
-                      className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2 uppercase"
+                    <select
+                      className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
                       value={wizardState.currency}
                       onChange={(e) =>
                         setWizardState({ ...wizardState, currency: e.target.value.toUpperCase() })
                       }
-                    />
+                    >
+                      {currencyOptions.map((currency) => (
+                        <option key={currency.code} value={currency.code}>
+                          {currency.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div>
@@ -382,23 +427,22 @@ export default function CommissionAgreementsPage() {
                         onChange={(e) =>
                           setNewParty((prev) => ({ ...prev, email: e.target.value }))
                         }
+                        required
                       />
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">
                         Percentual (%)
                       </label>
-                      <input
-                        type="number"
-                        className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
-                        value={newParty.splitPercentage}
-                        onChange={(e) =>
-                          setNewParty((prev) => ({
-                            ...prev,
-                            splitPercentage: Number(e.target.value),
-                          }))
-                        }
-                      />
+                          <NumericInput
+                            value={newParty.splitPercentage}
+                            onValueChange={(val) =>
+                              setNewParty((prev) => ({ ...prev, splitPercentage: val }))
+                            }
+                            className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
+                            decimalScale={2}
+                            placeholder="0.00"
+                          />
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Função</label>
@@ -406,7 +450,7 @@ export default function CommissionAgreementsPage() {
                         className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
                         value={newParty.role}
                         onChange={(e) =>
-                          setNewParty((prev) => ({ ...prev, role: e.target.value as any }))
+                          setNewParty((prev) => ({ ...prev, role: e.target.value as PartyRole }))
                         }
                       >
                         <option value="Seller">Seller</option>
@@ -480,14 +524,13 @@ export default function CommissionAgreementsPage() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Valor</label>
-                      <input
-                        type="number"
-                        className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
-                        value={newMilestone.value}
-                        onChange={(e) =>
-                          setNewMilestone((prev) => ({ ...prev, value: Number(e.target.value) }))
-                        }
-                      />
+                          <NumericInput
+                            value={newMilestone.value}
+                            onValueChange={(val) =>
+                              setNewMilestone((prev) => ({ ...prev, value: val }))
+                            }
+                            className="mt-1 w-full rounded-xl border border-border bg-background/60 px-3 py-2"
+                          />
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Data</label>
@@ -661,14 +704,26 @@ export default function CommissionAgreementsPage() {
                   <div className="flex flex-wrap gap-3">
                     <Button
                       variant="ghost"
-                      onClick={() => router.push(`/acordos/${agreement.agreementId}`)}
+                      onClick={() => {
+                        if (!agreement.agreementId) {
+                          setError("Acordo inválido. Recarregue a lista e tente novamente.");
+                          return;
+                        }
+                        router.push(`/acordos/${agreement.agreementId}`);
+                      }}
                     >
                       Abrir
                     </Button>
                     {agreement.status === 1 || agreement.status === "Draft" ? (
                       <Button
                         variant="ghost"
-                        onClick={() => handleActivateAgreement(agreement.agreementId)}
+                        onClick={() => {
+                          if (!agreement.agreementId) {
+                            setError("Acordo inválido. Recarregue a lista e tente novamente.");
+                            return;
+                          }
+                          handleActivateAgreement(agreement.agreementId);
+                        }}
                       >
                         Ativar
                       </Button>

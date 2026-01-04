@@ -1,16 +1,31 @@
 import { apiClient } from "./apiClient";
 import type {
+  AgreementAcceptanceStatusDto,
   AgreementWizardMilestoneInput,
   AgreementWizardPartyInput,
   CommissionAgreementDto,
   CreateCommissionAgreementInput,
 } from "@/lib/types/agreements";
 
-const normalizeAgreement = (raw: any): CommissionAgreementDto => {
-  return {
-    ...raw,
-    agreementId: raw.agreementId ?? raw.AgreementId ?? raw.id ?? raw.Id,
-  } as CommissionAgreementDto;
+type RawAgreement = Record<
+  string,
+  unknown
+> & {
+  agreementId?: string;
+  AgreementId?: string;
+  id?: string;
+  Id?: string;
+};
+
+const normalizeAgreement = (raw: RawAgreement): CommissionAgreementDto => {
+  const normalized = { ...raw } as unknown as CommissionAgreementDto;
+  normalized.agreementId =
+    (raw.agreementId ??
+      raw.AgreementId ??
+      raw.id ??
+      raw.Id ??
+      "") as string;
+  return normalized;
 };
 
 export async function listCommissionAgreementsClient(params?: { status?: string }) {
@@ -20,17 +35,17 @@ export async function listCommissionAgreementsClient(params?: { status?: string 
   }
   const q = query.toString();
   const path = q ? `/api/commission-agreements?${q}` : "/api/commission-agreements";
-  const data = await apiClient.get<any[]>(path);
+  const data = await apiClient.get<RawAgreement[]>(path);
   return data.map(normalizeAgreement);
 }
 
 export async function getCommissionAgreementClient(agreementId: string) {
-  const data = await apiClient.get<any>(`/api/commission-agreements/${agreementId}`);
+  const data = await apiClient.get<RawAgreement>(`/api/commission-agreements/${agreementId}`);
   return normalizeAgreement(data);
 }
 
 export async function createCommissionAgreementClient(input: CreateCommissionAgreementInput) {
-  return apiClient.post<{ agreementId: string } | { sessionId?: string }>(
+  return apiClient.post<{ agreementId: string } | { sessionId?: string; id?: string }>(
     "/api/commission-agreements",
     {
       title: input.title,
@@ -98,4 +113,21 @@ export async function cancelAgreementClient(agreementId: string, reason: string)
 
 export async function disputeAgreementClient(agreementId: string, reason: string) {
   return apiClient.post<void>(`/api/commission-agreements/${agreementId}/dispute`, { reason });
+}
+
+export async function getAcceptanceStatusClient(agreementId: string) {
+  return apiClient.get<AgreementAcceptanceStatusDto>(
+    `/api/commission-agreements/${agreementId}/acceptance/status`,
+  );
+}
+
+export async function connectPartyStripeAccountClient(
+  agreementId: string,
+  partyId: string,
+  accountIdOrCode: string
+) {
+  return apiClient.post<void>(
+    `/api/commission-agreements/${agreementId}/parties/${partyId}/connect-stripe`,
+    { authorizationCodeOrAccountId: accountIdOrCode }
+  );
 }

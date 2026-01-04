@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,10 @@ import {
   addAgreementPartyClient,
   cancelAgreementClient,
   completeAgreementClient,
+  connectPartyStripeAccountClient,
   createAgreementMilestoneClient,
   disputeAgreementClient,
+  getAcceptanceStatusClient,
   getCommissionAgreementClient,
 } from "@/lib/api/agreementsApiClient";
 import {
@@ -21,14 +23,26 @@ import {
   getEscrowAccountClient,
 } from "@/lib/api/escrowApiClient";
 import type {
+  AgreementAcceptanceStatusDto,
   AgreementWizardMilestoneInput,
   AgreementWizardPartyInput,
   CommissionAgreementDto,
   MilestoneDto,
+  PartyRole,
 } from "@/lib/types/agreements";
 import type { EscrowAccountDto } from "@/lib/types/escrow";
 import { getMilestoneStatusLabel, getRoleLabel, getStatusLabel } from "@/lib/types/agreements";
 import { ApiError, extractApiFieldErrors } from "@/lib/api/types";
+import NumericInput from "@/components/NumericInput";
+
+const CURRENCY_OPTIONS = [
+  { code: "BRL", flag: "🇧🇷", label: "Real brasileiro (R$)" },
+  { code: "USD", flag: "🇺🇸", label: "Dólar americano (US$)" },
+  { code: "EUR", flag: "🇪🇺", label: "Euro (€)" },
+  { code: "GBP", flag: "🇬🇧", label: "Libra esterlina (£)" },
+  { code: "CAD", flag: "🇨🇦", label: "Dólar canadense (CA$)" },
+  { code: "AUD", flag: "🇦🇺", label: "Dólar australiano (A$)" },
+];
 
 export default function AgreementDetailPage() {
   const params = useParams();
@@ -56,40 +70,131 @@ export default function AgreementDetailPage() {
     currency: "BRL",
     dueDate: "",
   });
+  const [acceptanceStatus, setAcceptanceStatus] = useState<AgreementAcceptanceStatusDto | null>(null);
   const [selectedMilestone, setSelectedMilestone] = useState<MilestoneDto | null>(null);
   const [completeNotes, setCompleteNotes] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
   const [cancelReason, setCancelReason] = useState("");
-  const [payoutAmount, setPayoutAmount] = useState("");
+  const [payoutAmount, setPayoutAmount] = useState<number>();
   const [payoutCurrency, setPayoutCurrency] = useState("BRL");
   const [message, setMessage] = useState<string | null>(null);
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [selectedPartyForStripe, setSelectedPartyForStripe] = useState<string | null>(null);
+  const [stripeAccountInput, setStripeAccountInput] = useState("");
+  const [showAddPartyModal, setShowAddPartyModal] = useState(false);
+  const [showAddMilestoneModal, setShowAddMilestoneModal] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const agreementMilestones = useMemo(
+    () => agreement?.milestones ?? [],
+    [agreement],
+  );
+  const payoutTransaction = useMemo(() => {
+    if (!agreement || !escrowAccount || !selectedMilestone) return null;
+    const txId = selectedMilestone.releasedPayoutTransactionId;
+    if (!txId) return null;
+    return escrowAccount.transactions.find((tx) => tx.transactionId === txId) ?? null;
+  }, [agreement, escrowAccount, selectedMilestone]);
+  const payoutBaseAmount = payoutTransaction?.amount ?? selectedMilestone?.value ?? 0;
+  const payoutCurrencyDisplay =
+    payoutTransaction?.currency ?? selectedMilestone?.currency ?? agreement?.currency ?? "BRL";
+  const getTransactionStatusLabel = (status: string | number): string => {
+    const statusMap: Record<string | number, string> = {
+      "Pending": "Pendente",
+      "Approved": "Aprovado",
+      "Rejected": "Rejeitado",
+      "Disputed": "Disputado",
+      "Completed": "Concluído",
+      "Failed": "Falhou",
+      0: "Pendente",
+      1: "Aprovado",
+      2: "Rejeitado",
+      3: "Disputado",
+      4: "Concluído",
+      5: "Falhou",
+    };
+    return statusMap[status] || String(status);
+  };
 
-  useEffect(() => {
-    if (!agreementId) return;
-    loadAgreement();
-  }, [agreementId]);
+  const payoutSplits = useMemo(() => {
+    if (!agreement) return [];
+    return agreement.parties.map((party) => {
+      const shareAmount = (payoutBaseAmount * party.splitPercentage) / 100;
+      const hasStripe = Boolean(party.stripeAccountId);
+      const share = Number.isFinite(shareAmount) ? shareAmount : 0;
+      const statusLabel = hasStripe
+        ? payoutTransaction
+          ? getTransactionStatusLabel(payoutTransaction.status)
+          : "Pronto para pagar"
+        : "Conta Stripe pendente";
+      return {
+        partyId: party.partyId,
+        partyName: party.partyName,
+        email: party.email,
+        splitPercentage: party.splitPercentage,
+        share,
+        statusLabel,
+      };
+    });
+  }, [agreement, payoutBaseAmount, payoutTransaction]);
 
-  async function loadAgreement() {
+  const isDraft = agreement?.status === 0 || agreement?.status === "Draft";
+  const isActive = agreement?.status === 2 || agreement?.status === "Active";
+  const loadAgreement = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setEscrowAccount(null);
+    setAcceptanceStatus(null);
     if (!agreementId) return;
     try {
       const data = await getCommissionAgreementClient(agreementId);
-      setAgreement(data);
+      const resolvedEscrowAccountId =
+        data.escrowAccountId && data.escrowAccountId !== "undefined" && data.escrowAccountId !== "null"
+          ? data.escrowAccountId
+          : null;
+      setAgreement({ ...data, escrowAccountId: resolvedEscrowAccountId });
       setMilestoneForm((prev) => ({ ...prev, currency: data.currency }));
-      if (data.escrowAccountId) {
-        const escrow = await getEscrowAccountClient(data.escrowAccountId);
+      if (resolvedEscrowAccountId) {
+        const escrow = await getEscrowAccountClient(resolvedEscrowAccountId);
         setEscrowAccount(escrow);
-      } else {
-        setEscrowAccount(null);
+      }
+      try {
+        const status = await getAcceptanceStatusClient(agreementId);
+        setAcceptanceStatus(status);
+      } catch {
+        // Silently ignore
       }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Erro ao carregar o acordo.");
+      setEscrowAccount(null);
     } finally {
       setLoading(false);
     }
-  }
+  }, [agreementId]);
+
+  useEffect(() => {
+    if (!agreementId) {
+      setError("Acordo não encontrado.");
+      setLoading(false);
+      return;
+    }
+    loadAgreement();
+  }, [agreementId, loadAgreement]);
+
+  useEffect(() => {
+    if (agreementMilestones.length === 0) {
+      setSelectedMilestone(null);
+      return;
+    }
+    setSelectedMilestone((prev) => {
+      if (prev && agreementMilestones.some((m) => m.milestoneId === prev.milestoneId)) {
+        return prev;
+      }
+      return agreementMilestones[0];
+    });
+  }, [agreementMilestones]);
 
   async function handleAddParty() {
     if (!agreementId) return;
@@ -107,6 +212,8 @@ export default function AgreementDetailPage() {
       await addAgreementPartyClient(agreementId, { ...partyForm, partyId: crypto.randomUUID() });
       setPartyForm({ partyName: "", email: "", splitPercentage: 0, role: "Agent" });
       setPartyErrors({});
+      setShowAddPartyModal(false);
+      setMessage("Parte adicionada com sucesso!");
       await loadAgreement();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -137,6 +244,8 @@ export default function AgreementDetailPage() {
         currency: agreement?.currency ?? "BRL",
         dueDate: "",
       });
+      setShowAddMilestoneModal(false);
+      setMessage("Milestone adicionado com sucesso!");
       await loadAgreement();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao adicionar milestone.");
@@ -214,10 +323,10 @@ export default function AgreementDetailPage() {
     }
     try {
       await triggerMilestonePayoutClient(selectedMilestone.milestoneId, agreementId, {
-        amount: payoutAmount ? Number(payoutAmount) : undefined,
+        amount: payoutAmount ?? undefined,
         currency: payoutCurrency || agreement.currency,
       });
-      setPayoutAmount("");
+      setPayoutAmount(undefined);
       setSelectedMilestone(null);
       await loadAgreement();
     } catch (err) {
@@ -239,6 +348,27 @@ export default function AgreementDetailPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao criar conta escrow.");
+    }
+  }
+
+  async function handleConnectStripe() {
+    if (!agreementId || !selectedPartyForStripe || !stripeAccountInput) {
+      setError("Selecione uma parte e informe o Account ID.");
+      return;
+    }
+    try {
+      await connectPartyStripeAccountClient(
+        agreementId,
+        selectedPartyForStripe,
+        stripeAccountInput
+      );
+      setMessage("Stripe conectado com sucesso!");
+      setShowStripeModal(false);
+      setSelectedPartyForStripe(null);
+      setStripeAccountInput("");
+      await loadAgreement();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao conectar Stripe.");
     }
   }
 
@@ -306,6 +436,29 @@ export default function AgreementDetailPage() {
             <p className="text-muted-foreground text-sm mt-2 whitespace-pre-wrap">
               {agreement.description || "Sem descrição registrada."}
             </p>
+            {acceptanceStatus && (
+              <div className="mt-4 rounded-2xl border border-border/60 bg-background/60 p-3 text-sm space-y-1">
+                <p className="font-semibold text-base">Fluxo de aceite</p>
+                <p>
+                  Status: <strong>{acceptanceStatus.status}</strong>
+                </p>
+                <p>
+                  Partes:{" "}
+                  <strong>
+                    {acceptanceStatus.acceptedParties}/{acceptanceStatus.totalParties} aceitos
+                  </strong>
+                </p>
+                <p>
+                  Pendentes: <strong>{acceptanceStatus.pendingParties}</strong>
+                </p>
+                <p>
+                  Dias desde o convite: <strong>{acceptanceStatus.daysElapsed}</strong>
+                </p>
+                <p>
+                  Expirou? <strong>{acceptanceStatus.isExpired ? "Sim" : "Não"}</strong>
+                </p>
+              </div>
+            )}
             <div className="mt-4 space-y-2 text-sm">
               <p>
                 Valor Total:{" "}
@@ -332,6 +485,36 @@ export default function AgreementDetailPage() {
               {agreement.status === 2 || agreement.status === "Active" ? (
                 <Button onClick={handleCompleteAgreement}>Concluir acordo</Button>
               ) : null}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowMoreMenu(!showMoreMenu)}
+                >
+                  ⋯ Mais
+                </Button>
+                {showMoreMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-lg shadow-lg z-40">
+                    <button
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setShowDisputeModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-accent text-sm"
+                    >
+                      📋 Abrir disputa
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setShowCancelModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-accent text-sm text-destructive"
+                    >
+                      ✕ Cancelar acordo
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -341,84 +524,56 @@ export default function AgreementDetailPage() {
               {agreement.parties.map((party) => (
                 <div
                   key={party.partyId}
-                  className="rounded-2xl border border-border/60 bg-background/50 px-4 py-3 flex justify-between gap-4"
+                  className="rounded-2xl border border-border/60 bg-background/50 px-4 py-3"
                 >
-                  <div>
-                    <p className="font-semibold">{party.partyName}</p>
-                    <p className="text-xs text-muted-foreground">{party.email ?? "Sem e-mail"}</p>
+                  <div className="flex justify-between gap-4 mb-2">
+                    <div>
+                      <p className="font-semibold">{party.partyName}</p>
+                      <p className="text-xs text-muted-foreground">{party.email ?? "Sem e-mail"}</p>
+                    </div>
+                    <div className="text-right text-sm">
+                      <p>{getRoleLabel(party.role)}</p>
+                      <p>{party.splitPercentage}%</p>
+                      <p className="text-xs text-muted-foreground">
+                        {party.hasAccepted ? "Aceitou" : "Pendente"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right text-sm">
-                    <p>{getRoleLabel(party.role)}</p>
-                    <p>{party.splitPercentage}%</p>
-                    <p className="text-xs text-muted-foreground">
-                      {party.hasAccepted ? "Aceitou" : "Pendente"}
-                    </p>
-                  </div>
+                  {isActive && (
+                    <div className="flex gap-2 items-center">
+                      {party.stripeAccountId ? (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-lg">
+                          ✓ Stripe Conectado
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs"
+                          onClick={() => {
+                            setSelectedPartyForStripe(party.partyId);
+                            setShowStripeModal(true);
+                          }}
+                        >
+                          Conectar Stripe
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-            <div className="mt-4 border-t border-border/40 pt-4 space-y-2">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Adicionar</p>
-              <input
-                className={`w-full rounded-xl border bg-background/60 px-3 py-2 text-sm ${
-                  partyErrors.partyName ? "border-red-300" : "border-border"
-                }`}
-                placeholder="Nome da parte"
-                value={partyForm.partyName}
-                onChange={(e) => setPartyForm((prev) => ({ ...prev, partyName: e.target.value }))}
-              />
-              {partyErrors.partyName && (
-                <p className="text-xs text-red-500">{partyErrors.partyName}</p>
-              )}
-              <input
-                className={`w-full rounded-xl border bg-background/60 px-3 py-2 text-sm ${
-                  partyErrors.email ? "border-red-300" : "border-border"
-                }`}
-                placeholder="Email"
-                value={partyForm.email}
-                onChange={(e) => setPartyForm((prev) => ({ ...prev, email: e.target.value }))}
-              />
-              {partyErrors.email && (
-                <p className="text-xs text-red-500">{partyErrors.email}</p>
-              )}
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  className={`flex-1 rounded-xl border bg-background/60 px-3 py-2 text-sm ${
-                    partyErrors.splitPercentage ? "border-red-300" : "border-border"
-                  }`}
-                  placeholder="%"
-                  value={partyForm.splitPercentage}
-                  onChange={(e) =>
-                    setPartyForm((prev) => ({ ...prev, splitPercentage: Number(e.target.value) }))
-                  }
-                />
-                <select
-                  className={`flex-1 rounded-xl border bg-background/60 px-3 py-2 text-sm ${
-                    partyErrors.role ? "border-red-300" : "border-border"
-                  }`}
-                  value={partyForm.role}
-                  onChange={(e) =>
-                    setPartyForm((prev) => ({ ...prev, role: e.target.value as any }))
-                  }
+            {isDraft && (
+              <div className="mt-4 border-t border-border/40 pt-4">
+                <Button
+                  className="w-full"
+                  variant="ghost"
+                  onClick={() => setShowAddPartyModal(true)}
                 >
-                  <option value="Seller">Seller</option>
-                  <option value="Buyer">Buyer</option>
-                  <option value="Broker">Broker</option>
-                  <option value="Agent">Agent</option>
-                  <option value="Witness">Witness</option>
-                </select>
+                  + Adicionar parte
+                </Button>
               </div>
-              {partyErrors.splitPercentage && (
-                <p className="text-xs text-red-500">{partyErrors.splitPercentage}</p>
-              )}
-              {partyErrors.role && (
-                <p className="text-xs text-red-500">{partyErrors.role}</p>
-              )}
-              <Button className="w-full" onClick={handleAddParty}>
-                Adicionar parte
-              </Button>
-            </div>
+            )}
           </div>
 
           <div className="rounded-3xl border border-border/60 bg-card/70 backdrop-blur-xl p-5">
@@ -488,39 +643,17 @@ export default function AgreementDetailPage() {
               ))}
             </div>
             <div className="space-y-3 text-sm">
-              <div className="rounded-2xl border border-border/60 bg-background/50 p-4 space-y-3">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                  Novo milestone
-                </p>
-                <input
-                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
-                  placeholder="Descrição"
-                  value={milestoneForm.description}
-                  onChange={(e) =>
-                    setMilestoneForm((prev) => ({ ...prev, description: e.target.value }))
-                  }
-                />
-                <input
-                  type="number"
-                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
-                  placeholder="Valor"
-                  value={milestoneForm.value}
-                  onChange={(e) =>
-                    setMilestoneForm((prev) => ({ ...prev, value: Number(e.target.value) }))
-                  }
-                />
-                <input
-                  type="date"
-                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
-                  value={milestoneForm.dueDate}
-                  onChange={(e) =>
-                    setMilestoneForm((prev) => ({ ...prev, dueDate: e.target.value }))
-                  }
-                />
-                <Button className="w-full" onClick={handleAddMilestone}>
-                  Salvar milestone
-                </Button>
-              </div>
+              {isDraft && (
+                <div className="rounded-2xl border border-border/60 bg-background/50 p-4">
+                  <Button
+                    className="w-full"
+                    variant="ghost"
+                    onClick={() => setShowAddMilestoneModal(true)}
+                  >
+                    + Novo milestone
+                  </Button>
+                </div>
+              )}
               <div className="rounded-2xl border border-border/60 bg-background/50 p-4 space-y-3">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">
                   Operações
@@ -539,19 +672,23 @@ export default function AgreementDetailPage() {
                 >
                   Marcar como completo
                 </Button>
-                <input
-                  type="number"
-                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
-                  placeholder="Valor para payout"
+                <NumericInput
                   value={payoutAmount}
-                  onChange={(e) => setPayoutAmount(e.target.value)}
+                  onValueChange={(value) => setPayoutAmount(value)}
+                  placeholder="Valor para payout"
+                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
                 />
-                <input
-                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm uppercase"
-                  placeholder="Moeda"
+                <select
+                  className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
                   value={payoutCurrency}
-                  onChange={(e) => setPayoutCurrency(e.target.value.toUpperCase())}
-                />
+                  onChange={(e) => setPayoutCurrency(e.target.value)}
+                >
+                  {CURRENCY_OPTIONS.map(({ code, flag, label }) => (
+                    <option key={code} value={code}>
+                      {flag} {code} – {label}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   className="w-full"
                   onClick={handleMilestonePayout}
@@ -560,36 +697,340 @@ export default function AgreementDetailPage() {
                   Solicitar payout
                 </Button>
               </div>
+              {selectedMilestone && payoutSplits.length > 0 && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mt-4 space-y-3">
+                  <p className="text-xs uppercase tracking-widest text-primary font-semibold">
+                    📊 Distribuição de Payout
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Total:{" "}
+                    <strong>{formatCurrency(payoutBaseAmount, payoutCurrencyDisplay)}</strong> ·
+                    Status:{" "}
+                    <strong>
+                      {payoutTransaction ? getTransactionStatusLabel(payoutTransaction.status) : "Aguardando"}
+                    </strong>
+                  </p>
+                  <div className="space-y-3">
+                    {payoutSplits.map((split) => (
+                      <div
+                        key={split.partyId}
+                        className="flex justify-between gap-4 border-t border-border/40 pt-2"
+                      >
+                        <div>
+                          <p className="font-semibold">{split.partyName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {split.email ?? "Sem e-mail"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">
+                            {formatCurrency(split.share, payoutCurrencyDisplay)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{split.statusLabel}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {split.splitPercentage.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="rounded-3xl border border-border/60 bg-card/70 backdrop-blur-xl p-5 space-y-3">
-            <h3 className="text-lg font-semibold">Disputa</h3>
-            <textarea
-              className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm min-h-[80px]"
-              placeholder="Motivo da disputa"
-              value={disputeReason}
-              onChange={(e) => setDisputeReason(e.target.value)}
-            />
-            <Button variant="ghost" onClick={handleDispute}>
-              Abrir disputa
-            </Button>
+
+        {showStripeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
+              <h2 className="text-lg font-semibold">Conectar Stripe</h2>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm"
+                placeholder="Account ID ou código OAuth (acct_...)"
+                value={stripeAccountInput}
+                onChange={(e) => setStripeAccountInput(e.target.value)}
+              />
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowStripeModal(false);
+                    setSelectedPartyForStripe(null);
+                    setStripeAccountInput("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleConnectStripe}
+                >
+                  Conectar
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="rounded-3xl border border-border/60 bg-card/70 backdrop-blur-xl p-5 space-y-3">
-            <h3 className="text-lg font-semibold">Cancelamento</h3>
-            <textarea
-              className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm min-h-[80px]"
-              placeholder="Motivo do cancelamento"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-            />
-            <Button variant="destructive" onClick={handleCancel}>
-              Cancelar acordo
-            </Button>
+        )}
+
+        {showAddPartyModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-4 max-h-[90vh] overflow-auto">
+              <h2 className="text-lg font-semibold">Adicionar Parte</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Nome da Parte</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    placeholder="Nome completo ou empresa"
+                    value={partyForm.partyName}
+                    onChange={(e) =>
+                      setPartyForm({ ...partyForm, partyName: e.target.value })
+                    }
+                  />
+                  {partyErrors.partyName && (
+                    <p className="text-xs text-destructive mt-1">{partyErrors.partyName}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium">E-mail</label>
+                  <input
+                    type="email"
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    placeholder="email@example.com"
+                    value={partyForm.email || ""}
+                    onChange={(e) =>
+                      setPartyForm({ ...partyForm, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Papel (Função)</label>
+                  <select
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    value={partyForm.role}
+                    onChange={(e) =>
+                      setPartyForm({ ...partyForm, role: e.target.value as PartyRole })
+                    }
+                  >
+                    <option value="Seller">Vendedor</option>
+                    <option value="Buyer">Comprador</option>
+                    <option value="Broker">Intermediário</option>
+                    <option value="Agent">Agente</option>
+                    <option value="Witness">Testemunha</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Percentual de Split (%)</label>
+                  <input
+                    type="number"
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={partyForm.splitPercentage || ""}
+                    onChange={(e) =>
+                      setPartyForm({ ...partyForm, splitPercentage: parseFloat(e.target.value) || 0 })
+                    }
+                  />
+                  {partyErrors.splitPercentage && (
+                    <p className="text-xs text-destructive mt-1">{partyErrors.splitPercentage}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowAddPartyModal(false);
+                    setPartyForm({
+                      partyName: "",
+                      email: "",
+                      splitPercentage: 0,
+                      role: "Agent",
+                    });
+                    setPartyErrors({});
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleAddParty}
+                >
+                  Adicionar
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {showAddMilestoneModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
+              <h2 className="text-lg font-semibold">Novo Milestone</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Descrição</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    placeholder="Descrição do milestone"
+                    value={milestoneForm.description}
+                    onChange={(e) =>
+                      setMilestoneForm({ ...milestoneForm, description: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium">Valor</label>
+                    <NumericInput
+                      value={milestoneForm.value}
+                      onValueChange={(value) =>
+                        setMilestoneForm({ ...milestoneForm, value: value || 0 })
+                      }
+                      placeholder="0.00"
+                      className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Moeda</label>
+                    <select
+                      className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                      value={milestoneForm.currency}
+                      onChange={(e) =>
+                        setMilestoneForm({ ...milestoneForm, currency: e.target.value })
+                      }
+                    >
+                  {CURRENCY_OPTIONS.map(({ code, flag }) => (
+                    <option key={code} value={code}>
+                      {flag} {code}
+                    </option>
+                  ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Data de Vencimento</label>
+                  <input
+                    type="date"
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm mt-1"
+                    value={milestoneForm.dueDate}
+                    onChange={(e) =>
+                      setMilestoneForm({ ...milestoneForm, dueDate: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowAddMilestoneModal(false);
+                    setMilestoneForm({
+                      description: "",
+                      value: 0,
+                      currency: agreement?.currency ?? "BRL",
+                      dueDate: "",
+                    });
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleAddMilestone}
+                >
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDisputeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
+              <h2 className="text-lg font-semibold">Abrir Disputa</h2>
+              <p className="text-sm text-muted-foreground">
+                Descreva o motivo da disputa para que a outra parte seja notificada.
+              </p>
+              <textarea
+                className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm min-h-[100px]"
+                placeholder="Motivo da disputa"
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+              />
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowDisputeModal(false);
+                    setDisputeReason("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    handleDispute();
+                    setShowDisputeModal(false);
+                  }}
+                >
+                  Abrir Disputa
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCancelModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
+              <h2 className="text-lg font-semibold text-destructive">Cancelar Acordo</h2>
+              <p className="text-sm text-muted-foreground">
+                Esta ação é irreversível. Descreva o motivo do cancelamento.
+              </p>
+              <textarea
+                className="w-full rounded-xl border border-border bg-background/60 px-3 py-2 text-sm min-h-[100px]"
+                placeholder="Motivo do cancelamento"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+              />
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelReason("");
+                  }}
+                >
+                  Voltar
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => {
+                    handleCancel();
+                    setShowCancelModal(false);
+                  }}
+                >
+                  Cancelar Acordo
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </LayoutWrapper>
   );

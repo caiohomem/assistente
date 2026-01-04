@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBffSession } from "@/lib/bff";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
 import {
@@ -215,12 +214,6 @@ export default function WorkflowsPage() {
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/workflows")}`;
-          return;
-        }
-
         await loadData();
       } finally {
         if (isMounted) setLoading(false);

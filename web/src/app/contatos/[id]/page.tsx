@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import type { Contact } from "@/lib/types/contact";
 import { getContactByIdClient } from "@/lib/api/contactsApiClient";
 import { listNotesByContactClient } from "@/lib/api/notesApiClient";
@@ -38,12 +37,6 @@ export default function ContactDetailsPage() {
       if (!contactId) return;
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/contatos/${contactId}`)}`;
-          return;
-        }
-
         const [c, n] = await Promise.all([
           getContactByIdClient(contactId),
           listNotesByContactClient(contactId),
@@ -164,4 +157,3 @@ export default function ContactDetailsPage() {
     </LayoutWrapper>
   );
 }
-

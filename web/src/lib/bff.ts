@@ -36,6 +36,18 @@ export function getApiBaseUrl(): string {
   );
 }
 
+export function getN8nWebhookBaseUrl(): string {
+  return (process.env.NEXT_PUBLIC_N8N_WEBHOOK_BASE_URL || "").trim().replace(/\/+$/, "");
+}
+
+export function redirectToLogin(returnUrl?: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const currentPath = returnUrl ?? window.location.pathname + window.location.search;
+  window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+}
+
 const parseJsonResponse = async <T>(res: Response): Promise<T | undefined> => {
   try {
     return (await res.json()) as T;

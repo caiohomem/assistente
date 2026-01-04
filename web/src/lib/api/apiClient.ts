@@ -52,6 +52,12 @@ export class ApiClient {
     if (requiresAuth || requiresCsrf) {
       const session = await this.getSession(cookieHeader);
       if (requiresAuth && !session.authenticated) {
+        if (typeof window !== "undefined") {
+          const currentPath = window.location.pathname + window.location.search;
+          const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
+          window.location.href = loginUrl;
+          return undefined as TResponse;
+        }
         throw new Error("Não autenticado");
       }
       if (requiresCsrf && session.csrfToken) {

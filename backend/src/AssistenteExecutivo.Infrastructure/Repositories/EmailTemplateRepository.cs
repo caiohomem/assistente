@@ -25,6 +25,17 @@ public class EmailTemplateRepository : IEmailTemplateRepository
         return await _context.EmailTemplates.FindAsync(new object[] { id }, cancellationToken);
     }
 
+    public async Task<EmailTemplate?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        return await _context.EmailTemplates
+            .FirstOrDefaultAsync(t => t.IsActive && t.Name.ToUpper() == name.Trim().ToUpper(), cancellationToken);
+    }
+
     public async Task<List<EmailTemplate>> GetAllActiveAsync(CancellationToken cancellationToken = default)
     {
         return await _context.EmailTemplates
@@ -72,4 +83,3 @@ public class EmailTemplateRepository : IEmailTemplateRepository
         await Task.CompletedTask;
     }
 }
-

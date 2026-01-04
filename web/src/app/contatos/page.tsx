@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getBffSession } from "@/lib/bff";
 import { listContactsClient, type ListContactsResult } from "@/lib/api/contactsApiClient";
 import { ContactsListClient } from "./ContactsListClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -30,12 +29,6 @@ export default function ContactsPage() {
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/contatos")}`;
-          return;
-        }
-
         const data = await listContactsClient({ page: 1, pageSize: 20 });
         if (!isMounted) return;
         setInitialData(data);

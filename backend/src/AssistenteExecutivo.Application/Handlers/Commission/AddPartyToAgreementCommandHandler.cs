@@ -50,6 +50,7 @@ public class AddPartyToAgreementCommandHandler : IRequestHandler<AddPartyToAgree
             request.Email,
             split,
             request.Role,
+            request.StripeAccountId,
             _clock);
 
         // Explicitly add the new party to the DbContext to ensure it's tracked as Added

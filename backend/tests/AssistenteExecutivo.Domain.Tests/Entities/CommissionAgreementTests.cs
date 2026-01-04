@@ -26,7 +26,7 @@ public class CommissionAgreementTests
     public void AddParty_WhenSplitExceedsHundred_ShouldThrow()
     {
         var agreement = CreateAgreement();
-        agreement.AddParty(Guid.NewGuid(), null, null, "Parte A", "a@example.com", Percentage.Create(80), PartyRole.Agent, _clock);
+        agreement.AddParty(Guid.NewGuid(), null, null, "Parte A", "a@example.com", Percentage.Create(80), PartyRole.Agent, null, _clock);
 
         var act = () => agreement.AddParty(
             Guid.NewGuid(),
@@ -36,6 +36,7 @@ public class CommissionAgreementTests
             "b@example.com",
             Percentage.Create(25),
             PartyRole.Agent,
+            null,
             _clock);
 
         act.Should().Throw<DomainException>()

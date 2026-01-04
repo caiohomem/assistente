@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { getCreditBalance, listCreditTransactions, purchaseCreditPackage } from '@/lib/api/creditsApi'
-import { getBffSession } from '@/lib/bff'
 import type { CreditBalance, CreditTransaction } from '@/lib/types/credit'
 import { CreditTransactionType } from '@/lib/types/credit'
 import type { CreditPackage } from '@/lib/types/plan'
@@ -14,7 +12,6 @@ import { Coins, Plus, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function CreditosPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [balance, setBalance] = useState<CreditBalance | null>(null)
   const [transactions, setTransactions] = useState<CreditTransaction[]>([])
@@ -27,13 +24,6 @@ export default function CreditosPage() {
       setLoading(true)
       setError(null)
       
-      // Verificar autenticação
-      const session = await getBffSession()
-      if (!session.authenticated) {
-        router.push('/login')
-        return
-      }
-
       // Carregar dados em paralelo
       const [balanceResult, transactionsResult] = await Promise.allSettled([
         getCreditBalance(),
@@ -61,7 +51,7 @@ export default function CreditosPage() {
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
     loadCreditsData()

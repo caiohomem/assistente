@@ -1,11 +1,12 @@
 "use client"
 
-import { ReactNode, useState } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import { Sidebar } from "./Sidebar"
 import { Header } from "./Header"
 import { Menu } from "lucide-react"
 import { Button } from "./ui/button"
 import { cn } from "@/lib/utils"
+import { getBffSession } from "@/lib/bff"
 
 interface LayoutWrapperProps {
   children: ReactNode
@@ -16,6 +17,31 @@ interface LayoutWrapperProps {
 
 export function LayoutWrapper({ children, title, subtitle, activeTab }: LayoutWrapperProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function ensureAuthenticated() {
+      try {
+        const session = await getBffSession()
+        if (!mounted) return
+        if (!session.authenticated) {
+          const currentPath = window.location.pathname + window.location.search
+          window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`
+        }
+      } catch {
+        if (!mounted) return
+        const currentPath = window.location.pathname + window.location.search
+        window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`
+      }
+    }
+
+    void ensureAuthenticated()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -66,4 +92,3 @@ export function LayoutWrapper({ children, title, subtitle, activeTab }: LayoutWr
     </div>
   )
 }
-

@@ -96,8 +96,7 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
             <Sparkles className="w-5 h-5 text-primary-foreground transition-transform duration-500 group-hover:rotate-12" />
           </div>
           <div>
-            <h1 className="font-semibold text-lg gradient-text">Executive AI</h1>
-            <p className="text-xs text-muted-foreground">Assistente Executivo</p>
+            <h1 className="font-semibold text-lg gradient-text">Assistente Executivo</h1>
           </div>
         </div>
         {/* Mobile close button */}

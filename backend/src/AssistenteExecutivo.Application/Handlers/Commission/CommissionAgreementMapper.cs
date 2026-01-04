@@ -33,6 +33,7 @@ internal static class CommissionAgreementMapper
                 Email = p.Email,
                 SplitPercentage = p.SplitPercentage.Value,
                 Role = p.Role,
+                StripeAccountId = p.StripeAccountId,
                 HasAccepted = p.HasAccepted,
                 AcceptedAt = p.AcceptedAt
             }).ToList(),

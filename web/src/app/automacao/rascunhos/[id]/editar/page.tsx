@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getDraftByIdClient } from "@/lib/api/automationApiClient";
 import { EditarRascunhoClient } from "./EditarRascunhoClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -25,12 +24,6 @@ export default function EditarRascunhoPage() {
       if (!draftId) return;
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/automacao/rascunhos/${draftId}/editar`)}`;
-          return;
-        }
-
         const d = await getDraftByIdClient(draftId);
         if (!isMounted) return;
         setDraft(d);

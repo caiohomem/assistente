@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { getCreditBalance } from '@/lib/api/creditsApi'
 import { listContactsClient } from '@/lib/api/contactsApiClient'
-import { getBffSession } from '@/lib/bff'
 import type { CreditBalance } from '@/lib/types/credit'
 import type { Contact } from '@/lib/types/contact'
 import { LayoutWrapper } from '@/components/LayoutWrapper'
@@ -42,43 +41,6 @@ export default function DashboardPage() {
     
     async function loadDashboardData() {
       try {
-        // Verificar autenticação
-        console.log('[Dashboard] Verificando autenticação...');
-        const session = await getBffSession();
-        console.log('[Dashboard] Sessão recebida:', { 
-          authenticated: session.authenticated, 
-          hasUser: !!session.user,
-          userEmail: session.user?.email 
-        });
-        
-        if (!isMounted) return;
-        
-        if (!session.authenticated) {
-          console.log('[Dashboard] Não autenticado, redirecionando para login');
-          
-          // Verificar se já estamos em um loop de redirect
-          const redirectCount = parseInt(sessionStorage.getItem('redirectCount') || '0');
-          
-          if (redirectCount > 3) {
-            console.error('[Dashboard] Loop de redirect detectado! Parando para evitar loop infinito.');
-            setError('Erro de autenticação. Por favor, limpe os cookies e tente novamente.');
-            sessionStorage.removeItem('redirectCount');
-            return;
-          }
-          
-          sessionStorage.setItem('redirectCount', (redirectCount + 1).toString());
-          
-          // Usar window.location.href ao invés de router.push para evitar loops
-          const currentPath = window.location.pathname;
-          window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-          return;
-        }
-        
-        // Se autenticado, limpar contador de redirects
-        sessionStorage.removeItem('redirectCount');
-        
-        console.log('[Dashboard] Autenticado, carregando dados...');
-
         // Carregar dados em paralelo
         const [balanceResult, contactsResult] = await Promise.allSettled([
           getCreditBalance(),
@@ -116,12 +78,18 @@ export default function DashboardPage() {
         newStats.scannedCards = Math.floor(newStats.totalContacts * 0.36) // ~36% dos contatos
         newStats.audioNotes = Math.floor(newStats.totalContacts * 0.63) // ~63% dos contatos
 
-        setStats(newStats)
+        if (isMounted) {
+          setStats(newStats)
+        }
       } catch (err) {
         console.error('Erro ao carregar dashboard:', err)
-        setError(t('error'))
+        if (isMounted) {
+          setError(t('error'))
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 

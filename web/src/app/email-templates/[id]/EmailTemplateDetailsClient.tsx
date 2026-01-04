@@ -16,6 +16,12 @@ export function EmailTemplateDetailsClient({ template }: EmailTemplateDetailsCli
         return "Redefinição de Senha";
       case EmailTemplateType.Welcome:
         return "Bem-vindo";
+      case EmailTemplateType.AgreementProposal:
+        return "Acordo - Proposta";
+      case EmailTemplateType.AgreementReminder:
+        return "Acordo - Lembrete";
+      case EmailTemplateType.AgreementApproved:
+        return "Acordo - Aprovado";
       default:
         return "Desconhecido";
     }
@@ -99,10 +105,12 @@ export function EmailTemplateDetailsClient({ template }: EmailTemplateDetailsCli
       {/* Preview do HTML */}
       <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm p-6">
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Preview do HTML</h3>
-        <div className="border border-zinc-200 dark:border-zinc-700 rounded-md p-4 bg-zinc-50 dark:bg-zinc-900">
-          <div
-            className="prose dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: template.htmlBody }}
+        <div className="border border-zinc-200 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-900">
+          <iframe
+            title="Preview do template"
+            srcDoc={template.htmlBody}
+            className="w-full min-h-[400px] rounded-md border-0"
+            sandbox="allow-same-origin"
           />
         </div>
       </div>

@@ -64,7 +64,8 @@ public class DepositToEscrowCommandHandler : IRequestHandler<DepositToEscrowComm
             request.IdempotencyKey,
             _clock);
 
-        await _escrowAccountRepository.UpdateAsync(account, cancellationToken);
+        // Explicitly add the new transaction to the context
+        await _escrowAccountRepository.AddTransactionAsync(transaction, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await PublishDomainEventsAsync(account, cancellationToken);

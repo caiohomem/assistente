@@ -68,6 +68,30 @@ Este diretório contém os dois workflows sistêmicos que formam a base do siste
 }
 ```
 
+### 3. Commission Agreement Acceptance (`commission-acceptance.json`)
+
+**Endpoint:** `POST /webhook/commission-acceptance`
+
+**Propósito:** Envia proposta de aceite por email, aguarda assinaturas, envia lembretes diários e cancela ao expirar.
+
+**Auth:** Usa OAuth client_credentials (Keycloak) para chamar a API. Requer `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` no n8n.
+
+**Input:**
+```json
+{
+  "agreementId": "agreement-uuid",
+  "ownerUserId": "owner-uuid",
+  "maxDays": 7,
+  "reminderIntervalDays": 1,
+  "emailTemplateId": "template-uuid",
+  "reminderTemplateId": "template-uuid",
+  "emailSubject": "Assunto fallback",
+  "emailHtml": "<p>HTML fallback</p>",
+  "reminderSubject": "Assunto lembrete fallback",
+  "reminderHtml": "<p>HTML lembrete fallback</p>"
+}
+```
+
 **Output (síncrono):**
 ```json
 {

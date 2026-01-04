@@ -2,6 +2,9 @@ export enum EmailTemplateType {
   UserCreated = 1,
   PasswordReset = 2,
   Welcome = 3,
+  AgreementProposal = 4,
+  AgreementReminder = 5,
+  AgreementApproved = 6,
 }
 
 export interface EmailTemplate {

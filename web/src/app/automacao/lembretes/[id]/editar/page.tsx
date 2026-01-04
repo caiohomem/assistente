@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getReminderByIdClient } from "@/lib/api/automationApiClient";
 import { EditarLembreteClient } from "./EditarLembreteClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -34,12 +33,6 @@ export default function EditarLembretePage() {
       }
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/automacao/lembretes/${reminderId}/editar`)}`;
-          return;
-        }
-
         const r = await getReminderByIdClient(reminderId);
         if (!isMounted) return;
         setReminder(r);

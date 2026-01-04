@@ -33,9 +33,6 @@ public class CommissionAgreementRulesService
         if (!agreement.Milestones.Any())
             throw new DomainException("Domain:AcordoPrecisaDeMilestones");
 
-        if (agreement.Parties.Any(p => !p.HasAccepted))
-            throw new DomainException("Domain:TodasPartesDevemAceitarAcordo");
-
         var totalSplit = agreement.Parties.Sum(p => p.SplitPercentage.Value);
         if (totalSplit != 100m)
             throw new DomainException("Domain:SplitTotalDeveSerCemPorCento");

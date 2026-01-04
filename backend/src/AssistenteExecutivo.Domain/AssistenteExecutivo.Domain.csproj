@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="14.0.0" />
+    <PackageReference Include="DotLiquid" Version="2.3.197" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,4 +18,3 @@
   </ItemGroup>
 
 </Project>
-

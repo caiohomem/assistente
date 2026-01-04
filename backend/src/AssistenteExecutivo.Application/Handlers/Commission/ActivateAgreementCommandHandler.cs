@@ -15,19 +15,22 @@ public class ActivateAgreementCommandHandler : IRequestHandler<ActivateAgreement
     private readonly CommissionAgreementRulesService _rulesService;
     private readonly IClock _clock;
     private readonly IPublisher _publisher;
+    private readonly IAgreementAcceptanceWorkflowService _acceptanceWorkflowService;
 
     public ActivateAgreementCommandHandler(
         ICommissionAgreementRepository agreementRepository,
         IUnitOfWork unitOfWork,
         CommissionAgreementRulesService rulesService,
         IClock clock,
-        IPublisher publisher)
+        IPublisher publisher,
+        IAgreementAcceptanceWorkflowService acceptanceWorkflowService)
     {
         _agreementRepository = agreementRepository;
         _unitOfWork = unitOfWork;
         _rulesService = rulesService;
         _clock = clock;
         _publisher = publisher;
+        _acceptanceWorkflowService = acceptanceWorkflowService;
     }
 
     public async Task<Unit> Handle(ActivateAgreementCommand request, CancellationToken cancellationToken)
@@ -51,6 +54,11 @@ public class ActivateAgreementCommandHandler : IRequestHandler<ActivateAgreement
 
         await PublishDomainEventsAsync(agreement, cancellationToken);
         agreement.ClearDomainEvents();
+
+        if (agreement.Status == Domain.Enums.AgreementStatus.PendingAcceptance)
+        {
+            await _acceptanceWorkflowService.StartAsync(agreement, cancellationToken);
+        }
 
         return Unit.Value;
     }

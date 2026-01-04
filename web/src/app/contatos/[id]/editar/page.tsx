@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getContactByIdClient } from "@/lib/api/contactsApiClient";
 import { EditarContatoClient } from "./EditarContatoClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -26,12 +25,6 @@ export default function EditarContatoPage() {
       if (!contactId) return;
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/contatos/${contactId}/editar`)}`;
-          return;
-        }
-
         const c = await getContactByIdClient(contactId);
         if (!isMounted) return;
         setContact(c);
@@ -152,4 +145,3 @@ export default function EditarContatoPage() {
     </LayoutWrapper>
   );
 }
-

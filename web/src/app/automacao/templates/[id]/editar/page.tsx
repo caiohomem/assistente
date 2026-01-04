@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getTemplateByIdClient } from "@/lib/api/automationApiClient";
 import { EditarTemplateClient } from "./EditarTemplateClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -25,12 +24,6 @@ export default function EditarTemplatePage() {
       if (!templateId) return;
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/automacao/templates/${templateId}/editar`)}`;
-          return;
-        }
-
         const t = await getTemplateByIdClient(templateId);
         if (!isMounted) return;
         setTemplate(t);

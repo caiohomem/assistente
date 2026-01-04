@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getBffSession } from "@/lib/bff";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
 import { listNotesByContactClient } from "@/lib/api/notesApiClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -28,12 +27,6 @@ export default function NotasPage() {
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/contatos/notas")}`;
-          return;
-        }
-
         const data = await listContactsClient({ page: 1, pageSize: 1000 });
         if (!isMounted) return;
         setContacts(data.contacts);
@@ -170,4 +163,3 @@ export default function NotasPage() {
     </LayoutWrapper>
   );
 }
-

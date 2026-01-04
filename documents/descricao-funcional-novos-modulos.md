@@ -418,10 +418,16 @@ O módulo de **Commission & Agreements** gerencia acordos de comissão entre mú
 4. Acordo pode ter conta escrow associada
 5. Status controla o acordo:
    - **Draft**: Em elaboração
+   - **PendingAcceptance**: Aguardando aceite das partes
    - **Active**: Ativo
    - **Completed**: Concluído
    - **Disputed**: Em disputa
    - **Canceled**: Cancelado
+6. Aceite das partes:
+   - Cada parte recebe uma proposta por email com link de aceite
+   - Acordo permanece em PendingAcceptance até todas aceitarem
+   - Lembretes são enviados diariamente enquanto houver pendências
+   - Expira automaticamente após um número máximo de dias sem aceite
 
 **Casos de Uso**:
 - Parceria comercial → Acordo criado → Partes definidas → Milestones estabelecidos → Execução controlada

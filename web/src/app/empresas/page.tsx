@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getBffSession } from "@/lib/bff";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import {
@@ -35,12 +34,6 @@ export default function EmpresasPage() {
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/empresas")}`;
-          return;
-        }
-
         // Load all contacts to extract companies
         const data = await listContactsClient({ page: 1, pageSize: 1000 });
         if (!isMounted) return;

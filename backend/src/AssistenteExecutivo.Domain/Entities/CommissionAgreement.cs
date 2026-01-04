@@ -92,6 +92,7 @@ public class CommissionAgreement
         string? email,
         Percentage splitPercentage,
         PartyRole role,
+        string? stripeAccountId,
         IClock clock)
     {
         if (Status != AgreementStatus.Draft)
@@ -110,6 +111,7 @@ public class CommissionAgreement
             email,
             splitPercentage,
             role,
+            stripeAccountId,
             clock);
 
         party.SetAgreementId(AgreementId);
@@ -127,6 +129,15 @@ public class CommissionAgreement
         return party;
     }
 
+    public void ConnectPartyStripeAccount(Guid partyId, string stripeAccountId, IClock clock)
+    {
+        var party = GetParty(partyId);
+        party.ConnectStripeAccount(stripeAccountId, clock);
+        UpdatedAt = clock.UtcNow;
+
+        _domainEvents.Add(new PartyStripeConnected(AgreementId, partyId, stripeAccountId, clock.UtcNow));
+    }
+
     public void AcceptAgreement(Guid partyId, IClock clock)
     {
         var party = GetParty(partyId);
@@ -134,6 +145,14 @@ public class CommissionAgreement
         UpdatedAt = clock.UtcNow;
 
         _domainEvents.Add(new PartyAcceptedAgreement(AgreementId, partyId, clock.UtcNow));
+
+        if (Status == AgreementStatus.PendingAcceptance && _parties.All(p => p.HasAccepted))
+        {
+            Status = AgreementStatus.Active;
+            ActivatedAt ??= clock.UtcNow;
+            UpdatedAt = clock.UtcNow;
+            _domainEvents.Add(new AgreementActivated(AgreementId, clock.UtcNow));
+        }
     }
 
     public Milestone AddMilestone(
@@ -196,14 +215,20 @@ public class CommissionAgreement
         if (!_milestones.Any())
             throw new DomainException("Domain:AcordoPrecisaDeMilestones");
 
-        if (_parties.Any(p => !p.HasAccepted))
-            throw new DomainException("Domain:TodasPartesDevemAceitar");
+        if (_parties.All(p => p.HasAccepted))
+        {
+            Status = AgreementStatus.Active;
+            ActivatedAt = clock.UtcNow;
+            UpdatedAt = clock.UtcNow;
 
-        Status = AgreementStatus.Active;
-        ActivatedAt = clock.UtcNow;
-        UpdatedAt = clock.UtcNow;
-
-        _domainEvents.Add(new AgreementActivated(AgreementId, clock.UtcNow));
+            _domainEvents.Add(new AgreementActivated(AgreementId, clock.UtcNow));
+        }
+        else
+        {
+            Status = AgreementStatus.PendingAcceptance;
+            ActivatedAt = clock.UtcNow;
+            UpdatedAt = clock.UtcNow;
+        }
     }
 
     public void Complete(IClock clock)
