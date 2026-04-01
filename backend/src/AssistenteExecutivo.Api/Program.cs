@@ -275,8 +275,8 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
 
     // Auth
-    // - BFF: session-backed principal (default for web)
-    // - Mobile/API: JWT Bearer tokens issued by Keycloak
+    // - BFF: session-backed principal
+    // - API/Web direct: JWT Bearer tokens issued by Clerk
     builder.Services
     .AddAuthentication(options =>
     {
@@ -288,17 +288,9 @@ try
         _ => { })
     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        var keycloakBaseUrl = builder.Configuration["Keycloak:BaseUrl"]
-            ?? throw new InvalidOperationException("Keycloak:BaseUrl deve estar configurado em appsettings");
-        keycloakBaseUrl = keycloakBaseUrl.TrimEnd('/');
-        var realm = builder.Configuration["Keycloak:Realm"] ?? "assistenteexecutivo";
-        var authority = $"{keycloakBaseUrl}/realms/{realm}";
-
-        // Ensure authority uses HTTPS (Keycloak will be configured to emit HTTPS issuers)
-        if (authority.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-        {
-            authority = authority.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
-        }
+        var authority = builder.Configuration["Clerk:Authority"]
+            ?? throw new InvalidOperationException("Clerk:Authority deve estar configurado em appsettings ou variaveis de ambiente");
+        authority = authority.TrimEnd('/');
 
         Console.WriteLine($"[JWT] Authority: {authority}");
         Console.WriteLine($"[JWT] RequireHttpsMetadata: true");
@@ -308,11 +300,11 @@ try
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = authority, // Only HTTPS issuer
-            ValidateAudience = false, // Keycloak tokens can have multiple audiences; validate with policies if needed
+            ValidIssuer = authority,
+            ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            NameClaimType = "preferred_username",
+            NameClaimType = "email",
             RoleClaimType = "roles"
         };
 

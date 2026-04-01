@@ -17,30 +17,31 @@ export interface UpdateAgentConfigurationRequest {
   workflowPrompt?: string;
 }
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 /**
  * Obtém a configuração atual do agente.
  */
 export async function getAgentConfiguration(): Promise<AgentConfiguration> {
-  const session = await getBffSession();
-  if (!session.authenticated) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const path = `${apiBase}/api/agent-configuration`;
-
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
-
-  if (session.csrfToken) {
-    headers["X-CSRF-TOKEN"] = session.csrfToken;
-  }
   
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers,
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -59,21 +60,13 @@ export async function getAgentConfiguration(): Promise<AgentConfiguration> {
 export async function updateAgentConfiguration(
   request: UpdateAgentConfigurationRequest
 ): Promise<AgentConfiguration> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const path = `${apiBase}/api/agent-configuration`;
   
   const res = await fetch(path, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -83,6 +76,5 @@ export async function updateAgentConfiguration(
 
   return res.json();
 }
-
 
 

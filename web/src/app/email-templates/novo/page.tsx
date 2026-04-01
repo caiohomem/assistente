@@ -1,26 +1,33 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { NovoEmailTemplateClient } from "./NovoEmailTemplateClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function NovoEmailTemplatePage() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/email-templates/novo")}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function check() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/email-templates/novo")}`;
-          return;
-        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -30,7 +37,7 @@ export default function NovoEmailTemplatePage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isLoaded, isSignedIn, router]);
 
   return (
     <LayoutWrapper

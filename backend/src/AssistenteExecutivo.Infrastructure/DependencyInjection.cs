@@ -151,23 +151,27 @@ public static class DependencyInjection
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Services
-        var keycloakBaseUrl = configuration["Keycloak:BaseUrl"]
-            ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
+        // Identity provider integrations
+        var keycloakEnabled = configuration.GetValue<bool?>("Keycloak:Enabled") ?? false;
+        var keycloakBaseUrl = configuration["Keycloak:BaseUrl"];
 
-        services.AddHttpClient<IKeycloakService, KeycloakService>(client =>
+        if (keycloakEnabled && !string.IsNullOrWhiteSpace(keycloakBaseUrl))
         {
-            client.BaseAddress = new Uri(keycloakBaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(5);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-        });
+            services.AddHttpClient<IKeycloakService, KeycloakService>(client =>
+            {
+                client.BaseAddress = new Uri(keycloakBaseUrl);
+                client.Timeout = TimeSpan.FromMinutes(5);
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+            });
 
-
-        // Keycloak provisioning runs as a hosted service (singleton).
-        // Keep a single instance that can be used both as IHostedService and via the app interface.
-        services.AddSingleton<KeycloakAdminProvisioner>();
-        services.AddSingleton<IKeycloakAdminProvisioner>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
-        services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
+            services.AddSingleton<KeycloakAdminProvisioner>();
+            services.AddSingleton<IKeycloakAdminProvisioner>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
+            services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
+        }
+        else
+        {
+            services.AddScoped<IKeycloakService, DisabledKeycloakService>();
+        }
 
         services.AddHttpClient<EmailService>();
         services.AddScoped<IEmailService>(sp =>

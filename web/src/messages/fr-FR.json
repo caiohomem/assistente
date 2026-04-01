@@ -22,14 +22,14 @@
   "auth": {
     "login": "Connexion",
     "logout": "Déconnexion",
-    "loginDescription": "La connexion se fait via Keycloak (redirection par le backend BFF).",
+    "loginDescription": "La connexion est gérée par Clerk.",
     "loginButton": "Se connecter",
     "loginWithGoogle": "Se connecter avec Google (si configuré)",
     "forgotPassword": "J'ai oublié mon mot de passe",
     "goToProtectedPage": "Aller à la page protégée",
-    "session": "Session (BFF)",
-    "checkSession": "Consulter /auth/session",
-    "sessionDescription": "Cliquez sur \"Consulter /auth/session\" pour obtenir le token CSRF et l'état d'authentification.",
+    "session": "Session",
+    "checkSession": "Consulter la session",
+    "sessionDescription": "Consultez l'état actuel d'authentification.",
     "sessionError": "Échec de la consultation de la session."
   },
   "contacts": {

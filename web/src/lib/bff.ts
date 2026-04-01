@@ -8,6 +8,7 @@ type ErrorWithMeta = Error & {
 export type BffSession = {
   authenticated: boolean;
   csrfToken: string;
+  accessToken?: string | null;
   expiresAtUnix?: number | null;
   user?: {
     sub?: string | null;
@@ -18,22 +19,8 @@ export type BffSession = {
   } | null;
 };
 
-/**
- * Retorna a URL base da API para chamadas diretas (sem proxy).
- * 
- * IMPORTANTE: As chamadas são feitas diretamente do cliente/servidor para a API,
- * sem passar por proxy do Next.js. Isso facilita o desenvolvimento e debugging.
- * 
- * Configure NEXT_PUBLIC_API_BASE_URL no .env.local para apontar para sua API.
- * Exemplo: NEXT_PUBLIC_API_BASE_URL=http://localhost:5239
- * 
- * Se necessário, pode-se adicionar proxy no next.config.ts no futuro.
- */
 export function getApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5239").replace(
-    /\/+$/,
-    "",
-  );
+  return (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5239").replace(/\/+$/, "");
 }
 
 const parseJsonResponse = async <T>(res: Response): Promise<T | undefined> => {
@@ -44,127 +31,60 @@ const parseJsonResponse = async <T>(res: Response): Promise<T | undefined> => {
   }
 };
 
-export async function getBffSession(params?: {
-  cookieHeader?: string;
-}): Promise<BffSession> {
-  const apiBase = getApiBaseUrl();
-  const url = `${apiBase}/auth/session`;
-  
-  // Log para debug (apenas no servidor)
-  if (typeof window === "undefined") {
-    console.log(`[Server] Fetching BFF session from: ${url}`);
-    console.log(`[Server] API Base URL: ${apiBase}`);
-    console.log(`[Server] Has cookie header: ${!!params?.cookieHeader}`);
-  }
-  
-  try {
-    // Criar AbortController para timeout (compatível com Node.js 17+)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
-    
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "include",
-        headers: params?.cookieHeader ? { cookie: params.cookieHeader } : undefined,
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
+function getFrontendBaseUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_FRONTEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://127.0.0.1:3000"
+  ).replace(/\/+$/, "");
+}
 
-      if (!res.ok) {
-        // Log detalhado para debug
-        const isClient = typeof window !== "undefined";
-        if (isClient) {
-          console.error(`[Client] Failed to fetch /auth/session: ${res.status} ${res.statusText}`);
-          console.error(`[Client] URL: ${url}`);
-          console.error(`[Client] Cookies available:`, document.cookie);
-        } else {
-          console.error(`[Server] Failed to fetch /auth/session: ${res.status} ${res.statusText}`);
-          console.error(`[Server] URL: ${url}`);
-          console.error(`[Server] API Base URL: ${apiBase}`);
-          console.error(`[Server] Has cookie header: ${!!params?.cookieHeader}`);
-        }
-        
-        // Se for 401, retornar sessão não autenticada ao invés de lançar erro
-        if (res.status === 401) {
-          return {
-            authenticated: false,
-            csrfToken: "",
-            user: null,
-            expiresAtUnix: null
-          } as BffSession;
-        }
-        
-        throw new Error(`Failed to fetch /auth/session: ${res.status} ${res.statusText}`);
-      }
+export async function getBffSession(_params?: { cookieHeader?: string }): Promise<BffSession> {
+  const isServer = typeof window === "undefined";
+  const url = isServer ? `${getFrontendBaseUrl()}/api/auth/session` : "/api/auth/session";
+  const res = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    credentials: "include",
+    headers: _params?.cookieHeader ? { Cookie: _params.cookieHeader } : undefined,
+  });
 
-      const session = (await res.json()) as BffSession;
-      
-      // Log para debug no cliente
-      if (typeof window !== "undefined") {
-        console.log(`[Client] Session check:`, {
-          authenticated: session.authenticated,
-          hasUser: !!session.user,
-          userEmail: session.user?.email
-        });
-      }
-      
-      return session;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  } catch (error) {
-    // Log detalhado para debug (apenas no servidor)
-    if (typeof window === "undefined") {
-      console.error(`[Server] Fetch error for /auth/session`);
-      console.error(`[Server] URL: ${url}`);
-      console.error(`[Server] API Base URL: ${apiBase}`);
-      console.error(`[Server] Environment: NEXT_PUBLIC_API_BASE_URL=${process.env.NEXT_PUBLIC_API_BASE_URL || "not set"}`);
-      console.error(`[Server] Error:`, error);
-      
-      // Verificar se é um erro de conexão
-      if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        if (errorMessage.includes("fetch failed") || 
-            errorMessage.includes("econnrefused") ||
-            errorMessage.includes("connect econnrefused") ||
-            errorMessage.includes("networkerror") ||
-            errorMessage.includes("failed to fetch")) {
-          console.error(`[Server] Connection error detected.`);
-          console.error(`[Server] Please verify:`);
-          console.error(`[Server]   1. Is the API running at ${apiBase}?`);
-          console.error(`[Server]   2. Check if NEXT_PUBLIC_API_BASE_URL is set correctly in .env.local`);
-          console.error(`[Server]   3. Try accessing ${url} directly in your browser`);
-        }
-        
-        // Re-throw com mensagem mais clara
-        if (errorMessage.includes("aborted") || errorMessage.includes("timeout")) {
-          throw new Error(`Timeout connecting to API at ${apiBase}. Is the API running?`);
-        }
-      }
-    }
-    throw error;
+  if (!res.ok) {
+    throw new Error(`Failed to fetch Clerk session: ${res.status} ${res.statusText}`);
   }
+
+  return (await res.json()) as BffSession;
+}
+
+async function buildAuthHeaders(additionalHeaders?: HeadersInit): Promise<HeadersInit> {
+  const session = await getBffSession();
+  const headers = new Headers(additionalHeaders);
+
+  if (session.accessToken) {
+    headers.set("Authorization", `Bearer ${session.accessToken}`);
+  }
+
+  if (session.user?.email) {
+    headers.set("X-User-Email", session.user.email);
+  }
+
+  if (session.user?.name) {
+    headers.set("X-User-Name", session.user.name);
+  }
+
+  return headers;
 }
 
 export async function bffPostJson<TResponse>(
   path: string,
   body: unknown,
-  csrfToken: string,
-  cookieHeader?: string,
+  _csrfToken: string,
+  _cookieHeader?: string,
 ): Promise<TResponse> {
   const apiBase = getApiBaseUrl();
-  const headers: HeadersInit = {
+  const headers = await buildAuthHeaders({
     "Content-Type": "application/json",
-    "X-CSRF-TOKEN": csrfToken,
-  };
-  
-  // Para chamadas do servidor, passar cookies manualmente
-  if (cookieHeader) {
-    headers["Cookie"] = cookieHeader;
-  }
+  });
 
   const res = await fetch(`${apiBase}${path}`, {
     method: "POST",
@@ -174,36 +94,23 @@ export async function bffPostJson<TResponse>(
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
-      return {} as TResponse;
-    }
-
-    throw await buildApiError(res);
+    const error = (await buildApiError(res)) as ErrorWithMeta;
+    error.status = res.status;
+    error.url = `${apiBase}${path}`;
+    throw error;
   }
 
   const data = await parseJsonResponse<TResponse>(res);
-  return (data ?? ({} as TResponse));
+  return data ?? ({} as TResponse);
 }
 
 export async function bffPostNoContent(
   path: string,
-  csrfToken: string,
-  cookieHeader?: string,
+  _csrfToken: string,
+  _cookieHeader?: string,
 ): Promise<void> {
   const apiBase = getApiBaseUrl();
-  const headers: HeadersInit = {
-    "X-CSRF-TOKEN": csrfToken,
-  };
-  
-  // Para chamadas do servidor, passar cookies manualmente
-  if (cookieHeader) {
-    headers["Cookie"] = cookieHeader;
-  }
+  const headers = await buildAuthHeaders();
 
   const res = await fetch(`${apiBase}${path}`, {
     method: "POST",
@@ -212,49 +119,24 @@ export async function bffPostNoContent(
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      return; // Não lançar erro para evitar loop
-    }
-
-    throw await buildApiError(res);
+    const error = (await buildApiError(res)) as ErrorWithMeta;
+    error.status = res.status;
+    error.url = `${apiBase}${path}`;
+    throw error;
   }
 }
 
 export async function bffGetJson<TResponse>(
   path: string,
-  csrfToken?: string,
-  cookieHeader?: string,
+  _csrfToken?: string,
+  _cookieHeader?: string,
 ): Promise<TResponse> {
   const apiBase = getApiBaseUrl();
-  const headers: HeadersInit = {
+  const headers = await buildAuthHeaders({
     "Content-Type": "application/json",
-  };
-  
-  if (csrfToken) {
-    headers["X-CSRF-TOKEN"] = csrfToken;
-  }
-  
-  // Para chamadas do servidor, passar cookies manualmente
-  if (cookieHeader) {
-    headers["Cookie"] = cookieHeader;
-  }
+  });
 
   const url = `${apiBase}${path}`;
-  
-  // Log para debug (apenas no servidor)
-  if (typeof window === "undefined") {
-    console.log(`[Server] GET ${url}`);
-    console.log(`[Server] Headers:`, {
-      hasCsrfToken: !!csrfToken,
-      hasCookieHeader: !!cookieHeader,
-      cookieCount: cookieHeader ? cookieHeader.split(";").length : 0,
-    });
-  }
-
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -262,55 +144,26 @@ export async function bffGetJson<TResponse>(
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
-      return {} as TResponse;
-    }
-
-    // Log detalhado para debug (apenas no servidor)
-    if (typeof window === "undefined") {
-      console.error(`[Server] Request failed: ${res.status} ${res.statusText}`);
-      console.error(`[Server] URL: ${url}`);
-      console.error(`[Server] Response headers:`, Object.fromEntries(res.headers.entries()));
-    }
-
     const error = (await buildApiError(res)) as ErrorWithMeta;
-
-    // 404 é um caso esperado para endpoints opcionais (como /api/plans)
-    if (res.status === 404) {
-      error.status = 404;
-      throw error;
-    }
-
     error.status = res.status;
     error.url = url;
     throw error;
   }
 
   const data = await parseJsonResponse<TResponse>(res);
-  return (data ?? ({} as TResponse));
+  return data ?? ({} as TResponse);
 }
 
 export async function bffPutJson<TResponse>(
   path: string,
   body: unknown,
-  csrfToken: string,
-  cookieHeader?: string,
+  _csrfToken: string,
+  _cookieHeader?: string,
 ): Promise<TResponse> {
   const apiBase = getApiBaseUrl();
-  const headers: HeadersInit = {
+  const headers = await buildAuthHeaders({
     "Content-Type": "application/json",
-    "X-CSRF-TOKEN": csrfToken,
-  };
-  
-  // Para chamadas do servidor, passar cookies manualmente
-  if (cookieHeader) {
-    headers["Cookie"] = cookieHeader;
-  }
+  });
 
   const res = await fetch(`${apiBase}${path}`, {
     method: "PUT",
@@ -320,36 +173,23 @@ export async function bffPutJson<TResponse>(
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
-      return {} as TResponse;
-    }
-
-    throw await buildApiError(res);
+    const error = (await buildApiError(res)) as ErrorWithMeta;
+    error.status = res.status;
+    error.url = `${apiBase}${path}`;
+    throw error;
   }
 
   const data = await parseJsonResponse<TResponse>(res);
-  return (data ?? ({} as TResponse));
+  return data ?? ({} as TResponse);
 }
 
 export async function bffDelete(
   path: string,
-  csrfToken: string,
-  cookieHeader?: string,
+  _csrfToken: string,
+  _cookieHeader?: string,
 ): Promise<void> {
   const apiBase = getApiBaseUrl();
-  const headers: HeadersInit = {
-    "X-CSRF-TOKEN": csrfToken,
-  };
-  
-  // Para chamadas do servidor, passar cookies manualmente
-  if (cookieHeader) {
-    headers["Cookie"] = cookieHeader;
-  }
+  const headers = await buildAuthHeaders();
 
   const res = await fetch(`${apiBase}${path}`, {
     method: "DELETE",
@@ -358,14 +198,9 @@ export async function bffDelete(
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      return; // Não lançar erro para evitar loop
-    }
-
-    throw await buildApiError(res);
+    const error = (await buildApiError(res)) as ErrorWithMeta;
+    error.status = res.status;
+    error.url = `${apiBase}${path}`;
+    throw error;
   }
 }

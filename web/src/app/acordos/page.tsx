@@ -665,7 +665,10 @@ export default function CommissionAgreementsPage() {
                     >
                       Abrir
                     </Button>
-                    {agreement.status === 1 || agreement.status === "Draft" ? (
+                    {agreement.status === 1 ||
+                    agreement.status === 6 ||
+                    agreement.status === "Draft" ||
+                    agreement.status === "PendingAcceptance" ? (
                       <Button
                         variant="ghost"
                         onClick={() => handleActivateAgreement(agreement.agreementId)}

@@ -21,13 +21,13 @@
   },
   "auth": {
     "login": "Iniciar sesión",
-    "loginDescription": "El inicio de sesión se realiza mediante Keycloak (redirección por el backend BFF).",
+    "loginDescription": "El inicio de sesión se realiza con Clerk.",
     "loginWithGoogle": "Iniciar sesión con Google (si está configurado)",
     "forgotPassword": "Olvidé mi contraseña",
     "goToProtectedPage": "Ir a página protegida",
-    "session": "Sesión (BFF)",
-    "checkSession": "Consultar /auth/session",
-    "sessionDescription": "Haga clic en \"Consultar /auth/session\" para obtener el token CSRF y el estado de autenticación.",
+    "session": "Sesión",
+    "checkSession": "Consultar sesión",
+    "sessionDescription": "Consulte el estado actual de autenticación.",
     "sessionError": "Error al consultar sesión."
   },
   "contacts": {

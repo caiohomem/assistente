@@ -13,6 +13,20 @@ import type {
 // Re-export types for convenience
 export type { EmailTemplate, ListEmailTemplatesResult };
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 interface ListEmailTemplatesResponse {
   templates?: EmailTemplate[]
   Templates?: EmailTemplate[]
@@ -29,11 +43,6 @@ interface ListEmailTemplatesResponse {
 export async function listEmailTemplatesClient(
   params: ListEmailTemplatesParams = {},
 ): Promise<ListEmailTemplatesResult> {
-  const session = await getBffSession();
-  if (!session.authenticated) {
-    throw new Error("Não autenticado");
-  }
-
   const queryParams = new URLSearchParams();
   if (params.templateType !== undefined) queryParams.set("templateType", params.templateType.toString());
   if (params.activeOnly) queryParams.set("activeOnly", "true");
@@ -46,10 +55,7 @@ export async function listEmailTemplatesClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -65,19 +71,11 @@ export async function listEmailTemplatesClient(
 }
 
 export async function getEmailTemplateByIdClient(emailTemplateId: string): Promise<EmailTemplate> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/email-templates/${emailTemplateId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -88,19 +86,11 @@ export async function getEmailTemplateByIdClient(emailTemplateId: string): Promi
 export async function createEmailTemplateClient(
   request: CreateEmailTemplateRequest,
 ): Promise<{ id: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/email-templates`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -114,19 +104,11 @@ export async function updateEmailTemplateClient(
   emailTemplateId: string,
   request: UpdateEmailTemplateRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/email-templates/${emailTemplateId}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -138,18 +120,11 @@ export async function updateEmailTemplateClient(
 }
 
 export async function activateEmailTemplateClient(emailTemplateId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/email-templates/${emailTemplateId}/activate`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -160,18 +135,11 @@ export async function activateEmailTemplateClient(emailTemplateId: string): Prom
 }
 
 export async function deactivateEmailTemplateClient(emailTemplateId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/email-templates/${emailTemplateId}/deactivate`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -182,18 +150,11 @@ export async function deactivateEmailTemplateClient(emailTemplateId: string): Pr
 }
 
 export async function deleteEmailTemplateClient(emailTemplateId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/email-templates/${emailTemplateId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {

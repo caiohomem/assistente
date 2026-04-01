@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBffSession } from "@/lib/bff";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { Button } from "@/components/ui/button";
 import {
@@ -177,6 +178,8 @@ function ExecuteModal({ workflow, onClose, onExecute, isLoading }: ExecuteModalP
 }
 
 export default function WorkflowsPage() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("workflows");
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
@@ -211,16 +214,19 @@ export default function WorkflowsPage() {
   };
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/workflows")}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/workflows")}`;
-          return;
-        }
-
         await loadData();
       } finally {
         if (isMounted) setLoading(false);
@@ -231,7 +237,7 @@ export default function WorkflowsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isLoaded, isSignedIn, router]);
 
   const handleToggleExpand = async (workflowId: string) => {
     if (expandedWorkflowId === workflowId) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getBffSession } from "@/lib/bff";
+import { useAuth } from "@clerk/nextjs";
 import { listContactsClient } from "@/lib/api/contactsApiClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import {
@@ -24,6 +24,7 @@ interface CompanyInfo {
 }
 
 export default function EmpresasPage() {
+  const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -31,16 +32,19 @@ export default function EmpresasPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/empresas")}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/empresas")}`;
-          return;
-        }
-
         // Load all contacts to extract companies
         const data = await listContactsClient({ page: 1, pageSize: 1000 });
         if (!isMounted) return;
@@ -58,7 +62,7 @@ export default function EmpresasPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isLoaded, isSignedIn, router]);
 
   // Extract companies from contacts
   const companies = useMemo(() => {

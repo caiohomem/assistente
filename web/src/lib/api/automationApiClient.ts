@@ -45,6 +45,20 @@ export type {
   UpdateLetterheadRequest,
 };
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 // ============================================================================
 // REMINDERS
 // ============================================================================
@@ -61,11 +75,6 @@ export interface ListRemindersParams {
 export async function listRemindersClient(
   params: ListRemindersParams = {},
 ): Promise<ListRemindersResult> {
-  const session = await getBffSession();
-  if (!session.authenticated) {
-    throw new Error("Não autenticado");
-  }
-
   const queryParams = new URLSearchParams();
   if (params.contactId) queryParams.set("contactId", params.contactId);
   if (params.status !== undefined) queryParams.set("status", params.status.toString());
@@ -80,10 +89,7 @@ export async function listRemindersClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (res.status === 204) {
@@ -118,19 +124,11 @@ export async function listRemindersClient(
 }
 
 export async function getReminderByIdClient(reminderId: string): Promise<Reminder> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/reminders/${reminderId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -141,19 +139,11 @@ export async function getReminderByIdClient(reminderId: string): Promise<Reminde
 export async function createReminderClient(
   request: CreateReminderRequest,
 ): Promise<{ reminderId: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/reminders`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -167,19 +157,11 @@ export async function updateReminderStatusClient(
   reminderId: string,
   request: UpdateReminderStatusRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/reminders/${reminderId}/status`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -206,11 +188,6 @@ export interface ListDraftsParams {
 export async function listDraftsClient(
   params: ListDraftsParams = {},
 ): Promise<ListDraftsResult> {
-  const session = await getBffSession();
-  if (!session.authenticated) {
-    throw new Error("Não autenticado");
-  }
-
   const queryParams = new URLSearchParams();
   if (params.contactId) queryParams.set("contactId", params.contactId);
   if (params.companyId) queryParams.set("companyId", params.companyId);
@@ -225,10 +202,7 @@ export async function listDraftsClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -254,19 +228,11 @@ export async function listDraftsClient(
 }
 
 export async function getDraftByIdClient(draftId: string): Promise<DraftDocument> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/drafts/${draftId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -277,19 +243,11 @@ export async function getDraftByIdClient(draftId: string): Promise<DraftDocument
 export async function createDraftClient(
   request: CreateDraftRequest,
 ): Promise<{ draftId: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/drafts`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -303,19 +261,11 @@ export async function updateDraftClient(
   draftId: string,
   request: UpdateDraftRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/drafts/${draftId}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -326,18 +276,11 @@ export async function updateDraftClient(
 }
 
 export async function approveDraftClient(draftId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/drafts/${draftId}/approve`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -347,18 +290,11 @@ export async function approveDraftClient(draftId: string): Promise<void> {
 }
 
 export async function sendDraftClient(draftId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/drafts/${draftId}/send`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -381,11 +317,6 @@ export interface ListTemplatesParams {
 export async function listTemplatesClient(
   params: ListTemplatesParams = {},
 ): Promise<ListTemplatesResult> {
-  const session = await getBffSession();
-  if (!session.authenticated) {
-    throw new Error("Não autenticado");
-  }
-
   const queryParams = new URLSearchParams();
   if (params.type !== undefined) queryParams.set("type", params.type.toString());
   if (params.activeOnly) queryParams.set("activeOnly", "true");
@@ -398,10 +329,7 @@ export async function listTemplatesClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -427,19 +355,11 @@ export async function listTemplatesClient(
 }
 
 export async function getTemplateByIdClient(templateId: string): Promise<Template> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/templates/${templateId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -450,19 +370,11 @@ export async function getTemplateByIdClient(templateId: string): Promise<Templat
 export async function createTemplateClient(
   request: CreateTemplateRequest,
 ): Promise<{ templateId: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/templates`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -476,19 +388,11 @@ export async function updateTemplateClient(
   templateId: string,
   request: UpdateTemplateRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/templates/${templateId}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -511,11 +415,6 @@ export interface ListLetterheadsParams {
 export async function listLetterheadsClient(
   params: ListLetterheadsParams = {},
 ): Promise<ListLetterheadsResult> {
-  const session = await getBffSession();
-  if (!session.authenticated) {
-    throw new Error("Não autenticado");
-  }
-
   const queryParams = new URLSearchParams();
   if (params.activeOnly) queryParams.set("activeOnly", "true");
   if (params.page) queryParams.set("page", params.page.toString());
@@ -527,10 +426,7 @@ export async function listLetterheadsClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -556,19 +452,11 @@ export async function listLetterheadsClient(
 }
 
 export async function getLetterheadByIdClient(letterheadId: string): Promise<Letterhead> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/letterheads/${letterheadId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -579,19 +467,11 @@ export async function getLetterheadByIdClient(letterheadId: string): Promise<Let
 export async function createLetterheadClient(
   request: CreateLetterheadRequest,
 ): Promise<{ letterheadId: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/letterheads`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -605,19 +485,11 @@ export async function updateLetterheadClient(
   letterheadId: string,
   request: UpdateLetterheadRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/letterheads/${letterheadId}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -628,18 +500,11 @@ export async function updateLetterheadClient(
 }
 
 export async function deleteReminderClient(reminderId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/reminders/${reminderId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -649,18 +514,11 @@ export async function deleteReminderClient(reminderId: string): Promise<void> {
 }
 
 export async function deleteDraftClient(draftId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/drafts/${draftId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -670,18 +528,11 @@ export async function deleteDraftClient(draftId: string): Promise<void> {
 }
 
 export async function deleteTemplateClient(templateId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/templates/${templateId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {
@@ -691,18 +542,11 @@ export async function deleteTemplateClient(templateId: string): Promise<void> {
 }
 
 export async function deleteLetterheadClient(letterheadId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/automation/letterheads/${letterheadId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {

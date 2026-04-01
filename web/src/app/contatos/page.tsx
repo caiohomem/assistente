@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getBffSession } from "@/lib/bff";
+import { useAuth } from "@clerk/nextjs";
 import { listContactsClient, type ListContactsResult } from "@/lib/api/contactsApiClient";
 import { ContactsListClient } from "./ContactsListClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -12,6 +12,7 @@ import { ArrowLeft, Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ContactsPage() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [loading, setLoading] = useState(true);
   const [initialData, setInitialData] = useState<ListContactsResult>({
     contacts: [],
@@ -26,16 +27,19 @@ export default function ContactsPage() {
   const companyFilter = searchParams.get("empresa") || "";
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/contatos")}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/contatos")}`;
-          return;
-        }
-
         const data = await listContactsClient({ page: 1, pageSize: 20 });
         if (!isMounted) return;
         setInitialData(data);
@@ -50,7 +54,7 @@ export default function ContactsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isLoaded, isSignedIn, router]);
 
   const handleNewContactSubmit = async (formData: ContactFormData) => {
     try {
@@ -163,7 +167,6 @@ export default function ContactsPage() {
     </LayoutWrapper>
   );
 }
-
 
 
 

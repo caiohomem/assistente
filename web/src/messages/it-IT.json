@@ -28,13 +28,13 @@
     "logout": "Esci",
     "forgotPassword": "Password dimenticata",
     "resetPassword": "Reimposta password",
-    "loginDescription": "L'accesso viene effettuato tramite Keycloak (reindirizzamento tramite backend BFF).",
+    "loginDescription": "L'accesso viene gestito da Clerk.",
     "loginWithGoogle": "Accedi con Google (se configurato)",
     "goToProtectedPage": "Vai alla pagina protetta",
-    "session": "Sessione (BFF)",
-    "checkSession": "Consulta /auth/session",
+    "session": "Sessione",
+    "checkSession": "Controlla sessione",
     "checkingSession": "Controllo in corso...",
-    "sessionInfo": "Fai clic su \"Consulta /auth/session\" per ottenere il token CSRF e lo stato di autenticazione.",
+    "sessionInfo": "Controlla lo stato attuale di autenticazione.",
     "sessionError": "Errore durante la consulta della sessione."
   },
   "dashboard": {

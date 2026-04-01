@@ -84,6 +84,11 @@ public class CommissionAgreement
         return new CommissionAgreement(agreementId, ownerUserId, title, description, totalValue, terms, clock);
     }
 
+    private bool IsEditablePreActivationStatus()
+    {
+        return Status == AgreementStatus.Draft || Status == AgreementStatus.PendingAcceptance;
+    }
+
     public AgreementParty AddParty(
         Guid partyId,
         Guid? contactId,
@@ -94,7 +99,7 @@ public class CommissionAgreement
         PartyRole role,
         IClock clock)
     {
-        if (Status != AgreementStatus.Draft)
+        if (!IsEditablePreActivationStatus())
             throw new DomainException("Domain:ApenasDraftPermitePartes");
 
         if (_parties.Any(p => p.PartyId == partyId))
@@ -143,7 +148,7 @@ public class CommissionAgreement
         DateTime dueDate,
         IClock clock)
     {
-        if (Status != AgreementStatus.Draft)
+        if (!IsEditablePreActivationStatus())
             throw new DomainException("Domain:ApenasDraftPermiteMilestones");
 
         if (_milestones.Any(m => m.MilestoneId == milestoneId))
@@ -187,7 +192,7 @@ public class CommissionAgreement
 
     public void Activate(IClock clock)
     {
-        if (Status != AgreementStatus.Draft)
+        if (!IsEditablePreActivationStatus())
             throw new DomainException("Domain:AcordoNaoEstaEmDraft");
 
         if (!_parties.Any())

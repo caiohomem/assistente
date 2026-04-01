@@ -4,20 +4,26 @@ import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 import { RelationshipType } from "@/lib/types/relationshipType";
 import { throwIfErrorResponse } from "./types";
 
-export async function listRelationshipTypesClient(): Promise<RelationshipType[]> {
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
   const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
+  if (!session.authenticated || !session.accessToken) {
     throw new Error("Não autenticado");
   }
 
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
+export async function listRelationshipTypesClient(): Promise<RelationshipType[]> {
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/relationship-types`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -25,19 +31,11 @@ export async function listRelationshipTypesClient(): Promise<RelationshipType[]>
 }
 
 export async function createRelationshipTypeClient(name: string): Promise<RelationshipType> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/relationship-types`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({ name }),
   });
 
@@ -46,19 +44,11 @@ export async function createRelationshipTypeClient(name: string): Promise<Relati
 }
 
 export async function updateRelationshipTypeClient(id: string, name: string): Promise<RelationshipType> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/relationship-types/${id}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({ name }),
   });
 
@@ -67,18 +57,11 @@ export async function updateRelationshipTypeClient(id: string, name: string): Pr
 }
 
 export async function deleteRelationshipTypeClient(id: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/relationship-types/${id}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   if (res.status === 204) {

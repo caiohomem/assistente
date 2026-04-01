@@ -16,6 +16,20 @@ import {
 } from "@/lib/types/workflow";
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 // Map numeric enum values to string values
 const workflowStatusMap: Record<number | string, WorkflowStatus> = {
   1: "Draft",
@@ -154,11 +168,6 @@ type RawExecuteResponse = {
 export async function listWorkflowsClient(
   status?: WorkflowStatus
 ): Promise<WorkflowSummary[]> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const queryParams = new URLSearchParams();
   if (status) queryParams.set("status", status);
@@ -168,10 +177,7 @@ export async function listWorkflowsClient(
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -196,19 +202,11 @@ export async function listWorkflowsClient(
  * Gets a workflow by ID.
  */
 export async function getWorkflowByIdClient(workflowId: string): Promise<Workflow> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -243,19 +241,11 @@ export async function getWorkflowByIdClient(workflowId: string): Promise<Workflo
 export async function createWorkflowClient(
   request: CreateWorkflowRequest
 ): Promise<CreateWorkflowResult> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({
       specJson: request.specJson,
       activateImmediately: request.activateImmediately || false,
@@ -284,19 +274,11 @@ export async function executeWorkflowClient(
   workflowId: string,
   request?: ExecuteWorkflowRequest
 ): Promise<ExecuteWorkflowResult> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}/execute`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request || {}),
   });
 
@@ -322,11 +304,6 @@ export async function listExecutionsClient(
   workflowId?: string,
   limit: number = 50
 ): Promise<WorkflowExecutionSummary[]> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const queryParams = new URLSearchParams();
   if (workflowId) queryParams.set("workflowId", workflowId);
@@ -337,10 +314,7 @@ export async function listExecutionsClient(
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -363,19 +337,11 @@ export async function listExecutionsClient(
  * Gets execution details by ID.
  */
 export async function getExecutionByIdClient(executionId: string): Promise<WorkflowExecution> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/executions/${executionId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -404,19 +370,11 @@ export async function getExecutionByIdClient(executionId: string): Promise<Workf
  * Lists pending approval requests.
  */
 export async function getPendingApprovalsClient(): Promise<WorkflowExecution[]> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/pending-approvals`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -445,19 +403,11 @@ export async function getPendingApprovalsClient(): Promise<WorkflowExecution[]> 
  * Approves a pending workflow step.
  */
 export async function approveStepClient(executionId: string): Promise<ApproveStepResult> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/executions/${executionId}/approve`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   const data = (await res.json().catch(() => ({}))) as RawExecuteResponse;
@@ -476,19 +426,11 @@ export async function approveStepClient(executionId: string): Promise<ApproveSte
  * Activates a workflow.
  */
 export async function activateWorkflowClient(workflowId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}/activate`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok && res.status !== 204) {
@@ -501,19 +443,11 @@ export async function activateWorkflowClient(workflowId: string): Promise<void> 
  * Pauses a workflow.
  */
 export async function pauseWorkflowClient(workflowId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}/pause`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok && res.status !== 204) {
@@ -526,19 +460,11 @@ export async function pauseWorkflowClient(workflowId: string): Promise<void> {
  * Archives (soft deletes) a workflow.
  */
 export async function archiveWorkflowClient(workflowId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok && res.status !== 204) {

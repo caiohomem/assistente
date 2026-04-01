@@ -1,25 +1,30 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getBffSession, type BffSession } from "@/lib/bff";
+import { useAuth, useUser, UserButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 
 export default function ProtectedPage() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<BffSession | null>(null);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/protected")}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
       try {
-        const s = await getBffSession();
-        if (!s.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/protected")}`;
-          return;
-        }
-        if (!isMounted) return;
-        setSession(s);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -29,13 +34,11 @@ export default function ProtectedPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const user = session?.user;
+  }, [isLoaded, isSignedIn, router]);
 
   const iniciais = useMemo(() => {
-    const name = user?.name ?? null;
-    const email = user?.email ?? null;
+    const name = user?.fullName ?? null;
+    const email = user?.primaryEmailAddress?.emailAddress ?? null;
 
     if (name) {
       const partes = name.trim().split(" ");
@@ -47,10 +50,10 @@ export default function ProtectedPage() {
       return email.charAt(0).toUpperCase();
     }
     return "U";
-  }, [user?.email, user?.name]);
+  }, [user?.fullName, user?.primaryEmailAddress?.emailAddress]);
 
   const corAvatar = useMemo(() => {
-    const texto = user?.name || user?.email || "U";
+    const texto = user?.fullName || user?.primaryEmailAddress?.emailAddress || "U";
     const cores = [
       "bg-indigo-500",
       "bg-purple-500",
@@ -65,9 +68,9 @@ export default function ProtectedPage() {
     ];
     const index = texto.charCodeAt(0) % cores.length;
     return cores[index];
-  }, [user?.email, user?.name]);
+  }, [user?.fullName, user?.primaryEmailAddress?.emailAddress]);
 
-  const nomeExibido = user?.name || user?.email || "Usuário";
+  const nomeExibido = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Usuário";
 
   return (
     <LayoutWrapper title="Perfil" subtitle="Detalhes do usuário" activeTab="settings">
@@ -98,14 +101,19 @@ export default function ProtectedPage() {
                       {nomeExibido}
                     </p>
                   </div>
-                  {user?.email && (
+                  {user?.primaryEmailAddress?.emailAddress && (
                     <div>
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Email
                       </label>
-                      <p className="mt-1 text-base text-muted-foreground">{user.email}</p>
+                      <p className="mt-1 text-base text-muted-foreground">
+                        {user.primaryEmailAddress.emailAddress}
+                      </p>
                     </div>
                   )}
+                  <div className="pt-2">
+                    <UserButton />
+                  </div>
                 </div>
               </div>
             </div>

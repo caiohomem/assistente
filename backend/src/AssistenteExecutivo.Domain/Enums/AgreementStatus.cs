@@ -6,5 +6,6 @@ public enum AgreementStatus
     Active = 2,
     Completed = 3,
     Disputed = 4,
-    Canceled = 5
+    Canceled = 5,
+    PendingAcceptance = 6
 }

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import type { Contact } from "@/lib/types/contact";
 import { getContactByIdClient } from "@/lib/api/contactsApiClient";
 import { listNotesByContactClient } from "@/lib/api/notesApiClient";
@@ -11,6 +11,7 @@ import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ContactDetailsClient } from "./ContactDetailsClient";
 
 export default function ContactDetailsPage() {
+  const { isLoaded, isSignedIn } = useAuth();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -32,18 +33,17 @@ export default function ContactDetailsPage() {
   >([]);
 
   useEffect(() => {
+    if (!isLoaded || !contactId) return;
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent(`/contatos/${contactId}`)}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
-      if (!contactId) return;
-
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/contatos/${contactId}`)}`;
-          return;
-        }
-
         const [c, n] = await Promise.all([
           getContactByIdClient(contactId),
           listNotesByContactClient(contactId),
@@ -74,7 +74,7 @@ export default function ContactDetailsPage() {
     return () => {
       isMounted = false;
     };
-  }, [contactId]);
+  }, [contactId, isLoaded, isSignedIn, router]);
 
   const loadNotes = async () => {
     if (!contactId) return;
@@ -164,4 +164,3 @@ export default function ContactDetailsPage() {
     </LayoutWrapper>
   );
 }
-

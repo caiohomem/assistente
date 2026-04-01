@@ -1,4 +1,11 @@
-export type AgreementStatus = "Draft" | "Active" | "Completed" | "Disputed" | "Canceled" | number;
+export type AgreementStatus =
+  | "Draft"
+  | "PendingAcceptance"
+  | "Active"
+  | "Completed"
+  | "Disputed"
+  | "Canceled"
+  | number;
 export type PartyRole = "Seller" | "Buyer" | "Broker" | "Agent" | "Witness" | number;
 export type MilestoneStatus = "Pending" | "Completed" | "Overdue" | number;
 
@@ -53,6 +60,7 @@ export const AgreementStatusLabels: Record<number, string> = {
   3: "Completed",
   4: "Disputed",
   5: "Canceled",
+  6: "PendingAcceptance",
 };
 
 export const PartyRoleLabels: Record<number, string> = {

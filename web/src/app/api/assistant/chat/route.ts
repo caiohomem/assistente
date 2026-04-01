@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBffSession, getApiBaseUrl } from "@/lib/bff";
+import { auth, clerkClient } from "@clerk/nextjs/server";
+import { getApiBaseUrl } from "@/lib/bff";
 
 /**
  * API route para chat com assistente - delega para o backend
  */
 export async function POST(request: NextRequest) {
   try {
-    // Obter cookies do request original
-    const cookieHeader = request.headers.get("cookie") || "";
-    
-    // Verificar autenticação passando os cookies
-    const session = await getBffSession(cookieHeader ? { cookieHeader } : undefined);
-    if (!session.authenticated) {
+    const { userId, getToken } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
+
+    const accessToken = await getToken();
+    if (!accessToken) {
+      return NextResponse.json({ error: "Token não disponível" }, { status: 401 });
+    }
+
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const email = user.primaryEmailAddress?.emailAddress ?? null;
+    const fallbackName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+    const fullName = user.fullName ?? (fallbackName || null);
 
     const body = await request.json();
     const { messages, model } = body;
@@ -22,15 +30,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "messages é obrigatório" }, { status: 400 });
     }
 
-    // Chamar o backend que processa o chat com OpenAI
-    // Passar os cookies do request original para o backend
     const apiBase = getApiBaseUrl();
     const response = await fetch(`${apiBase}/api/assistant/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(cookieHeader ? { "Cookie": cookieHeader } : {}),
-        ...(session.csrfToken ? { "X-CSRF-TOKEN": session.csrfToken } : {}),
+        Authorization: `Bearer ${accessToken}`,
+        ...(email ? { "X-User-Email": email } : {}),
+        ...(fullName ? { "X-User-Name": fullName } : {}),
       },
       body: JSON.stringify({
         messages,

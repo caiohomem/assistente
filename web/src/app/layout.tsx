@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { getLocale, getMessages } from 'next-intl/server';
 import Script from "next/script";
@@ -118,9 +119,11 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} antialiased`}
         suppressHydrationWarning
       >
-        <Providers messages={messages} locale={locale}>
-          {children}
-        </Providers>
+        <ClerkProvider>
+          <Providers messages={messages} locale={locale}>
+            {children}
+          </Providers>
+        </ClerkProvider>
       </body>
     </html>
   );

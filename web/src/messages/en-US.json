@@ -136,14 +136,14 @@
   "auth": {
     "login": "Login",
     "logout": "Logout",
-    "loginDescription": "Login is done via Keycloak (redirect through BFF backend).",
+    "loginDescription": "Login is handled by Clerk.",
     "loginWithGoogle": "Login with Google (if configured)",
     "forgotPassword": "Forgot my password",
     "goToProtectedPage": "Go to protected page",
-    "session": "Session (BFF)",
-    "checkSession": "Check /auth/session",
+    "session": "Session",
+    "checkSession": "Check session",
     "checkingSession": "Checking...",
-    "sessionDescription": "Click \"Check /auth/session\" to get the CSRF token and authentication status.",
+    "sessionDescription": "Check the current authentication status.",
     "sessionError": "Failed to check session."
   },
   "dashboard": {

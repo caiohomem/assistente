@@ -24,7 +24,8 @@ public class CommissionAgreementRulesService
         if (agreement == null)
             throw new DomainException("Domain:AcordoObrigatorio");
 
-        if (agreement.Status != AgreementStatus.Draft)
+        if (agreement.Status != AgreementStatus.Draft &&
+            agreement.Status != AgreementStatus.PendingAcceptance)
             throw new DomainException("Domain:AcordoPrecisaEstarEmDraft");
 
         if (!agreement.Parties.Any())

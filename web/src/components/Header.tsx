@@ -13,13 +13,13 @@ interface HeaderProps {
 
 export function Header({ title, subtitle }: HeaderProps) {
   return (
-    <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8 animate-blur-in relative z-50">
-      <div className="lg:flex-1">
-        <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">{title}</h1>
+    <header className="relative z-30 mb-6 flex flex-col gap-4 animate-blur-in lg:mb-8 lg:flex-row lg:items-center lg:justify-between">
+      <div className="min-w-0 lg:flex-1">
+        <h1 className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text pr-12 text-2xl font-bold text-transparent lg:pr-0 lg:text-3xl">{title}</h1>
         {subtitle && <p className="text-muted-foreground mt-1.5 text-sm">{subtitle}</p>}
       </div>
 
-      <div className="flex items-center gap-2 lg:gap-4 relative">
+      <div className="relative flex items-center justify-between gap-2 sm:justify-start lg:gap-4">
         <div className="relative group hidden md:block">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors duration-300 group-focus-within:text-primary" />
           <input
@@ -36,6 +36,11 @@ export function Header({ title, subtitle }: HeaderProps) {
         </Button>
         
         <div className="hidden lg:flex items-center gap-2">
+          <LanguageSelector />
+          <ThemeSelector />
+        </div>
+
+        <div className="flex items-center gap-2 lg:hidden">
           <LanguageSelector />
           <ThemeSelector />
         </div>

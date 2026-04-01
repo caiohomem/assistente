@@ -43,12 +43,7 @@ interface RawContactsResponse {
   TotalPages?: number;
 }
 
-/**
- * Lista contatos do usuário autenticado.
- */
-export async function listContacts(
-  params: ListContactsParams = {},
-): Promise<ListContactsResult> {
+async function getAuthenticatedCookieHeader(): Promise<string> {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore
     .getAll()
@@ -56,9 +51,20 @@ export async function listContacts(
     .join("; ");
 
   const session = await getBffSession({ cookieHeader });
-  if (!session.authenticated || !session.csrfToken) {
+  if (!session.authenticated) {
     throw new Error("Não autenticado");
   }
+
+  return cookieHeader;
+}
+
+/**
+ * Lista contatos do usuário autenticado.
+ */
+export async function listContacts(
+  params: ListContactsParams = {},
+): Promise<ListContactsResult> {
+  const cookieHeader = await getAuthenticatedCookieHeader();
 
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set("page", params.page.toString());
@@ -66,7 +72,7 @@ export async function listContacts(
   if (params.includeDeleted) queryParams.set("includeDeleted", "true");
 
   const path = `/api/contacts${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-  const data = await bffGetJson<RawContactsResponse>(path, session.csrfToken, cookieHeader);
+  const data = await bffGetJson<RawContactsResponse>(path, undefined, cookieHeader);
   // Normalize response to camelCase
   return {
     contacts: data.contacts || data.Contacts || [],
@@ -83,16 +89,7 @@ export async function listContacts(
 export async function searchContacts(
   params: SearchContactsParams = {},
 ): Promise<SearchContactsResult> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-
-  const session = await getBffSession({ cookieHeader });
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
+  const cookieHeader = await getAuthenticatedCookieHeader();
 
   const queryParams = new URLSearchParams();
   if (params.searchTerm) queryParams.set("searchTerm", params.searchTerm);
@@ -100,7 +97,7 @@ export async function searchContacts(
   if (params.pageSize) queryParams.set("pageSize", params.pageSize.toString());
 
   const path = `/api/contacts/search${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-  const data = await bffGetJson<RawContactsResponse>(path, session.csrfToken, cookieHeader);
+  const data = await bffGetJson<RawContactsResponse>(path, undefined, cookieHeader);
   // Normalize response to camelCase
   return {
     contacts: data.contacts || data.Contacts || [],
@@ -115,18 +112,8 @@ export async function searchContacts(
  * Obtém um contato por ID.
  */
 export async function getContactById(contactId: string): Promise<Contact> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-
-  const session = await getBffSession({ cookieHeader });
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
-  return await bffGetJson<Contact>(`/api/contacts/${contactId}`, session.csrfToken, cookieHeader);
+  const cookieHeader = await getAuthenticatedCookieHeader();
+  return await bffGetJson<Contact>(`/api/contacts/${contactId}`, undefined, cookieHeader);
 }
 
 /**
@@ -135,16 +122,7 @@ export async function getContactById(contactId: string): Promise<Contact> {
 export async function createContact(
   request: CreateContactRequest,
 ): Promise<{ contactId: string }> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-
-  const session = await getBffSession({ cookieHeader });
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
+  const cookieHeader = await getAuthenticatedCookieHeader();
 
   // O API só aceita campos básicos no create, emails e phones são adicionados separadamente
   const createRequest = {
@@ -162,7 +140,7 @@ export async function createContact(
   const result = await bffPostJson<{ contactId: string }>(
     "/api/contacts",
     createRequest,
-    session.csrfToken,
+    "",
     cookieHeader,
   );
 
@@ -174,7 +152,7 @@ export async function createContact(
           await bffPostJson<void>(
             `/api/contacts/${result.contactId}/emails`,
             { email: email.trim() },
-            session.csrfToken,
+            "",
             cookieHeader,
           );
         } catch (error) {
@@ -193,7 +171,7 @@ export async function createContact(
           await bffPostJson<void>(
             `/api/contacts/${result.contactId}/phones`,
             { phone: phone.trim() },
-            session.csrfToken,
+            "",
             cookieHeader,
           );
         } catch (error) {
@@ -214,16 +192,7 @@ export async function updateContact(
   contactId: string,
   request: UpdateContactRequest,
 ): Promise<void> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join("; ");
-
-  const session = await getBffSession({ cookieHeader });
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
+  const cookieHeader = await getAuthenticatedCookieHeader();
 
   // O API só aceita campos básicos no update, emails e phones são gerenciados separadamente
   const updateRequest = {
@@ -238,7 +207,7 @@ export async function updateContact(
     country: request.address?.country,
   };
 
-  await bffPutJson<void>(`/api/contacts/${contactId}`, updateRequest, session.csrfToken, cookieHeader);
+  await bffPutJson<void>(`/api/contacts/${contactId}`, updateRequest, "", cookieHeader);
 
   // Nota: Para emails e phones, seria necessário primeiro obter o contato atual,
   // comparar com os novos valores, e adicionar/remover conforme necessário.

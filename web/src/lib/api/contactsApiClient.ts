@@ -32,6 +32,20 @@ export interface SearchContactsParams {
   pageSize?: number;
 }
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 /**
  * Lista contatos do usuário autenticado (client-side).
  */
@@ -49,9 +63,7 @@ export async function listContactsClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -84,9 +96,7 @@ export async function searchContactsClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -106,19 +116,11 @@ export async function searchContactsClient(
  * Obtém um contato por ID (client-side).
  */
 export async function getContactByIdClient(contactId: string): Promise<Contact> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
@@ -132,11 +134,6 @@ export async function getContactByIdClient(contactId: string): Promise<Contact> 
 export async function createContactClient(
   request: CreateContactRequest,
 ): Promise<{ contactId: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   // O API só aceita campos básicos no create, emails e phones são adicionados separadamente
   const createRequest = {
     firstName: request.firstName,
@@ -154,10 +151,7 @@ export async function createContactClient(
   const res = await fetch(`${apiBase}/api/contacts`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(createRequest),
   });
 
@@ -175,10 +169,7 @@ export async function createContactClient(
           const emailRes = await fetch(`${apiBase}/api/contacts/${result.contactId}/emails`, {
             method: "POST",
             credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-TOKEN": session.csrfToken,
-            },
+            headers: await getAuthorizedHeaders(),
             body: JSON.stringify({ email: trimmedEmail }),
           });
 
@@ -206,10 +197,7 @@ export async function createContactClient(
           const phoneRes = await fetch(`${apiBase}/api/contacts/${result.contactId}/phones`, {
             method: "POST",
             credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-TOKEN": session.csrfToken,
-            },
+            headers: await getAuthorizedHeaders(),
             body: JSON.stringify({ phone: trimmedPhone }),
           });
 
@@ -251,19 +239,11 @@ export async function addContactEmailClient(
   contactId: string,
   email: string,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}/emails`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({ email: email.trim() }),
   });
 
@@ -277,19 +257,11 @@ export async function addContactPhoneClient(
   contactId: string,
   phone: string,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}/phones`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({ phone: phone.trim() }),
   });
 
@@ -372,11 +344,6 @@ export async function updateContactClient(
   contactId: string,
   request: UpdateContactRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   // Transform UpdateContactRequest to match backend format
   const updateRequest = {
     firstName: request.firstName,
@@ -394,10 +361,7 @@ export async function updateContactClient(
   const res = await fetch(`${apiBase}/api/contacts/${contactId}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(updateRequest),
   });
 
@@ -411,11 +375,6 @@ export async function addRelationshipClient(
   contactId: string,
   request: AddContactRelationshipRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   // Validar que os IDs estão presentes e são válidos
   if (!contactId || contactId.trim() === "") {
     throw new Error("ID do contato de origem é obrigatório");
@@ -453,10 +412,7 @@ export async function addRelationshipClient(
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(backendRequest),
   });
 
@@ -472,18 +428,11 @@ export async function addRelationshipClient(
  * Deleta um relacionamento (client-side).
  */
 export async function deleteRelationshipClient(relationshipId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/relationships/${relationshipId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   // Endpoint retorna 204 No Content quando bem-sucedido
@@ -498,19 +447,11 @@ export async function deleteRelationshipClient(relationshipId: string): Promise<
  * Deleta um contato (client-side).
  */
 export async function deleteContactClient(contactId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   // Endpoint retorna 204 No Content quando bem-sucedido
@@ -562,11 +503,6 @@ type RawNetworkGraphResponse = {
 }
 
 export async function getNetworkGraphClient(maxDepth: number = 2): Promise<NetworkGraph> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const queryParams = new URLSearchParams();
   if (maxDepth) queryParams.set("maxDepth", maxDepth.toString());
@@ -576,10 +512,7 @@ export async function getNetworkGraphClient(maxDepth: number = 2): Promise<Netwo
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   await throwIfErrorResponse(res);
