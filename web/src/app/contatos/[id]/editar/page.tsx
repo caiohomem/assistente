@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getContactByIdClient } from "@/lib/api/contactsApiClient";
 import { EditarContatoClient } from "./EditarContatoClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function EditarContatoPage() {
+  const { isLoaded, isSignedIn } = useAuth();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const contactId = params?.id;
@@ -20,18 +21,17 @@ export default function EditarContatoPage() {
   const [contact, setContact] = useState<Awaited<ReturnType<typeof getContactByIdClient>> | null>(null);
 
   useEffect(() => {
+    if (!isLoaded || !contactId) return;
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent(`/contatos/${contactId}/editar`)}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
-      if (!contactId) return;
-
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/contatos/${contactId}/editar`)}`;
-          return;
-        }
-
         const c = await getContactByIdClient(contactId);
         if (!isMounted) return;
         setContact(c);
@@ -48,7 +48,7 @@ export default function EditarContatoPage() {
     return () => {
       isMounted = false;
     };
-  }, [contactId]);
+  }, [contactId, isLoaded, isSignedIn, router]);
 
   if (!contactId) return null;
 
@@ -152,4 +152,3 @@ export default function EditarContatoPage() {
     </LayoutWrapper>
   );
 }
-

@@ -1,4 +1,4 @@
-import { getBffSession, bffGetJson, bffPostJson } from "../bff";
+import { bffGetJson, bffPostJson } from "../bff";
 import type {
   CreditBalance,
   CreditTransaction,
@@ -6,24 +6,16 @@ import type {
 } from "../types/credit";
 import type { CreditPackage } from "../types/plan";
 
-async function getCsrfToken(): Promise<string> {
-  const session = await getBffSession();
-  return session.csrfToken;
-}
-
 export async function getCreditBalance(): Promise<CreditBalance> {
-  const csrfToken = await getCsrfToken();
-  return bffGetJson<CreditBalance>("/api/credits/balance", csrfToken);
+  return bffGetJson<CreditBalance>("/api/credits/balance");
 }
 
 export async function listCreditTransactions(): Promise<CreditTransaction[]> {
-  const csrfToken = await getCsrfToken();
-  return bffGetJson<CreditTransaction[]>("/api/credits/transactions", csrfToken);
+  return bffGetJson<CreditTransaction[]>("/api/credits/transactions");
 }
 
 export async function grantCredits(request: GrantCreditsRequest): Promise<void> {
-  const csrfToken = await getCsrfToken();
-  return bffPostJson<void>("/api/credits/grant", request, csrfToken);
+  return bffPostJson<void>("/api/credits/grant", request, "");
 }
 
 /**
@@ -60,11 +52,9 @@ export interface PurchaseCreditPackageResult {
 export async function purchaseCreditPackage(
   request: PurchaseCreditPackageRequest
 ): Promise<PurchaseCreditPackageResult> {
-  const csrfToken = await getCsrfToken();
   return bffPostJson<PurchaseCreditPackageResult>(
     "/api/credits/purchase",
     { packageId: request.packageId },
-    csrfToken
+    ""
   );
 }
-

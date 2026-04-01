@@ -6,59 +6,54 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { PricingCard } from "@/components/PricingCard";
 import { listPlans } from "@/lib/api/plansApi";
-// import { listCreditPackages } from "@/lib/api/creditsApi"; // Para uso futuro
 import type { Plan } from "@/lib/types/plan";
 import { useEffect, useState, useMemo } from "react";
+
+type TranslatedPlan = {
+  name: string;
+  price: string;
+  features: string[];
+  highlighted?: boolean;
+};
+
+type FeatureItem = {
+  title: string;
+  description: string;
+};
 
 
 export default function Home() {
   const t = useTranslations('landing');
-  const [displayPlans, setDisplayPlans] = useState<Array<{
-    name: string;
-    price: string;
-    features: string[];
-    highlighted?: boolean;
-  }>>([]);
+  const [backendPlans, setBackendPlans] = useState<Plan[]>([]);
   const [hasError, setHasError] = useState(false);
   
   // Obter planos traduzidos do JSON
-  const translatedPlans = useMemo(() => {
-    return (t.raw('pricing.plans') as any[] || []) as Array<{
-      name: string;
-      price: string;
-      features: string[];
-      highlighted?: boolean;
-    }>;
+  const translatedPlans = useMemo<TranslatedPlan[]>(() => {
+    const raw = t.raw('pricing.plans');
+    if (!Array.isArray(raw)) return [];
+    return raw.map((plan) => ({
+      name: String(plan?.name ?? ""),
+      price: String(plan?.price ?? ""),
+      features: Array.isArray(plan?.features) ? plan.features.map((feature: unknown) => String(feature ?? "")) : [],
+      highlighted: plan?.highlighted ?? false,
+    }));
   }, [t]);
-  
-  // Inicializar com planos traduzidos
-  useEffect(() => {
-    if (translatedPlans.length > 0) {
-      setDisplayPlans(translatedPlans);
-    }
-  }, [translatedPlans]);
-  
-  // Opcional: Buscar planos do backend para informações dinâmicas (como highlighted)
+
+  const featureItems = useMemo<FeatureItem[]>(() => {
+    const raw = t.raw('features.items');
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item) => ({
+      title: String(item?.title ?? ""),
+      description: String(item?.description ?? ""),
+    }));
+  }, [t]);
+
   useEffect(() => {
     async function fetchPlans() {
       try {
         const plans = await listPlans();
-        if (plans.length > 0 && translatedPlans.length > 0) {
-          // Combinar: manter traduções, atualizar apenas highlighted do backend
-          const combinedPlans = translatedPlans.map((translatedPlan, index) => {
-            const backendPlan = plans[index] || plans.find(p => 
-              p.name.toLowerCase() === translatedPlan.name.toLowerCase()
-            );
-            
-            return {
-              ...translatedPlan,
-              highlighted: backendPlan?.highlighted ?? translatedPlan.highlighted ?? false,
-            };
-          });
-          
-          if (combinedPlans.length > 0) {
-            setDisplayPlans(combinedPlans);
-          }
+        if (plans.length > 0) {
+          setBackendPlans(plans);
         }
       } catch (error) {
         console.error("Erro ao buscar planos/créditos:", error);
@@ -67,7 +62,23 @@ export default function Home() {
       }
     }
     fetchPlans();
-  }, [translatedPlans]);
+  }, []);
+
+  const displayPlans = useMemo(() => {
+    if (!translatedPlans.length) return [];
+    if (!backendPlans.length) return translatedPlans;
+
+    return translatedPlans.map((translatedPlan) => {
+      const backendPlan = backendPlans.find(
+        (plan) => plan.name?.toLowerCase() === translatedPlan.name.toLowerCase()
+      );
+
+      return {
+        ...translatedPlan,
+        highlighted: backendPlan?.highlighted ?? translatedPlan.highlighted ?? false,
+      };
+    });
+  }, [translatedPlans, backendPlans]);
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
@@ -160,7 +171,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {(t.raw('features.items') as any[] || []).map((item: any, index: number) => (
+            {featureItems.map((item, index) => (
               <div key={index} className="relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-lg transition-all">
                 <div className="mb-4 h-12 w-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
                   <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,4 @@
 "use client"
-
-import { useState, useEffect } from "react"
 import {
   LayoutDashboard,
   Users,
@@ -8,15 +6,15 @@ import {
   Mic,
   FileText,
   Network,
-  MessageSquare,
   Settings,
   Sparkles,
-  Menu,
   X,
   Bell,
   Coins,
   Building2,
   Zap,
+  Handshake,
+  PanelsTopLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
@@ -37,6 +35,8 @@ const menuItems = [
   { id: "documents", label: "Documentos", icon: FileText, path: "/documentos" },
   { id: "reminders", label: "Lembretes", icon: Bell, path: "/automacao/lembretes" },
   { id: "workflows", label: "Workflows", icon: Zap, path: "/workflows" },
+  { id: "agreements", label: "Acordos", icon: Handshake, path: "/acordos" },
+  { id: "negotiations", label: "Negociações", icon: PanelsTopLeft, path: "/negociacoes" },
   { id: "network", label: "Rede", icon: Network, path: "/contatos/rede" },
   { id: "assistant", label: "Assistente IA", icon: Sparkles, path: "/assistente" },
   { id: "credits", label: "Créditos", icon: Coins, path: "/creditos" },
@@ -75,14 +75,15 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
       {/* Mobile overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
           onClick={onToggle}
         />
       )}
       
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-screen w-64 bg-card/80 backdrop-blur-xl border-r border-border/50 flex flex-col z-50 transition-transform duration-300 ease-in-out",
+        "fixed left-0 top-0 z-50 flex h-dvh w-[86vw] max-w-[320px] flex-col border-r border-border/50 bg-card/92 backdrop-blur-xl shadow-2xl shadow-black/30 transition-transform duration-300 ease-in-out",
+        "sm:w-72 lg:h-screen lg:w-64 lg:max-w-none lg:shadow-none",
         "lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
@@ -90,7 +91,7 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-accent/5 pointer-events-none" />
       
       {/* Logo */}
-      <div className="p-6 border-b border-border/50 relative flex items-center justify-between">
+      <div className="relative flex items-center justify-between border-b border-border/50 px-5 py-5 lg:p-6">
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => router.push("/dashboard")}>
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 transition-all duration-500 group-hover:shadow-primary/40 group-hover:scale-105">
             <Sparkles className="w-5 h-5 text-primary-foreground transition-transform duration-500 group-hover:rotate-12" />
@@ -110,7 +111,7 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 relative overflow-y-auto">
+      <nav className="relative flex-1 space-y-1 overflow-y-auto p-3 lg:p-4">
         {menuItems.map((item, index) => {
           const Icon = item.icon
           const isActive = currentActiveTab === item.id
@@ -120,7 +121,7 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
               key={item.id}
               onClick={() => handleTabChange(item)}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 relative overflow-hidden group",
+                "group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-4 py-3 text-left text-sm font-medium transition-all duration-300",
                 isActive 
                   ? "bg-primary/15 text-primary shadow-lg shadow-primary/10" 
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/80"
@@ -160,7 +161,7 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
       </nav>
 
       {/* Settings */}
-      <div className="p-4 border-t border-border/50 relative">
+      <div className="relative border-t border-border/50 p-3 lg:p-4">
         <button 
           onClick={() => router.push("/configuracoes")}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all duration-300 group"
@@ -173,4 +174,3 @@ export function Sidebar({ activeTab, onTabChange, isOpen, onToggle }: SidebarPro
     </>
   )
 }
-

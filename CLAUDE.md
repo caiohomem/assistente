@@ -125,3 +125,4 @@ PostgreSQL with EF Core. Migration scripts in `backend/scripts/`.
 
 - Code and comments: English
 - UI text and user-facing content: Portuguese (Brazil) as primary, with translations
+

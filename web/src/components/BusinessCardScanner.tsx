@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { Camera, Upload, Sparkles, Loader2, Check, X, ExternalLink, RotateCcw } from "lucide-react"
@@ -10,12 +11,11 @@ import type { CardScanResult } from "@/lib/types/capture"
 
 interface BusinessCardScannerProps {
   onFileSelect?: (file: File) => void
-  compact?: boolean
 }
 
 type ScanState = "idle" | "uploading" | "processing" | "success" | "error"
 
-export function BusinessCardScanner({ onFileSelect, compact = false }: BusinessCardScannerProps) {
+export function BusinessCardScanner({ onFileSelect }: BusinessCardScannerProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -335,4 +335,3 @@ export function BusinessCardScanner({ onFileSelect, compact = false }: BusinessC
     </div>
   )
 }
-

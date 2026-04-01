@@ -1,44 +1,45 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useLocale } from 'next-intl'
+
+const LANGUAGES = [
+  { code: 'pt-BR', flag: '🇧🇷', name: 'Português (BR)' },
+  { code: 'pt-PT', flag: '🇵🇹', name: 'Português (PT)' },
+  { code: 'en-US', flag: '🇺🇸', name: 'English' },
+  { code: 'es-ES', flag: '🇪🇸', name: 'Español' },
+  { code: 'it-IT', flag: '🇮🇹', name: 'Italiano' },
+  { code: 'fr-FR', flag: '🇫🇷', name: 'Français' },
+]
 
 export function LanguageSelector() {
   const locale = useLocale()
   const [isOpen, setIsOpen] = useState(false)
-  const [currentLocale, setCurrentLocale] = useState<string>(locale)
+  const [selectedLocale, setSelectedLocale] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [pendingLocale, setPendingLocale] = useState<string | null>(null)
 
-  const languages = [
-    { code: 'pt-BR', flag: '🇧🇷', name: 'Português (BR)' },
-    { code: 'pt-PT', flag: '🇵🇹', name: 'Português (PT)' },
-    { code: 'en-US', flag: '🇺🇸', name: 'English' },
-    { code: 'es-ES', flag: '🇪🇸', name: 'Español' },
-    { code: 'it-IT', flag: '🇮🇹', name: 'Italiano' },
-    { code: 'fr-FR', flag: '🇫🇷', name: 'Français' },
-  ]
-
-  // Sync with locale from next-intl
   useEffect(() => {
-    if (locale && languages.some(lang => lang.code === locale)) {
-      setCurrentLocale(locale)
-    }
-  }, [locale])
+    if (!pendingLocale) return
+    if (typeof document === "undefined") return
+    
+    const expires = new Date()
+    expires.setFullYear(expires.getFullYear() + 1)
+    document.cookie = `NEXT_LOCALE=${pendingLocale}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`
+    window.location.reload()
+  }, [pendingLocale])
 
-  const currentLanguage = languages.find(lang => lang.code === currentLocale) || languages[0]
+  const activeLocale = selectedLocale ?? locale
+
+  const currentLanguage = useMemo(
+    () => LANGUAGES.find(lang => lang.code === activeLocale) || LANGUAGES[0],
+    [activeLocale]
+  )
 
   const changeLanguage = (newLocale: string) => {
     setIsOpen(false)
-    setCurrentLocale(newLocale)
-    
-    // Set the cookie NEXT_LOCALE for persistence
-    const expires = new Date()
-    expires.setFullYear(expires.getFullYear() + 1)
-    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`
-    
-    // Reload the page to apply the locale change
-    // In the future, this can be replaced with next-intl routing
-    window.location.reload()
+    setSelectedLocale(newLocale)
+    setPendingLocale(newLocale)
   }
 
   // Close dropdown when clicking outside
@@ -78,19 +79,19 @@ export function LanguageSelector() {
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg shadow-primary/10 z-[9999] overflow-hidden animate-blur-in">
-          {languages.map((lang) => (
+          {LANGUAGES.map((lang) => (
             <button
               key={lang.code}
               onClick={() => changeLanguage(lang.code)}
               className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-secondary/80 transition-all duration-300 ${
-                currentLocale === lang.code 
+                activeLocale === lang.code 
                   ? 'bg-primary/20 text-primary' 
                   : 'text-foreground'
               }`}
             >
               <span className="text-xl">{lang.flag}</span>
               <span className="text-sm font-medium">{lang.name}</span>
-              {currentLocale === lang.code && (
+              {activeLocale === lang.code && (
                 <svg 
                   className="ml-auto h-4 w-4 text-primary" 
                   fill="currentColor" 
@@ -110,4 +111,3 @@ export function LanguageSelector() {
     </div>
   )
 }
-

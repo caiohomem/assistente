@@ -10,6 +10,26 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+type WindowWithWebkitAudioContext = Window &
+  typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+  };
+
+const getAudioContextConstructor = (): typeof AudioContext | undefined => {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+  const win = window as WindowWithWebkitAudioContext;
+  return win.AudioContext ?? win.webkitAudioContext;
+};
+
+const describeError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message || error.name;
+  }
+  return String(error);
+};
+
 interface AudioPlayerProps {
   noteId: string;
 }
@@ -50,9 +70,9 @@ export function AudioPlayer({ noteId }: AudioPlayerProps) {
       const blobUrl = URL.createObjectURL(blob);
       setAudioBlobUrl(blobUrl);
       return blobUrl;
-    } catch (err) {
+    } catch (error) {
       setError("Erro ao carregar áudio");
-      throw err;
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +101,12 @@ export function AudioPlayer({ noteId }: AudioPlayerProps) {
         let audioContext = audioContextRef.current;
         
         if (!audioContext) {
-          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const AudioContextConstructor = getAudioContextConstructor();
+          if (!AudioContextConstructor) {
+            console.warn("Web Audio API não está disponível neste navegador.");
+            return;
+          }
+          audioContext = new AudioContextConstructor();
         }
         
         if (audioContext.state === 'suspended') {
@@ -97,23 +122,23 @@ export function AudioPlayer({ noteId }: AudioPlayerProps) {
             source.connect(analyser);
             analyser.connect(audioContext.destination);
             analyserRef.current = analyser;
-          } catch (err: any) {
-            console.warn('Audio visualization not available:', err.message || err.name);
+          } catch (error: unknown) {
+            console.warn('Audio visualization not available:', describeError(error));
             analyserRef.current = null;
           }
         }
         
         audioContextRef.current = audioContext;
-      } catch (err: any) {
-        console.warn('Error setting up audio context for visualization:', err.message || err);
+      } catch (error: unknown) {
+        console.warn('Error setting up audio context for visualization:', describeError(error));
         audioContextRef.current = null;
         analyserRef.current = null;
       }
     };
 
     if (audio.src) {
-      setupAudioContext().catch(err => {
-        console.warn('Failed to setup audio context:', err);
+      setupAudioContext().catch((error: unknown) => {
+        console.warn('Failed to setup audio context:', describeError(error));
       });
     }
 
@@ -222,8 +247,8 @@ export function AudioPlayer({ noteId }: AudioPlayerProps) {
       const url = await loadAudio();
       if (audioRef.current && url) {
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(err => {
-            console.warn('Failed to resume AudioContext:', err);
+          audioContextRef.current.resume().catch((error: unknown) => {
+            console.warn('Failed to resume AudioContext:', describeError(error));
           });
         }
         
@@ -237,13 +262,18 @@ export function AudioPlayer({ noteId }: AudioPlayerProps) {
         
         setIsPlaying(true);
       }
-    } catch (err: any) {
-      console.error('Error playing audio:', err);
+    } catch (error: unknown) {
+      console.error('Error playing audio:', error);
       let errorMessage = "Erro ao reproduzir áudio";
-      if (err.message) {
-        errorMessage = err.message;
-      } else if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
-        errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+      if (error instanceof Error) {
+        if (error.message) {
+          errorMessage = error.message;
+        }
+        if (error.name === 'NotSupportedError' || error.name === 'NotAllowedError') {
+          errorMessage = "Reprodução de áudio não suportada. Verifique as permissões do navegador.";
+        }
+      } else if (error != null) {
+        errorMessage = String(error);
       }
       setError(errorMessage);
       setIsPlaying(false);
@@ -452,8 +482,6 @@ function PlaybackRateControl({
     </div>
   );
 }
-
-
 
 
 

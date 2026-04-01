@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -25,11 +25,7 @@ export default function DraftsPage() {
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadDrafts();
-  }, [page]);
-
-  const loadDrafts = async () => {
+  const loadDrafts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -47,7 +43,11 @@ export default function DraftsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    loadDrafts();
+  }, [loadDrafts]);
 
   const getStatusLabel = (status: DraftStatus): string => {
     switch (status) {

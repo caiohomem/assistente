@@ -100,14 +100,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   
   const [mounted, setMounted] = useState(false)
 
-  // Aplicar tema ao HTML
-  const applyTheme = useCallback((currentTheme: Theme) => {
-    if (typeof window === 'undefined') return
-    
-    const effectiveTheme = applyThemeToDOM(currentTheme)
-    setResolvedTheme(effectiveTheme)
-  }, [])
-
   // Inicializar após mount - sincronizar estado com o que o ThemeScript aplicou
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -123,16 +115,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Se houver divergência, aplicar o tema correto diretamente
     if (currentEffectiveTheme !== effectiveTheme) {
       const appliedTheme = applyThemeToDOM(savedTheme)
-      setResolvedTheme(appliedTheme)
+      queueMicrotask(() => setResolvedTheme(appliedTheme))
     } else {
-      setResolvedTheme(effectiveTheme)
+      queueMicrotask(() => setResolvedTheme(effectiveTheme))
     }
     
     // Sincronizar o estado do tema com o localStorage
-    setThemeState(savedTheme)
+    queueMicrotask(() => setThemeState(savedTheme))
     
-    setMounted(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    queueMicrotask(() => setMounted(true))
   }, []) // Executar apenas uma vez no mount
 
   // Aplicar tema quando mudar (apenas após mount)
@@ -143,7 +134,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const effectiveTheme = applyThemeToDOM(theme)
     
     // Atualizar estado
-    setResolvedTheme(effectiveTheme)
+    queueMicrotask(() => setResolvedTheme(effectiveTheme))
     
     // Salvar no localStorage
     localStorage.setItem('theme', theme)
@@ -189,7 +180,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         root.classList.remove('dark')
       }
     }
-  }, [theme])
+  }, [])
 
   // Sempre fornecer o contexto, mesmo antes do mount
   return (

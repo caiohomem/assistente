@@ -1,6 +1,7 @@
 using AssistenteExecutivo.Application.Commands.Workflow;
 using AssistenteExecutivo.Application.Interfaces;
 using AssistenteExecutivo.Application.DTOs;
+using AssistenteExecutivo.Application.Json;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Interfaces;
@@ -8,7 +9,6 @@ using AssistenteExecutivo.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace AssistenteExecutivo.Application.Handlers.Workflow;
 
@@ -66,7 +66,7 @@ public class SaveWorkflowSpecCommandHandler : IRequestHandler<SaveWorkflowSpecCo
             var spec = JsonSerializer.Deserialize<WorkflowSpecDto>(request.SpecJson, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
+                Converters = { new CaseInsensitiveJsonStringEnumConverter() }
             });
 
             if (spec == null)

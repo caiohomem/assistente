@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -33,13 +33,7 @@ export function TemplatesListClient({ initialData }: TemplatesListClientProps) {
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!initialData) {
-      loadTemplates();
-    }
-  }, [page]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -57,7 +51,13 @@ export function TemplatesListClient({ initialData }: TemplatesListClientProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    if (!initialData) {
+      loadTemplates();
+    }
+  }, [initialData, loadTemplates]);
 
   const getTypeLabel = (type: TemplateType): string => {
     switch (type) {
@@ -266,4 +266,3 @@ export function TemplatesListClient({ initialData }: TemplatesListClientProps) {
     </div>
   );
 }
-

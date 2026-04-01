@@ -1,4 +1,5 @@
 import { getApiBaseUrl, getBffSession, BffSession } from "@/lib/bff";
+import { ApiError, extractApiErrorMessage } from "./types";
 
 /**
  * Cliente HTTP para fazer requisições diretas à API (sem proxy do Next.js).
@@ -26,8 +27,8 @@ export class ApiClient {
    * Obtém o token CSRF e sessão.
    * Funciona tanto no servidor (com cookieHeader) quanto no cliente.
    */
-  private async getSession(cookieHeader?: string): Promise<BffSession> {
-    return await getBffSession(cookieHeader ? { cookieHeader } : undefined);
+  private async getSession(_cookieHeader?: string): Promise<BffSession> {
+    return await getBffSession(_cookieHeader ? { cookieHeader: _cookieHeader } : undefined);
   }
 
   /**
@@ -42,7 +43,7 @@ export class ApiClient {
       body,
       headers = {},
       requiresAuth = true,
-      requiresCsrf = true,
+      requiresCsrf = false,
       cookieHeader,
     } = options;
 
@@ -50,11 +51,21 @@ export class ApiClient {
     let csrfToken: string | undefined;
     if (requiresAuth || requiresCsrf) {
       const session = await this.getSession(cookieHeader);
-      if (requiresAuth && !session.authenticated) {
+      if (requiresAuth && (!session.authenticated || !session.accessToken)) {
         throw new Error("Não autenticado");
       }
-      if (requiresCsrf && session.csrfToken) {
-        csrfToken = session.csrfToken;
+      csrfToken = session.csrfToken;
+
+      if (session.accessToken) {
+        headers.Authorization = `Bearer ${session.accessToken}`;
+      }
+
+      if (session.user?.email) {
+        headers["X-User-Email"] = session.user.email;
+      }
+
+      if (session.user?.name) {
+        headers["X-User-Name"] = session.user.name;
       }
     }
 
@@ -93,25 +104,16 @@ export class ApiClient {
 
     // Processar resposta
     const contentType = res.headers.get("content-type") ?? "";
-    const isJson = contentType.includes("application/json");
+    const isJson = contentType.includes("application/json") || contentType.includes("application/problem+json");
     const data = isJson ? await res.json() : undefined;
 
     if (!res.ok) {
-      // Tratar 401 (não autorizado) - redirecionar para login no cliente
-      if (res.status === 401 && typeof window !== "undefined") {
-        const currentPath = window.location.pathname;
-        const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-        window.location.href = loginUrl;
-        return undefined as TResponse; // Não lançar erro para evitar loop
+      if (process.env.NODE_ENV === "development") {
+        console.log("[ApiClient] Error response:", { status: res.status, contentType, data });
       }
 
-      const message =
-        (data &&
-          typeof data === "object" &&
-          "message" in data &&
-          String((data as any).message)) ||
-        `Request failed: ${res.status}`;
-      throw new Error(message);
+      const message = extractApiErrorMessage(data) ?? `Request failed: ${res.status}`;
+      throw new ApiError(message, res.status, data);
     }
 
     // Se não há conteúdo, retornar void
@@ -204,4 +206,3 @@ export async function getApiClientForServer(cookieHeader?: string) {
     ) => client.patch<TResponse>(path, body, { ...options, cookieHeader }),
   };
 }
-

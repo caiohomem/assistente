@@ -21,13 +21,13 @@
   },
   "auth": {
     "login": "Iniciar sesión",
-    "loginDescription": "El inicio de sesión se realiza mediante Keycloak (redirección por el backend BFF).",
+    "loginDescription": "El inicio de sesión se realiza con Clerk.",
     "loginWithGoogle": "Iniciar sesión con Google (si está configurado)",
     "forgotPassword": "Olvidé mi contraseña",
     "goToProtectedPage": "Ir a página protegida",
-    "session": "Sesión (BFF)",
-    "checkSession": "Consultar /auth/session",
-    "sessionDescription": "Haga clic en \"Consultar /auth/session\" para obtener el token CSRF y el estado de autenticación.",
+    "session": "Sesión",
+    "checkSession": "Consultar sesión",
+    "sessionDescription": "Consulte el estado actual de autenticación.",
     "sessionError": "Error al consultar sesión."
   },
   "contacts": {
@@ -173,6 +173,8 @@
     "successCreating": "Relacionamiento creado con éxito",
     "cannotRelateToSelf": "No se puede crear relacionamiento consigo mismo",
     "duplicateRelationship": "Ya existe un relacionamiento con este contacto",
+    "errorLoadingTypes": "Error al cargar los tipos de relacionamiento.",
+    "noTypesAvailable": "No hay tipos disponibles. Créelos en Configuraciones.",
     "types": {
       "colleague": "Colega",
       "friend": "Amigo",
@@ -181,6 +183,30 @@
       "supplier": "Proveedor",
       "partner": "Socio",
       "other": "Otro"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Tipos de Relacionamiento",
+    "title": "Administrar tipos de relacionamiento",
+    "description": "Cree y edite las categorías que describen cómo se relacionan sus contactos.",
+    "createLabel": "Nombre del tipo",
+    "editLabel": "Editar tipo de relacionamiento",
+    "namePlaceholder": "Ej.: Mentor, Socio Estratégico...",
+    "save": "Guardar tipo",
+    "saving": "Guardando...",
+    "cancelEdit": "Cancelar edición",
+    "loading": "Cargando tipos de relacionamiento...",
+    "emptyState": "Aún no hay tipos de relacionamiento.",
+    "defaultBadge": "Predeterminado",
+    "updatedAt": "Actualizado el {date}",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "deleting": "Eliminando...",
+    "errors": {
+      "loading": "Error al cargar tipos de relacionamiento.",
+      "nameRequired": "Ingrese un nombre para el tipo.",
+      "save": "Error al guardar el tipo de relacionamiento.",
+      "delete": "Error al eliminar el tipo de relacionamiento."
     }
   },
   "errors": {

@@ -85,20 +85,33 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             {
                 hasFunctionCalls = true;
 
-                functionCalls.Add(new FunctionCallInfo
+                var callInfo = new FunctionCallInfo
                 {
                     Name = outputItem.Name,
                     Arguments = outputItem.Arguments ?? ""
-                });
+                };
+                functionCalls.Add(callInfo);
 
-                // Executar função
-                var result = await ExecuteFunctionAsync(
-                    request.OwnerUserId,
-                    outputItem.Name,
-                    outputItem.Arguments ?? "",
-                    cancellationToken);
+                string serializedResult;
+                object? executionResult;
 
-                // Adicionar o function_call original ao input (Responses API requer isso)
+                try
+                {
+                    executionResult = await ExecuteFunctionAsync(
+                        request.OwnerUserId,
+                        outputItem.Name,
+                        outputItem.Arguments ?? "",
+                        cancellationToken);
+
+                    serializedResult = SerializeFunctionResult(executionResult);
+                    callInfo.Result = TruncateForLog(serializedResult);
+                }
+                catch (Exception ex)
+                {
+                    callInfo.Error = ex.Message;
+                    throw;
+                }
+
                 inputItems.Add(new InputFunctionCall
                 {
                     CallId = outputItem.CallId ?? "",
@@ -110,7 +123,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                 inputItems.Add(new InputFunctionCallOutput
                 {
                     CallId = outputItem.CallId ?? "",
-                    Output = JsonSerializer.Serialize(result)
+                    Output = serializedResult
                 });
             }
             // Verificar se é text direto
@@ -147,17 +160,32 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                 {
                     hasFunctionCalls = true;
 
-                    functionCalls.Add(new FunctionCallInfo
+                    var callInfo = new FunctionCallInfo
                     {
                         Name = outputItem.Name,
                         Arguments = outputItem.Arguments ?? ""
-                    });
+                    };
+                    functionCalls.Add(callInfo);
 
-                    var result = await ExecuteFunctionAsync(
-                        request.OwnerUserId,
-                        outputItem.Name,
-                        outputItem.Arguments ?? "",
-                        cancellationToken);
+                    string serializedResult;
+                    object? executionResult;
+
+                    try
+                    {
+                        executionResult = await ExecuteFunctionAsync(
+                            request.OwnerUserId,
+                            outputItem.Name,
+                            outputItem.Arguments ?? "",
+                            cancellationToken);
+
+                        serializedResult = SerializeFunctionResult(executionResult);
+                        callInfo.Result = TruncateForLog(serializedResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        callInfo.Error = ex.Message;
+                        throw;
+                    }
 
                     inputItems.Add(new InputFunctionCall
                     {
@@ -169,7 +197,7 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
                     inputItems.Add(new InputFunctionCallOutput
                     {
                         CallId = outputItem.CallId ?? "",
-                        Output = JsonSerializer.Serialize(result)
+                        Output = serializedResult
                     });
                 }
                 else if (outputItem.Type == "text" && outputItem.Text != null)
@@ -208,6 +236,27 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
             Message = finalTextContent != "" ? finalTextContent : "Não foi possível gerar uma resposta.",
             FunctionCalls = functionCalls
         };
+    }
+
+    private string SerializeFunctionResult(object? result)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao serializar resultado da função para log");
+            return result?.ToString() ?? "null";
+        }
+    }
+
+    private static string TruncateForLog(string? value, int maxLength = 4000)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value ?? string.Empty;
+
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...(truncated)";
     }
 
     private async Task<OpenAIResponse> CallOpenAIAsync(
@@ -655,15 +704,28 @@ public class ProcessAssistantChatCommandHandler : IRequestHandler<ProcessAssista
 
     private async Task<object> ExecuteAddContactRelationshipAsync(Guid ownerUserId, JsonElement args, CancellationToken cancellationToken)
     {
-        if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("targetContactId", out var targetProp) || !args.TryGetProperty("type", out var typeProp))
-            throw new ArgumentException("contactId, targetContactId e type são obrigatórios");
+        if (!args.TryGetProperty("contactId", out var contactIdProp) || !args.TryGetProperty("targetContactId", out var targetProp))
+            throw new ArgumentException("contactId e targetContactId são obrigatórios");
+
+        Guid? relationshipTypeId = null;
+        if (args.TryGetProperty("relationshipTypeId", out var relationshipTypeIdProp) &&
+            Guid.TryParse(relationshipTypeIdProp.GetString(), out var parsedTypeId))
+        {
+            relationshipTypeId = parsedTypeId;
+        }
+
+        var typeValue = args.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : null;
+
+        if (!relationshipTypeId.HasValue && string.IsNullOrWhiteSpace(typeValue))
+            throw new ArgumentException("relationshipTypeId ou type são obrigatórios");
 
         var command = new AddContactRelationshipCommand
         {
             ContactId = Guid.Parse(contactIdProp.GetString() ?? ""),
             OwnerUserId = ownerUserId,
             TargetContactId = Guid.Parse(targetProp.GetString() ?? ""),
-            Type = typeProp.GetString() ?? "",
+            Type = typeValue ?? string.Empty,
+            RelationshipTypeId = relationshipTypeId,
             Description = args.TryGetProperty("description", out var descProp) ? descProp.GetString() : null,
             Strength = args.TryGetProperty("strength", out var strengthProp) ? strengthProp.GetSingle() : null,
             IsConfirmed = args.TryGetProperty("isConfirmed", out var confirmedProp) && confirmedProp.GetBoolean()

@@ -59,6 +59,51 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.ToTable("AgentConfigurations", (string)null);
                 });
 
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.AgreementParty", b =>
+                {
+                    b.Property<Guid>("PartyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("HasAccepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PartyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("PartyId");
+
+                    b.HasIndex("AgreementId");
+
+                    b.ToTable("AgreementParties", (string)null);
+                });
+
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.CaptureJob", b =>
                 {
                     b.Property<Guid>("JobId")
@@ -122,6 +167,56 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasDatabaseName("IX_CaptureJobs_Type");
 
                     b.ToTable("CaptureJobs", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.CommissionAgreement", b =>
+                {
+                    b.Property<Guid>("AgreementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ActivatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CanceledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("EscrowAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Terms")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("AgreementId");
+
+                    b.ToTable("CommissionAgreements", (string)null);
                 });
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Company", b =>
@@ -399,6 +494,115 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.ToTable("DraftDocuments", (string)null);
                 });
 
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.EscrowAccount", b =>
+                {
+                    b.Property<Guid>("EscrowAccountId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StripeConnectedAccountId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EscrowAccountId");
+
+                    b.ToTable("EscrowAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.EscrowTransaction", b =>
+                {
+                    b.Property<Guid>("TransactionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApprovalType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("DisputeReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("EscrowAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("PartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RejectedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("StripeTransferId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TransactionId");
+
+                    b.HasIndex("EscrowAccountId");
+
+                    b.ToTable("EscrowTransactions", (string)null);
+                });
+
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Letterhead", b =>
                 {
                     b.Property<Guid>("LetterheadId")
@@ -523,6 +727,131 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasDatabaseName("IX_MediaAssets_OwnerUserId");
 
                     b.ToTable("MediaAssets", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Milestone", b =>
+                {
+                    b.Property<Guid>("MilestoneId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CompletionNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReleasedPayoutTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("MilestoneId");
+
+                    b.HasIndex("AgreementId");
+
+                    b.ToTable("Milestones", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.NegotiationProposal", b =>
+                {
+                    b.Property<Guid>("ProposalId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("ProposalId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("NegotiationProposals", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.NegotiationSession", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Context")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GeneratedAgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastAiSuggestionRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("SessionId");
+
+                    b.ToTable("NegotiationSessions", (string)null);
                 });
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Note", b =>
@@ -656,6 +985,10 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("IsConfirmed");
 
+                    b.Property<Guid?>("RelationshipTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("RelationshipTypeId");
+
                     b.Property<Guid>("SourceContactId")
                         .HasColumnType("uuid")
                         .HasColumnName("SourceContactId");
@@ -676,6 +1009,8 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                     b.HasKey("RelationshipId");
 
+                    b.HasIndex("RelationshipTypeId");
+
                     b.HasIndex("SourceContactId")
                         .HasDatabaseName("IX_Relationships_SourceContactId");
 
@@ -690,6 +1025,46 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .HasDatabaseName("UQ_Relationships_SourceContactId_TargetContactId");
 
                     b.ToTable("Relationships", (string)null);
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.RelationshipType", b =>
+                {
+                    b.Property<Guid>("RelationshipTypeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("RelationshipTypeId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDefault");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("Name");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("OwnerUserId");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("UpdatedAt");
+
+                    b.HasKey("RelationshipTypeId");
+
+                    b.HasIndex("OwnerUserId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_RelationshipTypes_Owner_Name");
+
+                    b.ToTable("RelationshipTypes", (string)null);
                 });
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Reminder", b =>
@@ -1119,6 +1494,34 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.ToTable("EmailTemplates", (string)null);
                 });
 
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.AgreementParty", b =>
+                {
+                    b.HasOne("AssistenteExecutivo.Domain.Entities.CommissionAgreement", null)
+                        .WithMany("Parties")
+                        .HasForeignKey("AgreementId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Percentage", "SplitPercentage", b1 =>
+                        {
+                            b1.Property<Guid>("AgreementPartyPartyId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Value")
+                                .HasColumnType("decimal(5,2)")
+                                .HasColumnName("SplitPercentage");
+
+                            b1.HasKey("AgreementPartyPartyId");
+
+                            b1.ToTable("AgreementParties", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("AgreementPartyPartyId");
+                        });
+
+                    b.Navigation("SplitPercentage")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.CaptureJob", b =>
                 {
                     b.HasOne("AssistenteExecutivo.Domain.Entities.Contact", null)
@@ -1183,7 +1586,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("CaptureJobJobId");
 
-                            b1.ToTable("CaptureJobs");
+                            b1.ToTable("CaptureJobs", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("CaptureJobJobId");
@@ -1229,8 +1632,75 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                     b.Navigation("ExtractedTasks");
                 });
 
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.CommissionAgreement", b =>
+                {
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Money", "TotalValue", b1 =>
+                        {
+                            b1.Property<Guid>("CommissionAgreementAgreementId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("TotalValueAmount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("TotalValueCurrency");
+
+                            b1.HasKey("CommissionAgreementAgreementId");
+
+                            b1.ToTable("CommissionAgreements", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("CommissionAgreementAgreementId");
+                        });
+
+                    b.Navigation("TotalValue")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Contact", b =>
                 {
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("ContactId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("City")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("AddressCity");
+
+                            b1.Property<string>("Country")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("AddressCountry");
+
+                            b1.Property<string>("State")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("AddressState");
+
+                            b1.Property<string>("Street")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("AddressStreet");
+
+                            b1.Property<string>("ZipCode")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("AddressZipCode");
+
+                            b1.HasKey("ContactId");
+
+                            b1.ToTable("Contacts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContactId");
+                        });
+
                     b.OwnsMany("AssistenteExecutivo.Domain.ValueObjects.EmailAddress", "Emails", b1 =>
                         {
                             b1.Property<Guid>("ContactId")
@@ -1264,44 +1734,6 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                                 .HasMaxLength(100)
                                 .HasColumnType("character varying(100)")
                                 .HasColumnName("LastName");
-
-                            b1.HasKey("ContactId");
-
-                            b1.ToTable("Contacts");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ContactId");
-                        });
-
-                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Address", "Address", b1 =>
-                        {
-                            b1.Property<Guid>("ContactId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("City")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
-                                .HasColumnName("AddressCity");
-
-                            b1.Property<string>("Country")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
-                                .HasColumnName("AddressCountry");
-
-                            b1.Property<string>("State")
-                                .HasMaxLength(100)
-                                .HasColumnType("character varying(100)")
-                                .HasColumnName("AddressState");
-
-                            b1.Property<string>("Street")
-                                .HasMaxLength(200)
-                                .HasColumnType("character varying(200)")
-                                .HasColumnName("AddressStreet");
-
-                            b1.Property<string>("ZipCode")
-                                .HasMaxLength(20)
-                                .HasColumnType("character varying(20)")
-                                .HasColumnName("AddressZipCode");
 
                             b1.HasKey("ContactId");
 
@@ -1385,7 +1817,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("CreditTransactionTransactionId");
 
-                            b1.ToTable("CreditTransactions");
+                            b1.ToTable("CreditTransactions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("CreditTransactionTransactionId");
@@ -1401,6 +1833,41 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .WithOne()
                         .HasForeignKey("AssistenteExecutivo.Domain.Entities.CreditWallet", "OwnerUserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.EscrowTransaction", b =>
+                {
+                    b.HasOne("AssistenteExecutivo.Domain.Entities.EscrowAccount", null)
+                        .WithMany("Transactions")
+                        .HasForeignKey("EscrowAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Money", "Amount", b1 =>
+                        {
+                            b1.Property<Guid>("EscrowTransactionTransactionId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("Amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("Currency");
+
+                            b1.HasKey("EscrowTransactionTransactionId");
+
+                            b1.ToTable("EscrowTransactions", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("EscrowTransactionTransactionId");
+                        });
+
+                    b.Navigation("Amount")
                         .IsRequired();
                 });
 
@@ -1435,13 +1902,57 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("MediaAssetMediaId");
 
-                            b1.ToTable("MediaAssets");
+                            b1.ToTable("MediaAssets", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("MediaAssetMediaId");
                         });
 
                     b.Navigation("MediaRef")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Milestone", b =>
+                {
+                    b.HasOne("AssistenteExecutivo.Domain.Entities.CommissionAgreement", null)
+                        .WithMany("Milestones")
+                        .HasForeignKey("AgreementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("AssistenteExecutivo.Domain.ValueObjects.Money", "Value", b1 =>
+                        {
+                            b1.Property<Guid>("MilestoneId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("ValueAmount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("ValueCurrency");
+
+                            b1.HasKey("MilestoneId");
+
+                            b1.ToTable("Milestones", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("MilestoneId");
+                        });
+
+                    b.Navigation("Value")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.NegotiationProposal", b =>
+                {
+                    b.HasOne("AssistenteExecutivo.Domain.Entities.NegotiationSession", null)
+                        .WithMany("Proposals")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -1479,7 +1990,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("PlanId");
 
-                            b1.ToTable("Plans");
+                            b1.ToTable("Plans", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PlanId");
@@ -1491,6 +2002,11 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Relationship", b =>
                 {
+                    b.HasOne("AssistenteExecutivo.Domain.Entities.RelationshipType", null)
+                        .WithMany()
+                        .HasForeignKey("RelationshipTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AssistenteExecutivo.Domain.Entities.Contact", null)
                         .WithMany("Relationships")
                         .HasForeignKey("SourceContactId")
@@ -1501,6 +2017,15 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("TargetContactId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.RelationshipType", b =>
+                {
+                    b.HasOne("AssistenteExecutivo.Domain.Entities.UserProfile", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -1524,7 +2049,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("UserProfileUserId");
 
-                            b1.ToTable("UserProfiles");
+                            b1.ToTable("UserProfiles", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserProfileUserId");
@@ -1546,7 +2071,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                             b1.HasIndex("Value")
                                 .IsUnique();
 
-                            b1.ToTable("UserProfiles");
+                            b1.ToTable("UserProfiles", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserProfileUserId");
@@ -1568,7 +2093,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
                             b1.HasIndex("Value")
                                 .IsUnique();
 
-                            b1.ToTable("UserProfiles");
+                            b1.ToTable("UserProfiles", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("UserProfileUserId");
@@ -1611,7 +2136,7 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                             b1.HasKey("WorkflowId");
 
-                            b1.ToTable("Workflows");
+                            b1.ToTable("Workflows", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("WorkflowId");
@@ -1619,6 +2144,13 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
 
                     b.Navigation("Trigger")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.CommissionAgreement", b =>
+                {
+                    b.Navigation("Milestones");
+
+                    b.Navigation("Parties");
                 });
 
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.Contact", b =>
@@ -1629,6 +2161,16 @@ namespace AssistenteExecutivo.Infrastructure.Migrations
             modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.CreditWallet", b =>
                 {
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.EscrowAccount", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("AssistenteExecutivo.Domain.Entities.NegotiationSession", b =>
+                {
+                    b.Navigation("Proposals");
                 });
 #pragma warning restore 612, 618
         }

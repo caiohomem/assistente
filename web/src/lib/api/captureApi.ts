@@ -1,13 +1,27 @@
 import { getBffSession, bffGetJson, getApiBaseUrl } from "../bff";
+import { buildApiError } from "./types";
 import type {
   CaptureJob,
   UploadCardRequest,
   ProcessAudioNoteRequest,
 } from "../types/capture";
 
-async function getCsrfToken(): Promise<string> {
+async function getSession() {
   const session = await getBffSession();
-  return session.csrfToken;
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+  return session;
+}
+
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getSession();
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
 }
 
 export interface UploadCardResponse {
@@ -18,7 +32,6 @@ export interface UploadCardResponse {
 }
 
 export async function uploadCard(request: UploadCardRequest): Promise<UploadCardResponse> {
-  const csrfToken = await getCsrfToken();
   const apiBase = getApiBaseUrl();
 
   const formData = new FormData();
@@ -30,29 +43,12 @@ export async function uploadCard(request: UploadCardRequest): Promise<UploadCard
   const res = await fetch(`${apiBase}/api/capture/upload-card`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
     body: formData,
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
-      return {} as UploadCardResponse;
-    }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
   return (await res.json()) as UploadCardResponse;
@@ -89,7 +85,6 @@ export interface ProcessAudioNoteResponse {
 export async function processAudioNote(
   request: ProcessAudioNoteRequest,
 ): Promise<ProcessAudioNoteResponse> {
-  const csrfToken = await getCsrfToken();
   const apiBase = getApiBaseUrl();
 
   const formData = new FormData();
@@ -99,42 +94,25 @@ export async function processAudioNote(
   const res = await fetch(`${apiBase}/api/capture/audio-note`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
     body: formData,
   });
 
   if (!res.ok) {
-    // Tratar 401 (Não autorizado) - redirecionar para login no cliente
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      // Retornar um valor padrão para evitar erro, mas nunca será usado pois redireciona
-      return {} as ProcessAudioNoteResponse;
-    }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
   return (await res.json()) as ProcessAudioNoteResponse;
 }
 
 export async function getCaptureJobById(id: string): Promise<CaptureJob> {
-  const csrfToken = await getCsrfToken();
-  return bffGetJson<CaptureJob>(`/api/capture/jobs/${id}`, csrfToken);
+  await getSession();
+  return bffGetJson<CaptureJob>(`/api/capture/jobs/${id}`);
 }
 
 export async function listCaptureJobs(): Promise<CaptureJob[]> {
-  const csrfToken = await getCsrfToken();
-  return bffGetJson<CaptureJob[]>("/api/capture/jobs", csrfToken);
+  await getSession();
+  return bffGetJson<CaptureJob[]>("/api/capture/jobs");
 }
 
 export interface TranscribeAudioResponse {
@@ -144,7 +122,6 @@ export interface TranscribeAudioResponse {
 }
 
 export async function transcribeAudio(file: File): Promise<TranscribeAudioResponse> {
-  const csrfToken = await getCsrfToken();
   const apiBase = getApiBaseUrl();
 
   const formData = new FormData();
@@ -153,29 +130,13 @@ export async function transcribeAudio(file: File): Promise<TranscribeAudioRespon
   const res = await fetch(`${apiBase}/api/capture/transcribe-audio`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
     body: formData,
   });
 
   if (!res.ok) {
-    if (res.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      const loginUrl = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-      window.location.href = loginUrl;
-      return {} as TranscribeAudioResponse;
-    }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw await buildApiError(res);
   }
 
   return (await res.json()) as TranscribeAudioResponse;
 }
-

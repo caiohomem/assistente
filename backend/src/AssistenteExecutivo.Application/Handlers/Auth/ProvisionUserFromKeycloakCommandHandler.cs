@@ -1,5 +1,6 @@
 using AssistenteExecutivo.Application.Commands.Auth;
 using AssistenteExecutivo.Application.Interfaces;
+using AssistenteExecutivo.Domain.Constants;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Exceptions;
@@ -16,17 +17,20 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly ILogger<ProvisionUserFromKeycloakCommandHandler> _logger;
+    private readonly IRelationshipTypeRepository _relationshipTypeRepository;
 
     public ProvisionUserFromKeycloakCommandHandler(
         IUserProfileRepository userProfileRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        ILogger<ProvisionUserFromKeycloakCommandHandler> logger)
+        ILogger<ProvisionUserFromKeycloakCommandHandler> logger,
+        IRelationshipTypeRepository relationshipTypeRepository)
     {
         _userProfileRepository = userProfileRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _logger = logger;
+        _relationshipTypeRepository = relationshipTypeRepository;
     }
 
     public async Task<ProvisionUserFromKeycloakResult> Handle(ProvisionUserFromKeycloakCommand request, CancellationToken cancellationToken)
@@ -72,6 +76,8 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
 
             await _userProfileRepository.AddAsync(userProfile, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await EnsureDefaultRelationshipTypesAsync(userId, cancellationToken);
 
             _logger.LogInformation(
                 "UserProfile criado com sucesso para {Email} (UserId={UserId}, KeycloakSubject={KeycloakSubject})",
@@ -132,7 +138,19 @@ public class ProvisionUserFromKeycloakCommandHandler : IRequestHandler<Provision
             Email = email.Value
         };
     }
+
+    private async Task EnsureDefaultRelationshipTypesAsync(Guid ownerUserId, CancellationToken cancellationToken)
+    {
+        var existing = await _relationshipTypeRepository.GetByOwnerAsync(ownerUserId, cancellationToken);
+        if (existing.Count > 0)
+            return;
+
+        var defaults = RelationshipTypeDefaults.Names
+            .Select(name => new RelationshipType(Guid.NewGuid(), ownerUserId, name, _clock, isDefault: true))
+            .ToList();
+
+        await _relationshipTypeRepository.AddRangeAsync(defaults, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
 }
-
-
 

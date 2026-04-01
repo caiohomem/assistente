@@ -1,6 +1,6 @@
 "use client";
 
-import { getApiBaseUrl } from "@/lib/bff";
+import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 
 export interface AgentConfiguration {
   configurationId: string;
@@ -17,6 +17,20 @@ export interface UpdateAgentConfigurationRequest {
   workflowPrompt?: string;
 }
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 /**
  * Obtém a configuração atual do agente.
  */
@@ -27,9 +41,7 @@ export async function getAgentConfiguration(): Promise<AgentConfiguration> {
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -54,9 +66,7 @@ export async function updateAgentConfiguration(
   const res = await fetch(path, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request),
   });
 
@@ -66,7 +76,5 @@ export async function updateAgentConfiguration(
 
   return res.json();
 }
-
-
 
 

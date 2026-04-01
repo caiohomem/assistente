@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode, useState } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import { Sidebar } from "./Sidebar"
 import { Header } from "./Header"
 import { Menu } from "lucide-react"
@@ -17,8 +17,20 @@ interface LayoutWrapperProps {
 export function LayoutWrapper({ children, title, subtitle, activeTab }: LayoutWrapperProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return
+    }
+
+    document.body.style.overflow = sidebarOpen ? "hidden" : ""
+
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [sidebarOpen])
+
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Animated background */}
       <div className="fixed inset-0 pointer-events-none">
         {/* Primary gradient */}
@@ -44,21 +56,21 @@ export function LayoutWrapper({ children, title, subtitle, activeTab }: LayoutWr
       
       <Sidebar activeTab={activeTab} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       
-      <main className="lg:ml-64 p-4 lg:p-8 relative min-h-screen">
+      <main className="relative min-h-screen px-4 pb-6 pt-20 lg:ml-64 lg:p-8">
         {/* Mobile menu button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className={cn(
-            "lg:hidden fixed top-4 left-4 z-50 bg-card/80 backdrop-blur-sm border border-border/50 hover:bg-card transition-opacity duration-300",
+            "lg:hidden fixed left-4 top-4 z-[60] h-11 w-11 rounded-2xl bg-card/85 backdrop-blur-md border border-border/50 shadow-lg shadow-black/20 hover:bg-card transition-opacity duration-300",
             sidebarOpen && "opacity-0 pointer-events-none"
           )}
         >
           <Menu className="w-5 h-5" />
         </Button>
         
-        <div className="max-w-7xl mx-auto pt-12 lg:pt-0">
+        <div className="mx-auto max-w-7xl">
           <Header title={title} subtitle={subtitle} />
           {children}
         </div>
@@ -66,4 +78,3 @@ export function LayoutWrapper({ children, title, subtitle, activeTab }: LayoutWr
     </div>
   )
 }
-

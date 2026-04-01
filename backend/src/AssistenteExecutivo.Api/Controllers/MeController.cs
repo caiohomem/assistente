@@ -23,8 +23,8 @@ public sealed class MeController : ControllerBase
     }
 
     /// <summary>
-    /// Minimal protected endpoint for mobile clients.
-    /// Requires a valid Keycloak access_token as Bearer token.
+    /// Minimal protected endpoint for clients autenticados.
+    /// Requires a valid Bearer token.
     /// </summary>
     [HttpGet("me")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -52,11 +52,9 @@ public sealed class MeController : ControllerBase
         var authHeader = Request.Headers.Authorization.FirstOrDefault();
         var token = authHeader?.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
 
-        var baseUrl = _config["Keycloak:BaseUrl"];
-        var realm = _config["Keycloak:Realm"] ?? "assistenteexecutivo";
-        var expectedIssuer = !string.IsNullOrWhiteSpace(baseUrl)
-            ? $"{baseUrl.TrimEnd('/')}/realms/{realm}"
-            : throw new InvalidOperationException("Keycloak:BaseUrl deve estar configurado em appsettings");
+        var authority = _config["Clerk:Authority"]
+            ?? throw new InvalidOperationException("Clerk:Authority deve estar configurado em appsettings");
+        var expectedIssuer = authority.TrimEnd('/');
 
         string? tokenIssuer = null;
         string? tokenAudience = null;
@@ -76,8 +74,7 @@ public sealed class MeController : ControllerBase
         {
             config = new
             {
-                keycloak_BaseUrl = baseUrl,
-                keycloak_Realm = realm,
+                clerk_Authority = authority,
                 expectedIssuer
             },
             token = new
@@ -113,5 +110,4 @@ public sealed class MeController : ControllerBase
         return NoContent();
     }
 }
-
 

@@ -10,8 +10,9 @@ public interface IRelationshipRepository
     Task AddAsync(Relationship relationship, CancellationToken cancellationToken = default);
     Task UpdateAsync(Relationship relationship, CancellationToken cancellationToken = default);
     Task DeleteAsync(Relationship relationship, CancellationToken cancellationToken = default);
+    Task UpdateRelationshipTypeNameAsync(Guid relationshipTypeId, string typeName, CancellationToken cancellationToken = default);
+    Task RemoveRelationshipTypeReferenceAsync(Guid relationshipTypeId, CancellationToken cancellationToken = default);
 }
-
 
 
 

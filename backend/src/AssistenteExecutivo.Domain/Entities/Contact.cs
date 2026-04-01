@@ -165,7 +165,8 @@ public class Contact
         string? description,
         IClock clock,
         float? strength = null,
-        bool? isConfirmed = null)
+        bool? isConfirmed = null,
+        Guid? relationshipTypeId = null)
     {
         if (IsDeleted)
             throw new DomainException("Domain:ContatoDeletadoNaoPodeTerRelacionamentos");
@@ -173,7 +174,7 @@ public class Contact
         if (_relationships.Any(r => r.TargetContactId == targetContactId && r.SourceContactId == ContactId))
             throw new DomainException("Domain:RelationshipJaExiste");
 
-        var relationship = new Relationship(relationshipId, ContactId, targetContactId, type, description);
+        var relationship = new Relationship(relationshipId, ContactId, targetContactId, type, description, relationshipTypeId);
         
         if (strength.HasValue)
         {

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { listLetterheadsClient, deleteLetterheadClient, type Letterhead, type ListLetterheadsResult } from "@/lib/api/automationApiClient";
+import { listLetterheadsClient, deleteLetterheadClient, type Letterhead } from "@/lib/api/automationApiClient";
 import { NovoPapelTimbradoClient } from "./novo/NovoPapelTimbradoClient";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,7 @@ export default function LetterheadsPage() {
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadLetterheads();
-  }, [page]);
-
-  const loadLetterheads = async () => {
+  const loadLetterheads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -50,7 +46,11 @@ export default function LetterheadsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    loadLetterheads();
+  }, [loadLetterheads]);
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -246,4 +246,3 @@ export default function LetterheadsPage() {
     </LayoutWrapper>
   );
 }
-

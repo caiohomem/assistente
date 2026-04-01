@@ -37,6 +37,14 @@ public class RelationshipConfiguration : IEntityTypeConfiguration<Relationship>
             .HasMaxLength(100)
             .IsRequired();
 
+        builder.Property(r => r.RelationshipTypeId)
+            .HasColumnName("RelationshipTypeId");
+
+        builder.HasOne<RelationshipType>()
+            .WithMany()
+            .HasForeignKey(r => r.RelationshipTypeId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.Property(r => r.Description)
             .HasColumnName("Description")
             .HasMaxLength(500);
@@ -67,4 +75,3 @@ public class RelationshipConfiguration : IEntityTypeConfiguration<Relationship>
             .HasDatabaseName("UQ_Relationships_SourceContactId_TargetContactId");
     }
 }
-

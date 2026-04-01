@@ -1,7 +1,8 @@
 "use client";
 
-import { Contact, CreateContactRequest, UpdateContactRequest, AddContactRelationshipRequest, Relationship, NetworkGraph } from "@/lib/types/contact";
+import { Contact, CreateContactRequest, UpdateContactRequest, AddContactRelationshipRequest, NetworkGraph } from "@/lib/types/contact";
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
+import { throwIfErrorResponse } from "./types";
 
 export interface ListContactsResult {
   contacts: Contact[];
@@ -31,6 +32,20 @@ export interface SearchContactsParams {
   pageSize?: number;
 }
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 /**
  * Lista contatos do usuário autenticado (client-side).
  */
@@ -48,20 +63,10 @@ export async function listContactsClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const data = await res.json();
   // Normalize response to camelCase
@@ -91,20 +96,10 @@ export async function searchContactsClient(
   const res = await fetch(path, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const data = await res.json();
   // Normalize response to camelCase
@@ -121,30 +116,14 @@ export async function searchContactsClient(
  * Obtém um contato por ID (client-side).
  */
 export async function getContactByIdClient(contactId: string): Promise<Contact> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   return await res.json() as Contact;
 }
@@ -155,11 +134,6 @@ export async function getContactByIdClient(contactId: string): Promise<Contact> 
 export async function createContactClient(
   request: CreateContactRequest,
 ): Promise<{ contactId: string }> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   // O API só aceita campos básicos no create, emails e phones são adicionados separadamente
   const createRequest = {
     firstName: request.firstName,
@@ -177,22 +151,11 @@ export async function createContactClient(
   const res = await fetch(`${apiBase}/api/contacts`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(createRequest),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
   const result = await res.json() as { contactId: string };
 
@@ -206,10 +169,7 @@ export async function createContactClient(
           const emailRes = await fetch(`${apiBase}/api/contacts/${result.contactId}/emails`, {
             method: "POST",
             credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-TOKEN": session.csrfToken,
-            },
+            headers: await getAuthorizedHeaders(),
             body: JSON.stringify({ email: trimmedEmail }),
           });
 
@@ -237,10 +197,7 @@ export async function createContactClient(
           const phoneRes = await fetch(`${apiBase}/api/contacts/${result.contactId}/phones`, {
             method: "POST",
             credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-TOKEN": session.csrfToken,
-            },
+            headers: await getAuthorizedHeaders(),
             body: JSON.stringify({ phone: trimmedPhone }),
           });
 
@@ -282,31 +239,15 @@ export async function addContactEmailClient(
   contactId: string,
   email: string,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}/emails`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({ email: email.trim() }),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 /**
@@ -316,31 +257,15 @@ export async function addContactPhoneClient(
   contactId: string,
   phone: string,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}/phones`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({ phone: phone.trim() }),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 /**
@@ -419,11 +344,6 @@ export async function updateContactClient(
   contactId: string,
   request: UpdateContactRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   // Transform UpdateContactRequest to match backend format
   const updateRequest = {
     firstName: request.firstName,
@@ -441,22 +361,11 @@ export async function updateContactClient(
   const res = await fetch(`${apiBase}/api/contacts/${contactId}`, {
     method: "PUT",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(updateRequest),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 /**
@@ -466,11 +375,6 @@ export async function addRelationshipClient(
   contactId: string,
   request: AddContactRelationshipRequest,
 ): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   // Validar que os IDs estão presentes e são válidos
   if (!contactId || contactId.trim() === "") {
     throw new Error("ID do contato de origem é obrigatório");
@@ -494,6 +398,7 @@ export async function addRelationshipClient(
   const backendRequest = {
     targetContactId: request.targetContactId,
     type: request.type,
+    relationshipTypeId: request.relationshipTypeId || null,
     description: request.description || null,
     strength: request.strength ?? null,
     isConfirmed: request.isConfirmed ?? null,
@@ -507,10 +412,7 @@ export async function addRelationshipClient(
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(backendRequest),
   });
 
@@ -519,46 +421,18 @@ export async function addRelationshipClient(
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    let data: any = undefined;
-    
-    // Tentar ler JSON apenas se o content-type indicar JSON
-    if (maybeJson) {
-      try {
-        const text = await res.text();
-        if (text && text.trim().length > 0) {
-          data = JSON.parse(text);
-        }
-      } catch (e) {
-        // Se falhar ao parsear JSON, usar mensagem padrão
-      }
-    }
-    
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 /**
  * Deleta um relacionamento (client-side).
  */
 export async function deleteRelationshipClient(relationshipId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/relationships/${relationshipId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(false),
   });
 
   // Endpoint retorna 204 No Content quando bem-sucedido
@@ -566,34 +440,18 @@ export async function deleteRelationshipClient(relationshipId: string): Promise<
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 /**
  * Deleta um contato (client-side).
  */
 export async function deleteContactClient(contactId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/contacts/${contactId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   // Endpoint retorna 204 No Content quando bem-sucedido
@@ -601,26 +459,50 @@ export async function deleteContactClient(contactId: string): Promise<void> {
     return;
   }
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 }
 
 /**
  * Obtém o grafo de relacionamentos entre contatos (client-side).
  */
-export async function getNetworkGraphClient(maxDepth: number = 2): Promise<NetworkGraph> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
+type RawNetworkNode = {
+  contactId?: string
+  ContactId?: string
+  fullName?: string
+  FullName?: string
+  company?: string
+  Company?: string
+  jobTitle?: string
+  JobTitle?: string
+  primaryEmail?: string
+  PrimaryEmail?: string
+}
 
+type RawNetworkEdge = {
+  relationshipId?: string
+  RelationshipId?: string
+  sourceContactId?: string
+  SourceContactId?: string
+  targetContactId?: string
+  TargetContactId?: string
+  type?: string
+  Type?: string
+  description?: string
+  Description?: string
+  strength?: number | null
+  Strength?: number | null
+  isConfirmed?: boolean | null
+  IsConfirmed?: boolean | null
+}
+
+type RawNetworkGraphResponse = {
+  nodes?: RawNetworkNode[]
+  Nodes?: RawNetworkNode[]
+  edges?: RawNetworkEdge[]
+  Edges?: RawNetworkEdge[]
+}
+
+export async function getNetworkGraphClient(maxDepth: number = 2): Promise<NetworkGraph> {
   const apiBase = getApiBaseUrl();
   const queryParams = new URLSearchParams();
   if (maxDepth) queryParams.set("maxDepth", maxDepth.toString());
@@ -630,39 +512,31 @@ export async function getNetworkGraphClient(maxDepth: number = 2): Promise<Netwo
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
-  if (!res.ok) {
-    const contentType = res.headers.get("content-type") ?? "";
-    const maybeJson = contentType.includes("application/json");
-    const data = maybeJson ? await res.json() : undefined;
-    const message =
-      (data && typeof data === "object" && "message" in data && String((data as any).message)) ||
-      `Request failed: ${res.status}`;
-    throw new Error(message);
-  }
+  await throwIfErrorResponse(res);
 
-  const data = await res.json();
+  const data = (await res.json()) as RawNetworkGraphResponse;
   
   // Normalize response to camelCase
+  const rawNodes = data.nodes ?? data.Nodes ?? [];
+  const rawEdges = data.edges ?? data.Edges ?? [];
+
   return {
-    nodes: (data.nodes || data.Nodes || []).map((n: any) => ({
-      contactId: n.contactId || n.ContactId,
-      fullName: n.fullName || n.FullName,
-      company: n.company || n.Company,
-      jobTitle: n.jobTitle || n.JobTitle,
-      primaryEmail: n.primaryEmail || n.PrimaryEmail,
+    nodes: rawNodes.map((n: RawNetworkNode) => ({
+      contactId: n.contactId ?? n.ContactId ?? "",
+      fullName: n.fullName ?? n.FullName ?? "",
+      company: n.company ?? n.Company ?? "",
+      jobTitle: n.jobTitle ?? n.JobTitle ?? "",
+      primaryEmail: n.primaryEmail ?? n.PrimaryEmail ?? "",
     })),
-    edges: (data.edges || data.Edges || []).map((e: any) => ({
-      relationshipId: e.relationshipId || e.RelationshipId,
-      sourceContactId: e.sourceContactId || e.SourceContactId,
-      targetContactId: e.targetContactId || e.TargetContactId,
-      type: e.type || e.Type,
-      description: e.description || e.Description,
+    edges: rawEdges.map((e: RawNetworkEdge) => ({
+      relationshipId: e.relationshipId ?? e.RelationshipId ?? "",
+      sourceContactId: e.sourceContactId ?? e.SourceContactId ?? "",
+      targetContactId: e.targetContactId ?? e.TargetContactId ?? "",
+      type: e.type ?? e.Type ?? "",
+      description: e.description ?? e.Description ?? "",
       strength: e.strength ?? e.Strength ?? 0,
       isConfirmed: e.isConfirmed ?? e.IsConfirmed ?? false,
     })),

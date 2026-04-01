@@ -16,6 +16,20 @@ import {
 } from "@/lib/types/workflow";
 import { getApiBaseUrl, getBffSession } from "@/lib/bff";
 
+async function getAuthorizedHeaders(contentType = true): Promise<HeadersInit> {
+  const session = await getBffSession();
+  if (!session.authenticated || !session.accessToken) {
+    throw new Error("Não autenticado");
+  }
+
+  return {
+    ...(contentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${session.accessToken}`,
+    ...(session.user?.email ? { "X-User-Email": session.user.email } : {}),
+    ...(session.user?.name ? { "X-User-Name": session.user.name } : {}),
+  };
+}
+
 // Map numeric enum values to string values
 const workflowStatusMap: Record<number | string, WorkflowStatus> = {
   1: "Draft",
@@ -71,14 +85,89 @@ function mapTriggerType(type: number | string): TriggerType {
 /**
  * Lists all workflows for the current user.
  */
+type RawWorkflowSummary = {
+  workflowId?: string
+  WorkflowId?: string
+  name?: string
+  Name?: string
+  description?: string
+  Description?: string
+  triggerType?: number | string
+  TriggerType?: number | string
+  status?: number | string
+  Status?: number | string
+  specVersion?: number
+  SpecVersion?: number
+  createdAt?: string
+  CreatedAt?: string
+  updatedAt?: string
+  UpdatedAt?: string
+}
+
+type RawWorkflow = RawWorkflowSummary & {
+  ownerUserId?: string
+  OwnerUserId?: string
+  trigger?: {
+    type?: number | string
+    cronExpression?: string
+    eventName?: string
+    configJson?: string
+  }
+  Trigger?: {
+    Type?: number | string
+    CronExpression?: string
+    EventName?: string
+    ConfigJson?: string
+  }
+  specJson?: string
+  SpecJson?: string
+  n8nWorkflowId?: string
+  N8nWorkflowId?: string
+}
+
+type RawExecutionSummary = {
+  executionId?: string
+  ExecutionId?: string
+  workflowId?: string
+  WorkflowId?: string
+  workflowName?: string
+  WorkflowName?: string
+  status?: number | string
+  Status?: number | string
+  startedAt?: string
+  StartedAt?: string
+  completedAt?: string
+  CompletedAt?: string
+}
+
+type RawExecution = RawExecutionSummary & {
+  ownerUserId?: string
+  OwnerUserId?: string
+  specVersionUsed?: number
+  SpecVersionUsed?: number
+  inputJson?: string
+  InputJson?: string
+  outputJson?: string
+  OutputJson?: string
+  n8nExecutionId?: string
+  N8nExecutionId?: string
+  errorMessage?: string
+  ErrorMessage?: string
+  currentStepIndex?: number
+  CurrentStepIndex?: number
+}
+
+type RawExecuteResponse = {
+  success?: boolean
+  executionId?: string
+  ExecutionId?: string
+  errorMessage?: string
+  message?: string
+}
+
 export async function listWorkflowsClient(
   status?: WorkflowStatus
 ): Promise<WorkflowSummary[]> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const queryParams = new URLSearchParams();
   if (status) queryParams.set("status", status);
@@ -88,10 +177,7 @@ export async function listWorkflowsClient(
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -100,15 +186,15 @@ export async function listWorkflowsClient(
   }
 
   const data = await res.json();
-  return (data || []).map((w: any) => ({
-    workflowId: w.workflowId || w.WorkflowId,
-    name: w.name || w.Name,
-    description: w.description || w.Description,
-    triggerType: mapTriggerType(w.triggerType ?? w.TriggerType),
-    status: mapWorkflowStatus(w.status ?? w.Status),
-    specVersion: w.specVersion || w.SpecVersion || 1,
-    createdAt: w.createdAt || w.CreatedAt,
-    updatedAt: w.updatedAt || w.UpdatedAt,
+  return (data || []).map((w: RawWorkflowSummary) => ({
+    workflowId: w.workflowId ?? w.WorkflowId ?? "",
+    name: w.name ?? w.Name ?? "",
+    description: w.description ?? w.Description ?? "",
+    triggerType: mapTriggerType(w.triggerType ?? w.TriggerType ?? "Manual"),
+    status: mapWorkflowStatus(w.status ?? w.Status ?? "Draft"),
+    specVersion: w.specVersion ?? w.SpecVersion ?? 1,
+    createdAt: w.createdAt ?? w.CreatedAt ?? "",
+    updatedAt: w.updatedAt ?? w.UpdatedAt ?? "",
   }));
 }
 
@@ -116,19 +202,11 @@ export async function listWorkflowsClient(
  * Gets a workflow by ID.
  */
 export async function getWorkflowByIdClient(workflowId: string): Promise<Workflow> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -136,24 +214,24 @@ export async function getWorkflowByIdClient(workflowId: string): Promise<Workflo
     throw new Error(data.message || `Request failed: ${res.status}`);
   }
 
-  const w = await res.json();
+  const w = (await res.json()) as RawWorkflow;
   return {
-    workflowId: w.workflowId || w.WorkflowId,
-    ownerUserId: w.ownerUserId || w.OwnerUserId,
-    name: w.name || w.Name,
-    description: w.description || w.Description,
+    workflowId: w.workflowId ?? w.WorkflowId ?? "",
+    ownerUserId: w.ownerUserId ?? w.OwnerUserId ?? "",
+    name: w.name ?? w.Name ?? "",
+    description: w.description ?? w.Description ?? "",
     trigger: {
-      type: mapTriggerType(w.trigger?.type ?? w.Trigger?.Type),
-      cronExpression: w.trigger?.cronExpression || w.Trigger?.CronExpression,
-      eventName: w.trigger?.eventName || w.Trigger?.EventName,
-      configJson: w.trigger?.configJson || w.Trigger?.ConfigJson,
+      type: mapTriggerType(w.trigger?.type ?? w.Trigger?.Type ?? "Manual"),
+      cronExpression: w.trigger?.cronExpression ?? w.Trigger?.CronExpression,
+      eventName: w.trigger?.eventName ?? w.Trigger?.EventName,
+      configJson: w.trigger?.configJson ?? w.Trigger?.ConfigJson,
     },
-    specJson: w.specJson || w.SpecJson || "{}",
-    specVersion: w.specVersion || w.SpecVersion || 1,
-    n8nWorkflowId: w.n8nWorkflowId || w.N8nWorkflowId,
-    status: mapWorkflowStatus(w.status ?? w.Status),
-    createdAt: w.createdAt || w.CreatedAt,
-    updatedAt: w.updatedAt || w.UpdatedAt,
+    specJson: w.specJson ?? w.SpecJson ?? "{}",
+    specVersion: w.specVersion ?? w.SpecVersion ?? 1,
+    n8nWorkflowId: w.n8nWorkflowId ?? w.N8nWorkflowId ?? "",
+    status: mapWorkflowStatus(w.status ?? w.Status ?? "Draft"),
+    createdAt: w.createdAt ?? w.CreatedAt ?? "",
+    updatedAt: w.updatedAt ?? w.UpdatedAt ?? "",
   };
 }
 
@@ -163,19 +241,11 @@ export async function getWorkflowByIdClient(workflowId: string): Promise<Workflo
 export async function createWorkflowClient(
   request: CreateWorkflowRequest
 ): Promise<CreateWorkflowResult> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify({
       specJson: request.specJson,
       activateImmediately: request.activateImmediately || false,
@@ -204,23 +274,15 @@ export async function executeWorkflowClient(
   workflowId: string,
   request?: ExecuteWorkflowRequest
 ): Promise<ExecuteWorkflowResult> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}/execute`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
     body: JSON.stringify(request || {}),
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = (await res.json().catch(() => ({}))) as RawExecuteResponse;
 
   if (!res.ok) {
     return {
@@ -230,8 +292,8 @@ export async function executeWorkflowClient(
   }
 
   return {
-    success: true,
-    executionId: data.executionId || data.ExecutionId,
+    success: data.success ?? true,
+    executionId: data.executionId ?? data.ExecutionId ?? "",
   };
 }
 
@@ -242,11 +304,6 @@ export async function listExecutionsClient(
   workflowId?: string,
   limit: number = 50
 ): Promise<WorkflowExecutionSummary[]> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const queryParams = new URLSearchParams();
   if (workflowId) queryParams.set("workflowId", workflowId);
@@ -257,10 +314,7 @@ export async function listExecutionsClient(
   const res = await fetch(url, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -269,13 +323,13 @@ export async function listExecutionsClient(
   }
 
   const data = await res.json();
-  return (data || []).map((e: any) => ({
-    executionId: e.executionId || e.ExecutionId,
-    workflowId: e.workflowId || e.WorkflowId,
-    workflowName: e.workflowName || e.WorkflowName || "Workflow",
-    status: mapExecutionStatus(e.status ?? e.Status),
-    startedAt: e.startedAt || e.StartedAt,
-    completedAt: e.completedAt || e.CompletedAt,
+  return (data || []).map((e: RawExecutionSummary) => ({
+    executionId: e.executionId ?? e.ExecutionId ?? "",
+    workflowId: e.workflowId ?? e.WorkflowId ?? "",
+    workflowName: e.workflowName ?? e.WorkflowName ?? "Workflow",
+    status: mapExecutionStatus(e.status ?? e.Status ?? "Pending"),
+    startedAt: e.startedAt ?? e.StartedAt ?? "",
+    completedAt: e.completedAt ?? e.CompletedAt ?? "",
   }));
 }
 
@@ -283,19 +337,11 @@ export async function listExecutionsClient(
  * Gets execution details by ID.
  */
 export async function getExecutionByIdClient(executionId: string): Promise<WorkflowExecution> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/executions/${executionId}`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -303,20 +349,20 @@ export async function getExecutionByIdClient(executionId: string): Promise<Workf
     throw new Error(data.message || `Request failed: ${res.status}`);
   }
 
-  const e = await res.json();
+  const e = (await res.json()) as RawExecution;
   return {
-    executionId: e.executionId || e.ExecutionId,
-    workflowId: e.workflowId || e.WorkflowId,
-    ownerUserId: e.ownerUserId || e.OwnerUserId,
-    specVersionUsed: e.specVersionUsed || e.SpecVersionUsed || 1,
-    inputJson: e.inputJson || e.InputJson,
-    outputJson: e.outputJson || e.OutputJson,
-    status: mapExecutionStatus(e.status ?? e.Status),
-    n8nExecutionId: e.n8nExecutionId || e.N8nExecutionId,
-    errorMessage: e.errorMessage || e.ErrorMessage,
-    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex,
-    startedAt: e.startedAt || e.StartedAt,
-    completedAt: e.completedAt || e.CompletedAt,
+    executionId: e.executionId ?? e.ExecutionId ?? "",
+    workflowId: e.workflowId ?? e.WorkflowId ?? "",
+    ownerUserId: e.ownerUserId ?? e.OwnerUserId ?? "",
+    specVersionUsed: e.specVersionUsed ?? e.SpecVersionUsed ?? 1,
+    inputJson: e.inputJson ?? e.InputJson,
+    outputJson: e.outputJson ?? e.OutputJson,
+    status: mapExecutionStatus(e.status ?? e.Status ?? "Pending"),
+    n8nExecutionId: e.n8nExecutionId ?? e.N8nExecutionId,
+    errorMessage: e.errorMessage ?? e.ErrorMessage,
+    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex ?? 0,
+    startedAt: e.startedAt ?? e.StartedAt ?? "",
+    completedAt: e.completedAt ?? e.CompletedAt,
   };
 }
 
@@ -324,19 +370,11 @@ export async function getExecutionByIdClient(executionId: string): Promise<Workf
  * Lists pending approval requests.
  */
 export async function getPendingApprovalsClient(): Promise<WorkflowExecution[]> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/pending-approvals`, {
     method: "GET",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok) {
@@ -345,19 +383,19 @@ export async function getPendingApprovalsClient(): Promise<WorkflowExecution[]> 
   }
 
   const data = await res.json();
-  return (data || []).map((e: any) => ({
-    executionId: e.executionId || e.ExecutionId,
-    workflowId: e.workflowId || e.WorkflowId,
-    ownerUserId: e.ownerUserId || e.OwnerUserId,
-    specVersionUsed: e.specVersionUsed || e.SpecVersionUsed || 1,
-    inputJson: e.inputJson || e.InputJson,
-    outputJson: e.outputJson || e.OutputJson,
-    status: mapExecutionStatus(e.status ?? e.Status),
-    n8nExecutionId: e.n8nExecutionId || e.N8nExecutionId,
-    errorMessage: e.errorMessage || e.ErrorMessage,
-    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex,
-    startedAt: e.startedAt || e.StartedAt,
-    completedAt: e.completedAt || e.CompletedAt,
+  return (data || []).map((e: RawExecution) => ({
+    executionId: e.executionId ?? e.ExecutionId ?? "",
+    workflowId: e.workflowId ?? e.WorkflowId ?? "",
+    ownerUserId: e.ownerUserId ?? e.OwnerUserId ?? "",
+    specVersionUsed: e.specVersionUsed ?? e.SpecVersionUsed ?? 1,
+    inputJson: e.inputJson ?? e.InputJson,
+    outputJson: e.outputJson ?? e.OutputJson,
+    status: mapExecutionStatus(e.status ?? e.Status ?? "Pending"),
+    n8nExecutionId: e.n8nExecutionId ?? e.N8nExecutionId,
+    errorMessage: e.errorMessage ?? e.ErrorMessage,
+    currentStepIndex: e.currentStepIndex ?? e.CurrentStepIndex ?? 0,
+    startedAt: e.startedAt ?? e.StartedAt ?? "",
+    completedAt: e.completedAt ?? e.CompletedAt,
   }));
 }
 
@@ -365,22 +403,14 @@ export async function getPendingApprovalsClient(): Promise<WorkflowExecution[]> 
  * Approves a pending workflow step.
  */
 export async function approveStepClient(executionId: string): Promise<ApproveStepResult> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/executions/${executionId}/approve`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = (await res.json().catch(() => ({}))) as RawExecuteResponse;
 
   if (!res.ok) {
     return {
@@ -389,26 +419,18 @@ export async function approveStepClient(executionId: string): Promise<ApproveSte
     };
   }
 
-  return { success: true };
+  return { success: data.success ?? true };
 }
 
 /**
  * Activates a workflow.
  */
 export async function activateWorkflowClient(workflowId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}/activate`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok && res.status !== 204) {
@@ -421,19 +443,11 @@ export async function activateWorkflowClient(workflowId: string): Promise<void> 
  * Pauses a workflow.
  */
 export async function pauseWorkflowClient(workflowId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}/pause`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok && res.status !== 204) {
@@ -446,19 +460,11 @@ export async function pauseWorkflowClient(workflowId: string): Promise<void> {
  * Archives (soft deletes) a workflow.
  */
 export async function archiveWorkflowClient(workflowId: string): Promise<void> {
-  const session = await getBffSession();
-  if (!session.authenticated || !session.csrfToken) {
-    throw new Error("Não autenticado");
-  }
-
   const apiBase = getApiBaseUrl();
   const res = await fetch(`${apiBase}/api/workflows/${workflowId}`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-TOKEN": session.csrfToken,
-    },
+    headers: await getAuthorizedHeaders(),
   });
 
   if (!res.ok && res.status !== 204) {

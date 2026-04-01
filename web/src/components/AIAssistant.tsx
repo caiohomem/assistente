@@ -1,12 +1,12 @@
 "use client"
 
-import { Send, Sparkles, Mic, Paperclip, Loader2, StopCircle, Image as ImageIcon, Upload, Bug, X, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Send, Sparkles, Mic, Paperclip, Loader2, StopCircle, Upload, Bug, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { uploadCard, processAudioNote, getCaptureJobById, transcribeAudio } from "@/lib/api/captureApi";
-import type { UploadCardResponse, ProcessAudioNoteResponse } from "@/lib/api/captureApi";
+import { uploadCard, getCaptureJobById, transcribeAudio } from "@/lib/api/captureApi";
+import type { UploadCardResponse } from "@/lib/api/captureApi";
 
 interface Message {
   id: string;
@@ -21,8 +21,21 @@ interface DebugLog {
   timestamp: string;
   type: "request" | "response" | "error" | "info" | "ai-adapted";
   title: string;
-  data: any;
+  data: unknown;
   expanded?: boolean;
+}
+
+interface AssistantResponsePayload {
+  message?: string;
+  Message?: string;
+  error?: string;
+  functionCalls?: Array<{
+    name: string;
+    arguments: string;
+    result?: string;
+    error?: string | null;
+  }>;
+  [key: string]: unknown;
 }
 // ============================================================
 
@@ -49,7 +62,7 @@ export function AIAssistant() {
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
   const [debugPanelMinimized, setDebugPanelMinimized] = useState(false);
 
-  const addDebugLog = (type: DebugLog["type"], title: string, data: any) => {
+  const addDebugLog = (type: DebugLog["type"], title: string, data: unknown) => {
     const log: DebugLog = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
@@ -69,6 +82,15 @@ export function AIAssistant() {
 
   const clearDebugLogs = () => {
     setDebugLogs([]);
+  };
+
+  const parseJsonSafely = (value: unknown) => {
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
   };
 
   const getLogTypeColor = (type: DebugLog["type"]) => {
@@ -510,10 +532,10 @@ export function AIAssistant() {
       });
 
       const responseText = await response.text();
-      let data: any;
+      let data: AssistantResponsePayload;
 
       try {
-        data = JSON.parse(responseText);
+        data = JSON.parse(responseText) as AssistantResponsePayload;
       } catch (parseError) {
         // DEBUG: Log parse error
         addDebugLog("error", "JSON Parse Error", {
@@ -530,6 +552,22 @@ export function AIAssistant() {
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
         body: data,
+      });
+
+      const functionCalls = Array.isArray(data.functionCalls) ? data.functionCalls : [];
+      functionCalls.forEach((call, index) => {
+        const parsedArgs = parseJsonSafely(call.arguments);
+        const parsedResult = parseJsonSafely(call.result);
+        const logType: DebugLog["type"] =
+          call.error || (parsedResult && typeof parsedResult === "object" && (parsedResult as { success?: boolean }).success === false)
+            ? "error"
+            : "info";
+
+        addDebugLog(logType, `Function Call #${index + 1}: ${call.name}`, {
+          arguments: parsedArgs,
+          result: parsedResult,
+          error: call.error,
+        });
       });
 
       if (!response.ok) {
@@ -862,4 +900,3 @@ export function AIAssistant() {
     </div>
   );
 }
-

@@ -3,7 +3,6 @@
 import { Mail, Phone, Link as LinkIcon, Building2, Mic, Users } from "lucide-react"
 import { Button } from "./ui/button"
 import { Contact } from "@/lib/types/contact"
-import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
 interface ContactCardProps {
@@ -32,7 +31,6 @@ export function ContactCard({ contact, delay = 0 }: ContactCardProps) {
     if (diffDays === 0) {
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
       if (diffHours === 0) {
-        const diffMins = Math.floor(diffMs / (1000 * 60))
         return `Hoje, ${updated.getHours().toString().padStart(2, '0')}:${updated.getMinutes().toString().padStart(2, '0')}`
       }
       return "Hoje"
@@ -171,4 +169,3 @@ export function ContactCard({ contact, delay = 0 }: ContactCardProps) {
     </div>
   )
 }
-

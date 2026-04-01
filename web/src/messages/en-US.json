@@ -136,14 +136,14 @@
   "auth": {
     "login": "Login",
     "logout": "Logout",
-    "loginDescription": "Login is done via Keycloak (redirect through BFF backend).",
+    "loginDescription": "Login is handled by Clerk.",
     "loginWithGoogle": "Login with Google (if configured)",
     "forgotPassword": "Forgot my password",
     "goToProtectedPage": "Go to protected page",
-    "session": "Session (BFF)",
-    "checkSession": "Check /auth/session",
+    "session": "Session",
+    "checkSession": "Check session",
     "checkingSession": "Checking...",
-    "sessionDescription": "Click \"Check /auth/session\" to get the CSRF token and authentication status.",
+    "sessionDescription": "Check the current authentication status.",
     "sessionError": "Failed to check session."
   },
   "dashboard": {
@@ -190,6 +190,9 @@
     "transcriptionPromptLabel": "Transcription Prompt",
     "transcriptionPromptHint": "This prompt defines how the AI should analyze and process audio note transcriptions. The raw transcription will be automatically appended at the end.",
     "transcriptionPromptPlaceholder": "Enter the transcription prompt here...",
+    "workflowPromptLabel": "Workflow Prompt",
+    "workflowPromptHint": "This prompt guides the AI when executing automation workflows (drafts, templates, reminders, etc.). The workflow context is appended automatically.",
+    "workflowPromptPlaceholder": "Enter the workflow prompt here...",
     "promptRequired": "OCR prompt is required",
     "save": "Save",
     "saving": "Saving...",
@@ -367,6 +370,8 @@
     "successCreating": "Relationship created successfully",
     "cannotRelateToSelf": "Cannot create relationship with yourself",
     "duplicateRelationship": "Relationship with this contact already exists",
+    "errorLoadingTypes": "Error loading relationship types.",
+    "noTypesAvailable": "No types available. Create them in Settings.",
     "types": {
       "colleague": "Colleague",
       "friend": "Friend",
@@ -375,6 +380,30 @@
       "supplier": "Supplier",
       "partner": "Partner",
       "other": "Other"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Relationship Types",
+    "title": "Manage relationship types",
+    "description": "Create and edit the categories that describe how your contacts relate to each other.",
+    "createLabel": "Type name",
+    "editLabel": "Edit relationship type",
+    "namePlaceholder": "Ex: Mentor, Strategic Partner...",
+    "save": "Save type",
+    "saving": "Saving...",
+    "cancelEdit": "Cancel editing",
+    "loading": "Loading relationship types...",
+    "emptyState": "No relationship types yet.",
+    "defaultBadge": "Default",
+    "updatedAt": "Updated on {date}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "errors": {
+      "loading": "Error loading relationship types.",
+      "nameRequired": "Enter a name for the relationship type.",
+      "save": "Error saving relationship type.",
+      "delete": "Error deleting relationship type."
     }
   },
   "notes": {
@@ -452,4 +481,3 @@
     "reactivateErrorRetry": "Error reactivating user. Please try again."
   }
 }
-

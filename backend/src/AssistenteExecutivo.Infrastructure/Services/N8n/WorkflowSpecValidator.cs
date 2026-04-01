@@ -1,4 +1,5 @@
 using AssistenteExecutivo.Application.DTOs;
+using AssistenteExecutivo.Application.Json;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -35,7 +36,7 @@ public sealed class WorkflowSpecValidator : IWorkflowSpecValidator
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() }
+            Converters = { new CaseInsensitiveJsonStringEnumConverter() }
         };
     }
 

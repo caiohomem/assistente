@@ -1,10 +1,13 @@
 using AssistenteExecutivo.Application.Interfaces;
+using AssistenteExecutivo.Domain.DomainServices;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Infrastructure.Persistence;
 using AssistenteExecutivo.Infrastructure.Persistence.Repositories;
 using AssistenteExecutivo.Infrastructure.Repositories;
 using AssistenteExecutivo.Infrastructure.Services;
 using AssistenteExecutivo.Infrastructure.Services.N8n;
+using AssistenteExecutivo.Infrastructure.Services.Payments;
+using AssistenteExecutivo.Infrastructure.Services.Negotiations;
 using AssistenteExecutivo.Infrastructure.Services.OpenAI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -112,6 +115,7 @@ public static class DependencyInjection
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IContactRepository, ContactRepository>();
         services.AddScoped<IRelationshipRepository, RelationshipRepository>();
+        services.AddScoped<IRelationshipTypeRepository, RelationshipTypeRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<INoteRepository, NoteRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
@@ -126,32 +130,48 @@ public static class DependencyInjection
         services.AddScoped<ILetterheadRepository, LetterheadRepository>();
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
         services.AddScoped<IWorkflowExecutionRepository, WorkflowExecutionRepository>();
+        services.AddScoped<ICommissionAgreementRepository, CommissionAgreementRepository>();
+        services.AddScoped<IEscrowAccountRepository, EscrowAccountRepository>();
+        services.AddScoped<IMilestoneRepository, MilestoneRepository>();
+        services.AddScoped<INegotiationSessionRepository, NegotiationSessionRepository>();
+
+        services.Configure<StripeOptions>(configuration.GetSection("Stripe"));
+
+        // Domain services
+        services.AddScoped<CommissionAgreementRulesService>();
+        services.AddScoped<EscrowPayoutDomainService>();
 
         // n8n Services
         services.AddScoped<IWorkflowSpecValidator, WorkflowSpecValidator>();
         services.AddScoped<IWorkflowCompiler, WorkflowCompiler>();
         services.AddScoped<IN8nProvider, N8nProvider>();
+        services.AddScoped<INegotiationAIService, OpenAINegotiationAIService>();
+        services.AddScoped<IPaymentGateway, StripePaymentGateway>();
 
         // Unit of Work
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Services
-        var keycloakBaseUrl = configuration["Keycloak:BaseUrl"]
-            ?? throw new InvalidOperationException("Keycloak:BaseUrl não configurado em appsettings");
+        // Identity provider integrations
+        var keycloakEnabled = configuration.GetValue<bool?>("Keycloak:Enabled") ?? false;
+        var keycloakBaseUrl = configuration["Keycloak:BaseUrl"];
 
-        services.AddHttpClient<IKeycloakService, KeycloakService>(client =>
+        if (keycloakEnabled && !string.IsNullOrWhiteSpace(keycloakBaseUrl))
         {
-            client.BaseAddress = new Uri(keycloakBaseUrl);
-            client.Timeout = TimeSpan.FromMinutes(5);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-        });
+            services.AddHttpClient<IKeycloakService, KeycloakService>(client =>
+            {
+                client.BaseAddress = new Uri(keycloakBaseUrl);
+                client.Timeout = TimeSpan.FromMinutes(5);
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+            });
 
-
-        // Keycloak provisioning runs as a hosted service (singleton).
-        // Keep a single instance that can be used both as IHostedService and via the app interface.
-        services.AddSingleton<KeycloakAdminProvisioner>();
-        services.AddSingleton<IKeycloakAdminProvisioner>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
-        services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
+            services.AddSingleton<KeycloakAdminProvisioner>();
+            services.AddSingleton<IKeycloakAdminProvisioner>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
+            services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
+        }
+        else
+        {
+            services.AddScoped<IKeycloakService, DisabledKeycloakService>();
+        }
 
         services.AddHttpClient<EmailService>();
         services.AddScoped<IEmailService>(sp =>

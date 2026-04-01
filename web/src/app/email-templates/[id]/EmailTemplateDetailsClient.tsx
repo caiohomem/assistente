@@ -31,6 +31,30 @@ export function EmailTemplateDetailsClient({ template }: EmailTemplateDetailsCli
     });
   };
 
+  const previewDocument = `<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #f5f7fb;
+      }
+
+      body {
+        min-height: 100vh;
+        box-sizing: border-box;
+        padding: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    ${template.htmlBody}
+  </body>
+</html>`;
+
   return (
     <div className="space-y-6">
       {/* Informações Gerais */}
@@ -99,10 +123,12 @@ export function EmailTemplateDetailsClient({ template }: EmailTemplateDetailsCli
       {/* Preview do HTML */}
       <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm p-6">
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Preview do HTML</h3>
-        <div className="border border-zinc-200 dark:border-zinc-700 rounded-md p-4 bg-zinc-50 dark:bg-zinc-900">
-          <div
-            className="prose dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: template.htmlBody }}
+        <div className="overflow-hidden rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+          <iframe
+            title={`preview-${template.id}`}
+            srcDoc={previewDocument}
+            sandbox=""
+            className="h-[720px] w-full bg-white"
           />
         </div>
       </div>
@@ -117,4 +143,3 @@ export function EmailTemplateDetailsClient({ template }: EmailTemplateDetailsCli
     </div>
   );
 }
-

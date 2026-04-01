@@ -28,13 +28,13 @@
     "logout": "Esci",
     "forgotPassword": "Password dimenticata",
     "resetPassword": "Reimposta password",
-    "loginDescription": "L'accesso viene effettuato tramite Keycloak (reindirizzamento tramite backend BFF).",
+    "loginDescription": "L'accesso viene gestito da Clerk.",
     "loginWithGoogle": "Accedi con Google (se configurato)",
     "goToProtectedPage": "Vai alla pagina protetta",
-    "session": "Sessione (BFF)",
-    "checkSession": "Consulta /auth/session",
+    "session": "Sessione",
+    "checkSession": "Controlla sessione",
     "checkingSession": "Controllo in corso...",
-    "sessionInfo": "Fai clic su \"Consulta /auth/session\" per ottenere il token CSRF e lo stato di autenticazione.",
+    "sessionInfo": "Controlla lo stato attuale di autenticazione.",
     "sessionError": "Errore durante la consulta della sessione."
   },
   "dashboard": {
@@ -211,6 +211,8 @@
     "successCreating": "Relazione creata con successo",
     "cannotRelateToSelf": "Impossibile creare una relazione con te stesso",
     "duplicateRelationship": "Esiste già una relazione con questo contatto",
+    "errorLoadingTypes": "Errore durante il caricamento dei tipi di relazione.",
+    "noTypesAvailable": "Nessun tipo disponibile. Creali in Impostazioni.",
     "types": {
       "colleague": "Collega",
       "friend": "Amico",
@@ -219,6 +221,30 @@
       "supplier": "Fornitore",
       "partner": "Partner",
       "other": "Altro"
+    }
+  },
+  "relationshipTypes": {
+    "tabTitle": "Tipi di Relazione",
+    "title": "Gestisci i tipi di relazione",
+    "description": "Crea e modifica le categorie che descrivono come i tuoi contatti sono collegati.",
+    "createLabel": "Nome del tipo",
+    "editLabel": "Modifica tipo di relazione",
+    "namePlaceholder": "Es.: Mentore, Partner Strategico...",
+    "save": "Salva tipo",
+    "saving": "Salvataggio...",
+    "cancelEdit": "Annulla modifica",
+    "loading": "Caricamento tipi di relazione...",
+    "emptyState": "Nessun tipo di relazione ancora disponibile.",
+    "defaultBadge": "Predefinito",
+    "updatedAt": "Aggiornato il {date}",
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "deleting": "Eliminazione...",
+    "errors": {
+      "loading": "Errore durante il caricamento dei tipi di relazione.",
+      "nameRequired": "Inserisci un nome per il tipo.",
+      "save": "Errore durante il salvataggio del tipo di relazione.",
+      "delete": "Errore durante l'eliminazione del tipo di relazione."
     }
   },
   "errors": {

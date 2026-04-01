@@ -1,9 +1,11 @@
 using AssistenteExecutivo.Api.Extensions;
+using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Application.Commands.Credits;
 using AssistenteExecutivo.Application.DTOs;
 using AssistenteExecutivo.Application.Queries.Credits;
 using AssistenteExecutivo.Domain.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +13,7 @@ namespace AssistenteExecutivo.Api.Controllers;
 
 [ApiController]
 [Route("api/credits")]
-[Authorize]
+[Authorize(AuthenticationSchemes = $"{BffSessionAuthenticationDefaults.Scheme},{JwtBearerDefaults.AuthenticationScheme}")]
 public sealed class CreditsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -194,4 +196,3 @@ public sealed class CreditsController : ControllerBase
         public string? Reason { get; init; }
     }
 }
-

@@ -1,23 +1,30 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getBffSession } from "@/lib/bff"
+import { useAuth } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
 import { LayoutWrapper } from "@/components/LayoutWrapper"
 import { AIAssistant } from "@/components/AIAssistant"
 
 export default function AssistentePage() {
+  const { isLoaded, isSignedIn } = useAuth()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/assistente")}`)
+      return
+    }
+
     let isMounted = true
 
     async function check() {
       try {
-        const session = await getBffSession()
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/assistente")}`
-          return
-        }
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -27,7 +34,7 @@ export default function AssistentePage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [isLoaded, isSignedIn, router])
 
   if (loading) {
     return (
@@ -47,7 +54,6 @@ export default function AssistentePage() {
     </LayoutWrapper>
   )
 }
-
 
 
 

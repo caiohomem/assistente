@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { listTemplatesClient, deleteTemplateClient, createTemplateClient, type Template, type ListTemplatesResult } from "@/lib/api/automationApiClient";
+import { listTemplatesClient, deleteTemplateClient, type Template } from "@/lib/api/automationApiClient";
 import { TemplateType } from "@/lib/types/automation";
 import { NovoTemplateClient } from "./novo/NovoTemplateClient";
 import { ArrowLeft } from "lucide-react";
@@ -29,11 +29,7 @@ export default function TemplatesPage() {
   });
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadTemplates();
-  }, [page]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -51,7 +47,11 @@ export default function TemplatesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const getTypeLabel = (type: TemplateType): string => {
     switch (type) {
@@ -268,4 +268,3 @@ export default function TemplatesPage() {
     </LayoutWrapper>
   );
 }
-

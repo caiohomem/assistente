@@ -6,12 +6,12 @@ import type {
   UpdateNoteRequest,
 } from "../types/note";
 
-async function getCsrfToken(cookieHeader?: string): Promise<string> {
+async function getSession(cookieHeader?: string) {
   const session = await getBffSession(cookieHeader ? { cookieHeader } : undefined);
-  if (!session.authenticated || !session.csrfToken) {
+  if (!session.authenticated) {
     throw new Error("Não autenticado");
   }
-  return session.csrfToken;
+  return session;
 }
 
 export async function listNotesByContact(contactId: string): Promise<Note[]> {
@@ -21,8 +21,8 @@ export async function listNotesByContact(contactId: string): Promise<Note[]> {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const csrfToken = await getCsrfToken(cookieHeader);
-  return bffGetJson<Note[]>(`/api/contacts/${contactId}/notes`, csrfToken, cookieHeader);
+  await getSession(cookieHeader);
+  return bffGetJson<Note[]>(`/api/contacts/${contactId}/notes`, undefined, cookieHeader);
 }
 
 export async function getNoteById(id: string): Promise<Note> {
@@ -32,8 +32,8 @@ export async function getNoteById(id: string): Promise<Note> {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const csrfToken = await getCsrfToken(cookieHeader);
-  return bffGetJson<Note>(`/api/notes/${id}`, csrfToken, cookieHeader);
+  await getSession(cookieHeader);
+  return bffGetJson<Note>(`/api/notes/${id}`, undefined, cookieHeader);
 }
 
 export async function createTextNote(
@@ -46,8 +46,8 @@ export async function createTextNote(
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const csrfToken = await getCsrfToken(cookieHeader);
-  return bffPostJson<Note>(`/api/contacts/${contactId}/notes`, request, csrfToken, cookieHeader);
+  await getSession(cookieHeader);
+  return bffPostJson<Note>(`/api/contacts/${contactId}/notes`, request, "", cookieHeader);
 }
 
 export async function updateNote(
@@ -60,7 +60,6 @@ export async function updateNote(
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const csrfToken = await getCsrfToken(cookieHeader);
-  return bffPutJson<Note>(`/api/notes/${id}`, request, csrfToken, cookieHeader);
+  await getSession(cookieHeader);
+  return bffPutJson<Note>(`/api/notes/${id}`, request, "", cookieHeader);
 }
-

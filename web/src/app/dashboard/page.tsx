@@ -1,11 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { useTranslations } from 'next-intl'
-import { getCreditBalance, listCreditTransactions } from '@/lib/api/creditsApi'
+import { getCreditBalance } from '@/lib/api/creditsApi'
 import { listContactsClient } from '@/lib/api/contactsApiClient'
-import { getBffSession } from '@/lib/bff'
 import type { CreditBalance } from '@/lib/types/credit'
 import type { Contact } from '@/lib/types/contact'
 import { LayoutWrapper } from '@/components/LayoutWrapper'
@@ -26,8 +25,8 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const t = useTranslations('dashboard')
+  const { isLoaded, isSignedIn } = useAuth()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     totalContacts: 0,
@@ -40,46 +39,20 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!isSignedIn) {
+      window.location.href = `/login?returnUrl=${encodeURIComponent('/dashboard')}`
+      return
+    }
+
     let isMounted = true;
     
     async function loadDashboardData() {
       try {
-        // Verificar autenticação
-        console.log('[Dashboard] Verificando autenticação...');
-        const session = await getBffSession();
-        console.log('[Dashboard] Sessão recebida:', { 
-          authenticated: session.authenticated, 
-          hasUser: !!session.user,
-          userEmail: session.user?.email 
-        });
-        
         if (!isMounted) return;
-        
-        if (!session.authenticated) {
-          console.log('[Dashboard] Não autenticado, redirecionando para login');
-          
-          // Verificar se já estamos em um loop de redirect
-          const redirectCount = parseInt(sessionStorage.getItem('redirectCount') || '0');
-          
-          if (redirectCount > 3) {
-            console.error('[Dashboard] Loop de redirect detectado! Parando para evitar loop infinito.');
-            setError('Erro de autenticação. Por favor, limpe os cookies e tente novamente.');
-            sessionStorage.removeItem('redirectCount');
-            return;
-          }
-          
-          sessionStorage.setItem('redirectCount', (redirectCount + 1).toString());
-          
-          // Usar window.location.href ao invés de router.push para evitar loops
-          const currentPath = window.location.pathname;
-          window.location.href = `/login?returnUrl=${encodeURIComponent(currentPath)}`;
-          return;
-        }
-        
-        // Se autenticado, limpar contador de redirects
-        sessionStorage.removeItem('redirectCount');
-        
-        console.log('[Dashboard] Autenticado, carregando dados...');
 
         // Carregar dados em paralelo
         const [balanceResult, contactsResult] = await Promise.allSettled([
@@ -132,9 +105,9 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [router, t])
+  }, [isLoaded, isSignedIn, t])
 
-  if (loading) {
+  if (loading || !isLoaded) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

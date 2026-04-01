@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getBffSession } from "@/lib/bff";
+import { useAuth } from "@clerk/nextjs";
 import { listContactsClient, type ListContactsResult } from "@/lib/api/contactsApiClient";
 import { ContactsListClient } from "./ContactsListClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { ContactForm, ContactFormData } from "@/components/ContactForm";
 import { createContactClient } from "@/lib/api/contactsApiClient";
-import { ArrowLeft, Building2 } from "lucide-react";
+import { ArrowLeft, Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ContactsPage() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [loading, setLoading] = useState(true);
   const [initialData, setInitialData] = useState<ListContactsResult>({
     contacts: [],
@@ -26,16 +27,19 @@ export default function ContactsPage() {
   const companyFilter = searchParams.get("empresa") || "";
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      router.replace(`/login?returnUrl=${encodeURIComponent("/contatos")}`);
+      return;
+    }
+
     let isMounted = true;
 
     async function load() {
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent("/contatos")}`;
-          return;
-        }
-
         const data = await listContactsClient({ page: 1, pageSize: 20 });
         if (!isMounted) return;
         setInitialData(data);
@@ -50,7 +54,7 @@ export default function ContactsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isLoaded, isSignedIn, router]);
 
   const handleNewContactSubmit = async (formData: ContactFormData) => {
     try {
@@ -80,6 +84,10 @@ export default function ContactsPage() {
     router.push("/contatos");
   };
 
+  const handleOpenNewContact = () => {
+    router.push("/contatos?novo=true");
+  };
+
   if (loading) {
     return (
       <LayoutWrapper title="Contatos" subtitle="Gerencie sua rede de relacionamentos" activeTab="contacts">
@@ -97,6 +105,20 @@ export default function ContactsPage() {
   return (
     <LayoutWrapper title="Contatos" subtitle={subtitle} activeTab="contacts">
       <div className="space-y-6">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Gerencie seus contatos e crie novos registros sempre que precisar.
+          </p>
+          <Button
+            variant="glow"
+            className="gap-2 rounded-2xl"
+            onClick={handleOpenNewContact}
+          >
+            <Plus className="w-4 h-4" />
+            Novo Contato
+          </Button>
+        </div>
+
         {/* Company filter banner */}
         {companyFilter && (
           <div className="glass-card p-4 bg-primary/5 border-primary/20 flex items-center justify-between">
@@ -145,8 +167,6 @@ export default function ContactsPage() {
     </LayoutWrapper>
   );
 }
-
-
 
 
 

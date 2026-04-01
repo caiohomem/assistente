@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
 import { listRemindersClient, type ListRemindersResult } from "@/lib/api/automationApiClient";
 import { RemindersListClient } from "@/components/RemindersListClient";
@@ -10,11 +9,7 @@ export default function RemindersPage() {
   const [loading, setLoading] = useState(true);
   const [initialData, setInitialData] = useState<ListRemindersResult | undefined>(undefined);
 
-  useEffect(() => {
-    loadReminders();
-  }, []);
-
-  const loadReminders = async () => {
+  const loadReminders = useCallback(async () => {
     setLoading(true);
     try {
       const result = await listRemindersClient({
@@ -27,7 +22,11 @@ export default function RemindersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadReminders();
+  }, [loadReminders]);
 
   if (loading) {
     return (
@@ -52,4 +51,3 @@ export default function RemindersPage() {
     </LayoutWrapper>
   );
 }
-
