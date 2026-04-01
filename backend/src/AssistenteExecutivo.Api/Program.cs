@@ -606,8 +606,7 @@ try
             // Seed email templates
             await DatabaseSeeder.SeedEmailTemplatesAsync(context);
 
-            // Keycloak provisioning será feito pelo HostedService (KeycloakAdminProvisioner)
-            // Não precisa chamar manualmente aqui
+            // Nenhum provisionamento de provedor de identidade é executado no startup.
         }
         catch (Exception ex)
         {

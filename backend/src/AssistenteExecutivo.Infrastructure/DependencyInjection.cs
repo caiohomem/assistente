@@ -165,10 +165,6 @@ public static class DependencyInjection
                 client.Timeout = TimeSpan.FromMinutes(5);
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
             });
-
-            services.AddSingleton<KeycloakAdminProvisioner>();
-            services.AddSingleton<IKeycloakAdminProvisioner>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
-            services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<KeycloakAdminProvisioner>());
         }
         else
         {
