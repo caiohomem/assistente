@@ -1,47 +1,171 @@
 {
   "landing": {
     "header": {
-      "navFeatures": "Features",
+      "navProblem": "The Challenge",
+      "navSolution": "The Solution",
+      "navAi": "🚀 AI",
+      "aiPillars": "AI in every pillar",
+      "aiTechnology": "AI technologies",
+      "navProof": "Proof",
       "navPricing": "Pricing",
       "navLogin": "Login",
-      "navRegister": "Register",
       "ctaStart": "Get Started",
       "selectLanguage": "Select language"
     },
     "hero": {
-      "title": "Your Executive Assistant",
-      "titleHighlight": "Intelligent",
-      "subtitle": "Manage contacts, notes and tasks with artificial intelligence. Transform your productivity with professional tools.",
+      "title": "Your deal was ready...",
+      "titleHighlight": "until they backed out",
+      "subtitle": "Artificial intelligence powers every move. Visualize complex relationships. Execute agreements securely. Close more deals and never miss an opportunity.",
       "ctaPrimary": "Start Free",
-      "ctaSecondary": "Learn More"
+      "ctaSecondary": "Book Demo",
+      "demoSubject": "Book Demo",
+      "proof": "10,000+ deals closed • Powered by AI • Trusted by 50+ companies"
     },
-    "features": {
-      "title": "Powerful Features",
-      "subtitle": "Everything you need to manage your contacts and increase your productivity",
+    "problem": {
+      "title": "Do you face this every day?",
+      "subtitle": "Executives and managers deal with complex relationships. Without the right tools, opportunities disappear.",
       "items": [
         {
-          "title": "Contact Management",
-          "description": "Organize and manage all your professional contacts in one place"
+          "title": "Complex Relationships",
+          "description": "Multiple parties, indirect connections, hidden relationship paths. You miss opportunities because you cannot see the full network.",
+          "icon": "network"
         },
         {
-          "title": "Smart Notes",
-          "description": "Create and organize notes with automatic categorization and advanced search"
+          "title": "Repetitive Tasks",
+          "description": "Emails, documents, follow-ups, all done manually. They consume 10+ hours a week that should be spent negotiating.",
+          "icon": "clock"
         },
         {
-          "title": "Credit System",
-          "description": "Flexible usage control with credit system and detailed reports"
+          "title": "Risky Agreements",
+          "description": "No milestone tracking, no payment guarantee, no visibility into who accepted what. Real financial risk.",
+          "icon": "alert"
+        }
+      ]
+    },
+    "solution": {
+      "title": "How We Improve Your Results",
+      "subtitle": "Artificial Intelligence in every pillar: visibility, automation, and security",
+      "pillars": [
+        {
+          "title": "🧠 Intelligence (Powered by GPT-4 Vision)",
+          "description": "AI visualizes your relationship network, enriches profiles automatically, and detects risk in seconds. See your whole network. Discover paths. Identify opportunities.",
+          "benefits": [
+            "Smart graph: AI maps and suggests strategic connections",
+            "Automatic enrichment with AI: LinkedIn and public data processed",
+            "AI-powered KYC: verifies risk, fraud, and compliance automatically",
+            "Business card to contact in seconds with vision OCR"
+          ],
+          "icon": "brain"
         },
         {
-          "title": "Advanced Security",
-          "description": "Your data protected with encryption and secure authentication"
+          "title": "⚡ Automation (Powered by GPT + Whisper + TTS)",
+          "description": "AI transcribes, drafts, summarizes, and negotiates. Save 10+ hours per week. You speak, AI executes.",
+          "benefits": [
+            "Voice notes with AI: speech to summary plus structured tasks",
+            "AI drafts: personalized emails in seconds",
+            "Smart reminders: AI decides the best follow-up time",
+            "AI assistant chat that executes actions",
+            "Voice synthesis for audio responses"
+          ],
+          "icon": "zap"
         },
         {
-          "title": "Optimized Performance",
-          "description": "Fast and responsive interface for maximum productivity"
+          "title": "🛡️ Security (AI-Enhanced Trust)",
+          "description": "AI validates agreements, detects risky patterns, and suggests middle-ground terms. Close with confidence.",
+          "benefits": [
+            "AI-validated agreements with automatic legal term analysis",
+            "AI negotiation suggests middle terms based on history",
+            "AI-monitored escrow detects anomalous risk patterns",
+            "Full tracking of who accepted what, when, and why"
+          ],
+          "icon": "shield"
+        }
+      ]
+    },
+    "workflow": {
+      "title": "How It Works in Practice",
+      "subtitle": "Your workflow transformed by AI",
+      "steps": [
+        {
+          "number": "1",
+          "title": "Speak",
+          "description": "Record a voice note during the meeting. The system listens in Portuguese."
         },
         {
-          "title": "Dedicated Support",
-          "description": "Team ready to help you get the most out of the platform"
+          "number": "2",
+          "title": "AI Processes",
+          "description": "Whisper transcribes • GPT-4 summarizes • Tasks are extracted • Agreements are analyzed"
+        },
+        {
+          "number": "3",
+          "title": "You Receive",
+          "description": "Executive summary • Structured tasks • Smart reminders • Clear next steps"
+        },
+        {
+          "number": "4",
+          "title": "System Acts",
+          "description": "Contacts created • Documents drafted • Emails sent • Agreements tracked"
+        }
+      ]
+    },
+    "aiFeatures": {
+      "badge": "🚀 Powered by OpenAI & Advanced AI",
+      "title": "AI Technology That Makes the Difference",
+      "subtitle": "Not just AI. AI specialized for your workflow.",
+      "advancedTitle": "✨ Advanced Technology",
+      "advancedDescription": "Every feature uses artificial intelligence to save your time and increase your productivity.",
+      "advancedStack": "GPT-4 Vision • Whisper • Function Calling • Custom Workflows • Real-time Processing",
+      "features": [
+        {
+          "name": "Smart Assistant Chat",
+          "description": "Natural conversation in Portuguese. Executes actions such as creating contacts, updating records, and generating documents."
+        },
+        {
+          "name": "Speech-to-Text with Whisper",
+          "description": "Transcribes meeting audio in Portuguese. Automatically detects language. Up to 25MB per file."
+        },
+        {
+          "name": "Analysis with GPT-4 Vision",
+          "description": "Photograph a business card and extract name, email, phone, company, and job title with no manual typing."
+        },
+        {
+          "name": "Smart Summarization",
+          "description": "Turns raw transcription into an executive summary, tasks with deadlines, and useful context."
+        },
+        {
+          "name": "AI Agreement Generation",
+          "description": "Negotiation proposals become middle-ground AI suggestions and automatic draft agreements."
+        },
+        {
+          "name": "Text-to-Speech",
+          "description": "Audio responses for busy executives, with natural-sounding voices."
+        }
+      ]
+    },
+    "proof": {
+      "title": "Who Trusts Us",
+      "subtitle": "Executives and teams closing more deals, faster",
+      "caseStudies": [
+        {
+          "company": "TechVentures",
+          "role": "VP of Partnerships",
+          "result": "30% more deals in 90 days",
+          "quote": "The relationship graph changed how we do networking. We discovered connections we could not see before.",
+          "author": "Carlos M."
+        },
+        {
+          "company": "Consulting &Co",
+          "role": "Managing Partner",
+          "result": "10 hours saved per week",
+          "quote": "Smart reminders make sure we never miss a follow-up opportunity. Stronger relationships, less effort.",
+          "author": "Marina L."
+        },
+        {
+          "company": "Real Estate Group",
+          "role": "Operations Director",
+          "result": "100% of agreements using escrow",
+          "quote": "We close complex multi-party agreements safely. Escrow solved our trust problem.",
+          "author": "Roberto P."
         }
       ]
     },
@@ -52,49 +176,66 @@
         {
           "name": "Basic",
           "price": "$29/month",
+          "tagline": "Start here",
+          "description": "For professionals getting started",
           "features": [
             "Up to 100 contacts",
-            "500 notes",
+            "Notes & audio",
             "1,000 credits/month",
             "Email support",
-            "Regular updates"
+            "Start free for 14 days"
           ]
         },
         {
           "name": "Professional",
           "price": "$79/month",
           "highlighted": true,
+          "tagline": "Close more deals",
+          "description": "For teams that are growing",
           "features": [
             "Unlimited contacts",
-            "Unlimited notes",
+            "Agreements & escrow",
+            "Intelligence (graph, KYC)",
+            "Automation (reminders, drafts, templates)",
+            "Documents & letterheads",
             "5,000 credits/month",
-            "Priority support",
-            "Advanced features",
-            "API access"
+            "Priority support (24h)"
           ]
         },
         {
           "name": "Enterprise",
           "price": "Contact us",
+          "tagline": "Full control",
+          "description": "For companies that need power",
           "features": [
             "Everything in Professional",
+            "Custom modules",
             "Unlimited credits",
-            "24/7 support",
-            "Personalized training",
-            "Team management",
-            "Guaranteed SLA"
+            "Dedicated 24/7 support",
+            "Training included",
+            "Guaranteed SLA",
+            "Advanced team management"
           ]
         }
       ],
-      "popular": "Popular",
+      "billingNote": "per month, billed annually",
+      "customPrice": "Contact us",
       "selectPlan": "Select Plan",
-      "errorLoadingPlans": "Unable to load plans from server. Displaying default information."
+      "errorLoadingPlans": "Unable to load plans from the server. Showing default information instead.",
+      "fetchErrorLog": "Error loading plans"
+    },
+    "cta": {
+      "title": "Ready to close more deals?",
+      "subtitle": "Start free. No credit card required.",
+      "button": "Get Started Now",
+      "secondary": "Book Demo",
+      "demoSubject": "Book Demo"
     },
     "footer": {
-      "description": "Transform your productivity with professional contact and note management tools.",
+      "description": "Executive Assistant: intelligence, automation, and security for executives who close deals.",
       "product": "Product",
       "support": "Support",
-      "navFeatures": "Features",
+      "navFeatures": "Solution",
       "navPricing": "Pricing",
       "navLogin": "Login",
       "documentation": "Documentation",

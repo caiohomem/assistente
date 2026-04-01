@@ -266,99 +266,242 @@
   },
   "landing": {
     "header": {
+      "navProblem": "La sfida",
+      "navSolution": "La soluzione",
+      "navAi": "🚀 IA",
+      "aiPillars": "IA in ogni pilastro",
+      "aiTechnology": "Tecnologie IA",
+      "navProof": "Prove",
       "navFeatures": "Funzionalità",
       "navPricing": "Prezzi",
       "navLogin": "Accedi",
-      "ctaStart": "Inizia Ora",
+      "ctaStart": "Inizia ora",
       "selectLanguage": "Seleziona lingua"
     },
     "hero": {
-      "title": "Il Tuo Assistente Esecutivo",
-      "titleHighlight": "Intelligente",
-      "subtitle": "Gestisci contatti, note e attività con l'intelligenza artificiale. Trasforma la tua produttività con strumenti professionali.",
-      "ctaPrimary": "Inizia Gratis",
-      "ctaSecondary": "Scopri di Più"
+      "title": "Il tuo accordo era pronto...",
+      "titleHighlight": "finché è saltato",
+      "subtitle": "L’intelligenza artificiale potenzia ogni movimento. Visualizza relazioni complesse. Esegui accordi in sicurezza. Chiudi più accordi senza perdere opportunità.",
+      "ctaPrimary": "Inizia gratis",
+      "ctaSecondary": "Prenota Demo",
+      "demoSubject": "Prenota Demo",
+      "proof": "10.000+ accordi chiusi • Powered by AI • 50+ aziende si fidano di noi"
     },
-    "features": {
-      "title": "Funzionalità Potenti",
-      "subtitle": "Tutto ciò di cui hai bisogno per gestire i tuoi contatti e aumentare la tua produttività",
+    "problem": {
+      "title": "Affronti questo ogni giorno?",
+      "subtitle": "Dirigenti e manager gestiscono relazioni complesse. Senza gli strumenti giusti, le opportunità svaniscono.",
       "items": [
         {
-          "title": "Gestione Contatti",
-          "description": "Organizza e gestisci tutti i tuoi contatti professionali in un unico posto"
+          "title": "Relazioni complesse",
+          "description": "Più parti, connessioni indirette e percorsi nascosti. Perdi opportunità perché non vedi l’intera rete.",
+          "icon": "network"
         },
         {
-          "title": "Note Intelligenti",
-          "description": "Crea e organizza note con categorizzazione automatica e ricerca avanzata"
+          "title": "Attività ripetitive",
+          "description": "Email, documenti e follow-up manuali. Consumano oltre 10 ore a settimana.",
+          "icon": "clock"
         },
         {
-          "title": "Sistema di Crediti",
-          "description": "Controllo flessibile dell'utilizzo con sistema di crediti e report dettagliati"
+          "title": "Accordi rischiosi",
+          "description": "Nessun tracking delle milestone, nessuna garanzia di pagamento e poca visibilità sulle approvazioni.",
+          "icon": "alert"
+        }
+      ]
+    },
+    "solution": {
+      "title": "Come miglioriamo i tuoi risultati",
+      "subtitle": "Intelligenza artificiale in ogni pilastro: visibilità, automazione e sicurezza",
+      "pillars": [
+        {
+          "title": "🧠 Intelligence (Powered by GPT-4 Vision)",
+          "description": "L’IA visualizza la rete di relazioni, arricchisce i profili e rileva rischi in pochi secondi.",
+          "benefits": [
+            "Grafo intelligente",
+            "Arricchimento automatico",
+            "KYC con IA",
+            "Biglietto da visita in contatto"
+          ],
+          "icon": "brain"
         },
         {
-          "title": "Sicurezza Avanzata",
-          "description": "I tuoi dati protetti con crittografia e autenticazione sicura"
+          "title": "⚡ Automation (Powered by GPT + Whisper + TTS)",
+          "description": "L’IA trascrive, redige, riassume e negozia.",
+          "benefits": [
+            "Note vocali con IA",
+            "Bozze automatiche",
+            "Promemoria intelligenti",
+            "Assistente IA che esegue azioni"
+          ],
+          "icon": "zap"
         },
         {
-          "title": "Prestazioni Ottimizzate",
-          "description": "Interfaccia veloce e reattiva per la massima produttività"
+          "title": "🛡️ Security (AI-Enhanced Trust)",
+          "description": "L’IA valida gli accordi e rileva pattern di rischio.",
+          "benefits": [
+            "Accordi validati",
+            "Negoziazione con IA",
+            "Escrow monitorato",
+            "Tracciabilità completa"
+          ],
+          "icon": "shield"
+        }
+      ]
+    },
+    "workflow": {
+      "title": "Come funziona nella pratica",
+      "subtitle": "Il tuo flusso di lavoro trasformato dall’IA",
+      "steps": [
+        {
+          "number": "1",
+          "title": "Parla",
+          "description": "Registra una nota vocale durante la riunione."
         },
         {
-          "title": "Supporto Dedicato",
-          "description": "Team pronto ad aiutarti a sfruttare al meglio la piattaforma"
+          "number": "2",
+          "title": "L’IA elabora",
+          "description": "Whisper trascrive e GPT riassume ed estrae le attività."
+        },
+        {
+          "number": "3",
+          "title": "Ricevi",
+          "description": "Riassunto esecutivo, attività strutturate e prossimi passi."
+        },
+        {
+          "number": "4",
+          "title": "Il sistema agisce",
+          "description": "Contatti creati, documenti redatti e accordi tracciati."
+        }
+      ]
+    },
+    "aiFeatures": {
+      "badge": "🚀 Powered by OpenAI & Advanced AI",
+      "title": "La tecnologia IA che fa la differenza",
+      "subtitle": "Non solo IA. IA specializzata per il tuo workflow.",
+      "advancedTitle": "✨ Tecnologia avanzata",
+      "advancedDescription": "Ogni funzionalità usa l’intelligenza artificiale per farti risparmiare tempo.",
+      "advancedStack": "GPT-4 Vision • Whisper • Function Calling • Custom Workflows • Real-time Processing",
+      "features": [
+        {
+          "name": "Chat assistente intelligente",
+          "description": "Conversazione naturale ed esecuzione di azioni."
+        },
+        {
+          "name": "Speech-to-Text con Whisper",
+          "description": "Trascrizione automatica delle riunioni."
+        },
+        {
+          "name": "Analisi con GPT-4 Vision",
+          "description": "Estrazione automatica dei dati dai biglietti da visita."
+        },
+        {
+          "name": "Summarization intelligente",
+          "description": "Riassunti esecutivi e attività da trascrizioni."
+        },
+        {
+          "name": "Generazione accordi con IA",
+          "description": "Termini intermedi e bozze automatiche."
+        },
+        {
+          "name": "Sintesi vocale",
+          "description": "Risposte audio con voci naturali."
+        }
+      ]
+    },
+    "proof": {
+      "title": "Chi si fida di noi",
+      "subtitle": "Dirigenti e team che chiudono più accordi, più velocemente",
+      "caseStudies": [
+        {
+          "company": "TechVentures",
+          "role": "VP Partnership",
+          "result": "30% di accordi in più in 90 giorni",
+          "quote": "Il grafo delle relazioni ha cambiato il nostro networking.",
+          "author": "Carlos M."
+        },
+        {
+          "company": "Consulenza &Co",
+          "role": "Managing Partner",
+          "result": "10 ore risparmiate a settimana",
+          "quote": "I promemoria intelligenti mantengono il follow-up sempre puntuale.",
+          "author": "Marina L."
+        },
+        {
+          "company": "Real Estate Group",
+          "role": "Direttore Operativo",
+          "result": "100% degli accordi con escrow",
+          "quote": "Chiudiamo accordi complessi con molta più fiducia.",
+          "author": "Roberto P."
         }
       ]
     },
     "pricing": {
-      "title": "Piani e Prezzi",
+      "title": "Piani e prezzi",
       "subtitle": "Scegli il piano ideale per le tue esigenze",
       "plans": [
         {
           "name": "Base",
           "price": "€29/mese",
+          "tagline": "Inizia qui",
+          "description": "Per chi sta iniziando",
           "features": [
             "Fino a 100 contatti",
-            "500 note",
+            "Note e audio",
             "1.000 crediti/mese",
             "Supporto via email",
-            "Aggiornamenti regolari"
+            "14 giorni gratis"
           ]
         },
         {
           "name": "Professionale",
           "price": "€79/mese",
           "highlighted": true,
+          "tagline": "Chiudi più accordi",
+          "description": "Per team in crescita",
           "features": [
             "Contatti illimitati",
-            "Note illimitate",
+            "Accordi ed escrow",
+            "Intelligence (grafo, KYC)",
+            "Automation (promemoria, bozze, template)",
+            "Documenti e letterheads",
             "5.000 crediti/mese",
-            "Supporto prioritario",
-            "Funzionalità avanzate",
-            "Accesso API"
+            "Supporto prioritario (24h)"
           ]
         },
         {
           "name": "Aziendale",
           "price": "Su richiesta",
+          "tagline": "Controllo totale",
+          "description": "Per aziende che richiedono potenza",
           "features": [
             "Tutto del Professionale",
+            "Moduli personalizzati",
             "Crediti illimitati",
-            "Supporto 24/7",
-            "Formazione personalizzata",
-            "Gestione team",
-            "SLA garantito"
+            "Supporto dedicato 24/7",
+            "Formazione inclusa",
+            "SLA garantito",
+            "Gestione avanzata del team"
           ]
         }
       ],
+      "billingNote": "al mese, fatturato annualmente",
+      "customPrice": "Su richiesta",
       "popular": "Popolare",
-      "selectPlan": "Seleziona Piano",
-      "errorLoadingPlans": "Impossibile caricare i piani dal server. Visualizzazione delle informazioni predefinite."
+      "selectPlan": "Seleziona piano",
+      "errorLoadingPlans": "Impossibile caricare i piani dal server. Visualizzazione delle informazioni predefinite.",
+      "fetchErrorLog": "Errore durante il caricamento dei piani"
+    },
+    "cta": {
+      "title": "Pronto a chiudere più accordi?",
+      "subtitle": "Inizia gratis. Nessuna carta di credito richiesta.",
+      "button": "Inizia ora",
+      "secondary": "Prenota Demo",
+      "demoSubject": "Prenota Demo"
     },
     "footer": {
-      "description": "Trasforma la tua produttività con strumenti professionali per la gestione di contatti e note.",
+      "description": "Assistente Esecutivo: intelligenza, automazione e sicurezza per dirigenti che chiudono accordi.",
       "product": "Prodotto",
       "support": "Supporto",
-      "navFeatures": "Funzionalità",
+      "navFeatures": "Soluzione",
       "navPricing": "Prezzi",
       "navLogin": "Accedi",
       "documentation": "Documentazione",

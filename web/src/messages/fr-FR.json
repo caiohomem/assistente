@@ -193,6 +193,12 @@
   },
   "landing": {
     "header": {
+      "navProblem": "Le défi",
+      "navSolution": "La solution",
+      "navAi": "🚀 IA",
+      "aiPillars": "IA dans chaque pilier",
+      "aiTechnology": "Technologies IA",
+      "navProof": "Preuves",
       "navFeatures": "Fonctionnalités",
       "navPricing": "Tarifs",
       "navLogin": "Se connecter",
@@ -200,92 +206,229 @@
       "selectLanguage": "Sélectionner la langue"
     },
     "hero": {
-      "title": "Votre Assistant Exécutif",
-      "titleHighlight": "Intelligent",
-      "subtitle": "Gérez vos contacts, notes et tâches avec l'intelligence artificielle. Transformez votre productivité avec des outils professionnels.",
-      "ctaPrimary": "Commencer Gratuitement",
-      "ctaSecondary": "En Savoir Plus"
+      "title": "Votre accord était prêt...",
+      "titleHighlight": "jusqu’à ce qu’il échoue",
+      "subtitle": "L’intelligence artificielle renforce chaque mouvement. Visualisez des relations complexes. Exécutez des accords en toute sécurité. Concluez plus d’accords sans perdre d’opportunités.",
+      "ctaPrimary": "Commencer gratuitement",
+      "ctaSecondary": "Planifier une démo",
+      "demoSubject": "Planifier une démo",
+      "proof": "10 000+ accords conclus • Powered by AI • 50+ entreprises nous font confiance"
     },
-    "features": {
-      "title": "Fonctionnalités Puissantes",
-      "subtitle": "Tout ce dont vous avez besoin pour gérer vos contacts et augmenter votre productivité",
+    "problem": {
+      "title": "Vous vivez cela chaque jour ?",
+      "subtitle": "Les dirigeants gèrent des relations complexes. Sans les bons outils, les opportunités disparaissent.",
       "items": [
         {
-          "title": "Gestion des Contacts",
-          "description": "Organisez et gérez tous vos contacts professionnels en un seul endroit"
+          "title": "Relations complexes",
+          "description": "Parties multiples, connexions indirectes et chemins cachés. Vous perdez des opportunités faute de visibilité.",
+          "icon": "network"
         },
         {
-          "title": "Notes Intelligentes",
-          "description": "Créez et organisez des notes avec catégorisation automatique et recherche avancée"
+          "title": "Tâches répétitives",
+          "description": "Emails, documents et relances manuels. Plus de 10 heures par semaine perdues.",
+          "icon": "clock"
         },
         {
-          "title": "Système de Crédits",
-          "description": "Contrôle flexible d'utilisation avec système de crédits et rapports détaillés"
+          "title": "Accords risqués",
+          "description": "Sans suivi des jalons, sans garantie de paiement et sans visibilité sur les validations.",
+          "icon": "alert"
+        }
+      ]
+    },
+    "solution": {
+      "title": "Comment nous améliorons vos résultats",
+      "subtitle": "Intelligence artificielle dans chaque pilier : visibilité, automatisation et sécurité",
+      "pillars": [
+        {
+          "title": "🧠 Intelligence (Powered by GPT-4 Vision)",
+          "description": "L’IA visualise votre réseau, enrichit les profils et détecte les risques en quelques secondes.",
+          "benefits": [
+            "Graphe intelligent",
+            "Enrichissement automatique",
+            "KYC assisté par IA",
+            "Carte de visite vers contact"
+          ],
+          "icon": "brain"
         },
         {
-          "title": "Sécurité Avancée",
-          "description": "Vos données protégées par chiffrement et authentification sécurisée"
+          "title": "⚡ Automation (Powered by GPT + Whisper + TTS)",
+          "description": "L’IA transcrit, rédige, résume et négocie.",
+          "benefits": [
+            "Notes vocales avec IA",
+            "Brouillons automatiques",
+            "Rappels intelligents",
+            "Assistant IA qui exécute"
+          ],
+          "icon": "zap"
         },
         {
-          "title": "Performance Optimisée",
-          "description": "Interface rapide et réactive pour une productivité maximale"
+          "title": "🛡️ Security (AI-Enhanced Trust)",
+          "description": "L’IA valide les accords et détecte les schémas de risque.",
+          "benefits": [
+            "Accords validés",
+            "Négociation avec IA",
+            "Escrow surveillé",
+            "Traçabilité complète"
+          ],
+          "icon": "shield"
+        }
+      ]
+    },
+    "workflow": {
+      "title": "Comment cela fonctionne concrètement",
+      "subtitle": "Votre flux de travail transformé par l’IA",
+      "steps": [
+        {
+          "number": "1",
+          "title": "Parlez",
+          "description": "Enregistrez une note vocale pendant la réunion."
         },
         {
-          "title": "Support Dédié",
-          "description": "Équipe prête à vous aider à tirer le meilleur parti de la plateforme"
+          "number": "2",
+          "title": "L’IA traite",
+          "description": "Whisper transcrit et GPT résume et extrait les tâches."
+        },
+        {
+          "number": "3",
+          "title": "Vous recevez",
+          "description": "Résumé exécutif, tâches structurées et prochaines étapes."
+        },
+        {
+          "number": "4",
+          "title": "Le système agit",
+          "description": "Contacts créés, documents rédigés et accords suivis."
+        }
+      ]
+    },
+    "aiFeatures": {
+      "badge": "🚀 Powered by OpenAI & Advanced AI",
+      "title": "La technologie IA qui fait la différence",
+      "subtitle": "Pas seulement de l’IA. Une IA spécialisée pour votre workflow.",
+      "advancedTitle": "✨ Technologie avancée",
+      "advancedDescription": "Chaque fonctionnalité utilise l’intelligence artificielle pour vous faire gagner du temps.",
+      "advancedStack": "GPT-4 Vision • Whisper • Function Calling • Custom Workflows • Real-time Processing",
+      "features": [
+        {
+          "name": "Chat assistant intelligent",
+          "description": "Conversation naturelle et exécution d’actions."
+        },
+        {
+          "name": "Speech-to-Text avec Whisper",
+          "description": "Transcription automatique des réunions."
+        },
+        {
+          "name": "Analyse avec GPT-4 Vision",
+          "description": "Extraction automatique des données de cartes de visite."
+        },
+        {
+          "name": "Summarization intelligent",
+          "description": "Résumé exécutif et tâches à partir de transcriptions."
+        },
+        {
+          "name": "Génération d’accords avec IA",
+          "description": "Suggestions intermédiaires et brouillons automatiques."
+        },
+        {
+          "name": "Synthèse vocale",
+          "description": "Réponses audio avec voix naturelles."
+        }
+      ]
+    },
+    "proof": {
+      "title": "Qui nous fait confiance",
+      "subtitle": "Des dirigeants et équipes qui concluent plus d’accords, plus vite",
+      "caseStudies": [
+        {
+          "company": "TechVentures",
+          "role": "VP Partenariats",
+          "result": "30 % d’accords en plus en 90 jours",
+          "quote": "Le graphe relationnel a changé notre manière de réseauter.",
+          "author": "Carlos M."
+        },
+        {
+          "company": "Conseil &Co",
+          "role": "Associée gérante",
+          "result": "10 h gagnées par semaine",
+          "quote": "Les rappels intelligents maintiennent un suivi irréprochable.",
+          "author": "Marina L."
+        },
+        {
+          "company": "Real Estate Group",
+          "role": "Directeur des opérations",
+          "result": "100 % des accords avec escrow",
+          "quote": "Nous concluons des accords complexes avec beaucoup plus de confiance.",
+          "author": "Roberto P."
         }
       ]
     },
     "pricing": {
-      "title": "Plans et Tarifs",
+      "title": "Plans et tarifs",
       "subtitle": "Choisissez le plan idéal pour vos besoins",
       "plans": [
         {
           "name": "Basique",
           "price": "29€/mois",
+          "tagline": "Commencez ici",
+          "description": "Pour démarrer",
           "features": [
-            "Jusqu'à 100 contacts",
-            "500 notes",
+            "Jusqu’à 100 contacts",
+            "Notes et audio",
             "1 000 crédits/mois",
             "Support par email",
-            "Mises à jour régulières"
+            "14 jours gratuits"
           ]
         },
         {
           "name": "Professionnel",
           "price": "79€/mois",
           "highlighted": true,
+          "tagline": "Concluez plus d’accords",
+          "description": "Pour les équipes en croissance",
           "features": [
             "Contacts illimités",
-            "Notes illimitées",
+            "Accords et escrow",
+            "Intelligence (graphe, KYC)",
+            "Automation (rappels, brouillons, templates)",
+            "Documents et letterheads",
             "5 000 crédits/mois",
-            "Support prioritaire",
-            "Fonctionnalités avancées",
-            "Accès API"
+            "Support prioritaire (24h)"
           ]
         },
         {
           "name": "Entreprise",
           "price": "Sur devis",
+          "tagline": "Contrôle total",
+          "description": "Pour les entreprises exigeantes",
           "features": [
             "Tout du Professionnel",
+            "Modules personnalisés",
             "Crédits illimités",
-            "Support 24/7",
-            "Formation personnalisée",
-            "Gestion d'équipe",
-            "SLA garanti"
+            "Support dédié 24/7",
+            "Formation incluse",
+            "SLA garanti",
+            "Gestion avancée d’équipe"
           ]
         }
       ],
+      "billingNote": "par mois, facturé annuellement",
+      "customPrice": "Sur devis",
       "popular": "Populaire",
-      "selectPlan": "Sélectionner le Plan",
-      "errorLoadingPlans": "Impossible de charger les plans du serveur. Affichage des informations par défaut."
+      "selectPlan": "Sélectionner le plan",
+      "errorLoadingPlans": "Impossible de charger les plans du serveur. Affichage des informations par défaut.",
+      "fetchErrorLog": "Erreur lors du chargement des plans"
+    },
+    "cta": {
+      "title": "Prêt à conclure plus d’accords ?",
+      "subtitle": "Commencez gratuitement. Sans carte bancaire.",
+      "button": "Commencer maintenant",
+      "secondary": "Planifier une démo",
+      "demoSubject": "Planifier une démo"
     },
     "footer": {
-      "description": "Transformez votre productivité avec des outils professionnels de gestion de contacts et de notes.",
+      "description": "Assistant Exécutif : intelligence, automatisation et sécurité pour les dirigeants qui concluent des accords.",
       "product": "Produit",
       "support": "Support",
-      "navFeatures": "Fonctionnalités",
+      "navFeatures": "Solution",
       "navPricing": "Tarifs",
       "navLogin": "Se connecter",
       "documentation": "Documentation",

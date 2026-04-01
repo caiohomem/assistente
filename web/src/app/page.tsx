@@ -97,12 +97,12 @@ export default function Home() {
           setBackendPlans(plans);
         }
       } catch (error) {
-        console.error("Erro ao buscar planos:", error);
+        console.error(t('pricing.fetchErrorLog'), error);
         setHasError(true);
       }
     }
     fetchPlans();
-  }, []);
+  }, [t]);
 
   const displayPlans = useMemo(() => {
     if (!translatedPlans.length) return [];
@@ -178,17 +178,17 @@ export default function Home() {
               </Link>
               <div className="relative group">
                 <button className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1">
-                  🚀 AI
+                  {t('header.navAi')}
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                   </svg>
                 </button>
                 <div className="absolute left-0 mt-0 w-48 rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                   <Link href="#solution" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-t-lg">
-                    IA em cada pilar
+                    {t('header.aiPillars')}
                   </Link>
                   <Link href="#aiFeatures" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
-                    Tecnologias de IA
+                    {t('header.aiTechnology')}
                   </Link>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function Home() {
               <button
                 onClick={() => {
                   const email = "sales@assistenteexecutivo.com";
-                  window.location.href = `mailto:${email}?subject=Agendar Demo`;
+                  window.location.href = `mailto:${email}?subject=${encodeURIComponent(t('hero.demoSubject'))}`;
                 }}
                 className="inline-flex items-center px-8 py-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
               >
@@ -348,7 +348,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-20">
             <div className="inline-block mb-4 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded-full">
-              🚀 Powered by OpenAI & Advanced AI
+              {t('aiFeatures.badge')}
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-white mb-6">
               {t('aiFeatures.title')}
@@ -382,13 +382,13 @@ export default function Home() {
 
           <div className="mt-16 rounded-2xl border border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-8 text-center">
             <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">
-              ✨ Tecnologia Avançada
+              {t('aiFeatures.advancedTitle')}
             </p>
             <p className="text-lg text-gray-900 dark:text-white font-semibold">
-              Cada recurso utiliza inteligência artificial para economizar seu tempo e aumentar sua produtividade.
+              {t('aiFeatures.advancedDescription')}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-4">
-              GPT-4 Vision • Whisper • Function Calling • Custom Workflows • Real-time Processing
+              {t('aiFeatures.advancedStack')}
             </p>
           </div>
         </div>
@@ -482,9 +482,9 @@ export default function Home() {
                     <p className="text-4xl font-extrabold text-gray-900 dark:text-white">
                       {plan.price}
                     </p>
-                    {plan.price !== "Sob consulta" && (
+                    {plan.price !== t('pricing.customPrice') && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                        por mês, faturado anualmente
+                        {t('pricing.billingNote')}
                       </p>
                     )}
                   </div>
@@ -536,7 +536,7 @@ export default function Home() {
             <button
               onClick={() => {
                 const email = "sales@assistenteexecutivo.com";
-                window.location.href = `mailto:${email}?subject=Agendar Demo`;
+                window.location.href = `mailto:${email}?subject=${encodeURIComponent(t('cta.demoSubject'))}`;
               }}
               className="inline-flex items-center px-8 py-4 rounded-lg border-2 border-white text-white font-semibold hover:bg-white/10 transition-all"
             >
@@ -556,6 +556,7 @@ export default function Home() {
                   <LayoutDashboard className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-xl font-bold text-white">Assistente Executivo</span>
+                
               </div>
               <p className="text-sm text-gray-400 max-w-md leading-relaxed">
                 {t('footer.description')}

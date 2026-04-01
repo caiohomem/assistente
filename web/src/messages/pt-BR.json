@@ -3,6 +3,9 @@
     "header": {
       "navProblem": "O Desafio",
       "navSolution": "A Solução",
+      "navAi": "🚀 IA",
+      "aiPillars": "IA em cada pilar",
+      "aiTechnology": "Tecnologias de IA",
       "navProof": "Provas",
       "navPricing": "Planos",
       "navLogin": "Entrar",
@@ -15,6 +18,7 @@
       "subtitle": "Inteligência artificial potencializa cada movimento. Relacionamentos complexos visualizados. Acordos executados com segurança. Feche mais deals, nunca perca uma oportunidade.",
       "ctaPrimary": "Comece Grátis",
       "ctaSecondary": "Agendar Demo",
+      "demoSubject": "Agendar Demo",
       "proof": "10.000+ deals fechados • Powered by AI • 50+ empresas confiam em nós"
     },
     "problem": {
@@ -105,8 +109,12 @@
       ]
     },
     "aiFeatures": {
+      "badge": "🚀 Powered by OpenAI & Advanced AI",
       "title": "Tecnologia de IA que Diferencia",
       "subtitle": "Não é apenas AI — é AI especializada no seu problema",
+      "advancedTitle": "✨ Tecnologia Avançada",
+      "advancedDescription": "Cada recurso utiliza inteligência artificial para economizar seu tempo e aumentar sua produtividade.",
+      "advancedStack": "GPT-4 Vision • Whisper • Function Calling • Custom Workflows • Real-time Processing",
       "features": [
         {
           "name": "Chat Assistente Inteligente",
@@ -210,14 +218,18 @@
           ]
         }
       ],
+      "billingNote": "por mês, faturado anualmente",
+      "customPrice": "Sob consulta",
       "selectPlan": "Começar Agora",
-      "errorLoadingPlans": "Não foi possível carregar os planos. Exibindo informações padrão."
+      "errorLoadingPlans": "Não foi possível carregar os planos. Exibindo informações padrão.",
+      "fetchErrorLog": "Erro ao buscar planos"
     },
     "cta": {
       "title": "Pronto para fechar mais deals?",
       "subtitle": "Comece grátis. Sem cartão de crédito.",
       "button": "Comece Agora",
-      "secondary": "Agendar Demo"
+      "secondary": "Agendar Demo",
+      "demoSubject": "Agendar Demo"
     },
     "footer": {
       "description": "Assistente Executivo: inteligência, automação e segurança para executivos que fecham deals.",
