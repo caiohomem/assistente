@@ -17,6 +17,7 @@ export interface AgreementPartyDto {
   email?: string | null;
   splitPercentage: number;
   role: PartyRole;
+  stripeAccountId?: string | null;
   hasAccepted: boolean;
   acceptedAt?: string | null;
 }
@@ -52,6 +53,15 @@ export interface CommissionAgreementDto {
   canceledAt?: string | null;
   parties: AgreementPartyDto[];
   milestones: MilestoneDto[];
+}
+
+export interface AgreementAcceptanceStatusDto {
+  status: string;
+  acceptedParties: number;
+  totalParties: number;
+  pendingParties: number;
+  daysElapsed: number;
+  isExpired: boolean;
 }
 
 export const AgreementStatusLabels: Record<number, string> = {
