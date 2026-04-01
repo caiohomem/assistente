@@ -23,7 +23,7 @@ export default function Home() {
   const t = useTranslations('landing');
   const [backendPlans, setBackendPlans] = useState<Plan[]>([]);
   const [hasError, setHasError] = useState(false);
-
+  const dashboardLoginHref = "/entrar?returnUrl=%2Fdashboard";
   const translatedPlans = useMemo<TranslatedPlan[]>(() => {
     const raw = t.raw('pricing.plans');
     if (!Array.isArray(raw)) return [];
@@ -205,7 +205,7 @@ export default function Home() {
                 {t('header.navPricing')}
               </Link>
               <Link
-                href="/login"
+                href={dashboardLoginHref}
                 className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 {t('header.navLogin')}
@@ -216,7 +216,7 @@ export default function Home() {
               <ThemeSelector />
               <LanguageSelector />
               <Link
-                href="/login"
+                href={dashboardLoginHref}
                 className="hidden md:inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
               >
                 {t('header.ctaStart')}
@@ -242,7 +242,7 @@ export default function Home() {
 
             <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href="/login"
+                href={dashboardLoginHref}
                 className="inline-flex items-center px-8 py-4 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 {t('hero.ctaPrimary')}
@@ -490,7 +490,7 @@ export default function Home() {
                   </div>
 
                   <Link
-                    href="/login"
+                    href={dashboardLoginHref}
                     className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-all mb-8 ${
                       plan.highlighted
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
@@ -528,7 +528,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/login"
+              href={dashboardLoginHref}
               className="inline-flex items-center px-8 py-4 rounded-lg bg-white text-blue-600 font-semibold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl"
             >
               {t('cta.button')}
@@ -576,7 +576,7 @@ export default function Home() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/login" className="text-gray-400 hover:text-blue-400 transition-colors">
+                  <Link href={dashboardLoginHref} className="text-gray-400 hover:text-blue-400 transition-colors">
                     {t('footer.navLogin')}
                   </Link>
                 </li>

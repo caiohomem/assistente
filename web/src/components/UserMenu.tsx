@@ -18,12 +18,20 @@ export function UserMenu() {
   return (
     <div className="flex items-center gap-2">
       <Show when="signed-out">
-        <SignInButton mode="modal">
+        <SignInButton
+          mode="modal"
+          fallbackRedirectUrl="/dashboard"
+          forceRedirectUrl="/dashboard"
+        >
           <button className="rounded-2xl border border-border/50 bg-secondary/50 px-4 py-2 text-sm font-medium text-foreground transition-all duration-300 hover:bg-secondary/80">
             Entrar
           </button>
         </SignInButton>
-        <SignUpButton mode="modal">
+        <SignUpButton
+          mode="modal"
+          fallbackRedirectUrl="/dashboard"
+          forceRedirectUrl="/dashboard"
+        >
           <button className="rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-300 hover:opacity-90">
             Criar conta
           </button>
