@@ -6,6 +6,7 @@ public interface IEmailTemplateRepository
 {
     Task<EmailTemplate?> GetByTypeAsync(EmailTemplateType templateType, CancellationToken cancellationToken = default);
     Task<EmailTemplate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<EmailTemplate?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
     Task<List<EmailTemplate>> GetAllActiveAsync(CancellationToken cancellationToken = default);
     Task<List<EmailTemplate>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<List<EmailTemplate>> GetByTypeFilterAsync(EmailTemplateType? templateType, bool? activeOnly, CancellationToken cancellationToken = default);

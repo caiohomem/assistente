@@ -43,7 +43,19 @@ public class EscrowAccountRepository : IEscrowAccountRepository
 
     public Task UpdateAsync(EscrowAccount escrowAccount, CancellationToken cancellationToken = default)
     {
-        _context.EscrowAccounts.Update(escrowAccount);
+        // Check if entity is already tracked
+        var entry = _context.Entry(escrowAccount);
+        if (entry.State == EntityState.Detached)
+        {
+            _context.EscrowAccounts.Update(escrowAccount);
+        }
+        // If already tracked, EF Core will detect changes automatically via change tracking
+
         return Task.CompletedTask;
+    }
+
+    public async Task AddTransactionAsync(EscrowTransaction transaction, CancellationToken cancellationToken = default)
+    {
+        await _context.EscrowTransactions.AddAsync(transaction, cancellationToken);
     }
 }

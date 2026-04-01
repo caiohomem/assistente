@@ -144,6 +144,8 @@ public static class DependencyInjection
         // n8n Services
         services.AddScoped<IWorkflowSpecValidator, WorkflowSpecValidator>();
         services.AddScoped<IWorkflowCompiler, WorkflowCompiler>();
+        services.AddScoped<IAgreementAcceptanceTokenService, AgreementAcceptanceTokenService>();
+        services.AddScoped<IAgreementAcceptanceWorkflowService, AgreementAcceptanceWorkflowService>();
         services.AddScoped<IN8nProvider, N8nProvider>();
         services.AddScoped<INegotiationAIService, OpenAINegotiationAIService>();
         services.AddScoped<IPaymentGateway, StripePaymentGateway>();

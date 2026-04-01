@@ -1,10 +1,13 @@
 using AssistenteExecutivo.Application.Commands.Workflow;
 using AssistenteExecutivo.Application.Interfaces;
+using AssistenteExecutivo.Application.DTOs;
+using AssistenteExecutivo.Application.Json;
 using AssistenteExecutivo.Domain.Entities;
 using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Interfaces;
 using MediatR;
 using System.Text.Json;
+using System.Linq;
 
 namespace AssistenteExecutivo.Application.Handlers.Workflow;
 
@@ -69,12 +72,13 @@ public class ExecuteWorkflowCommandHandler : IRequestHandler<ExecuteWorkflowComm
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // 4. Execute via Flow Runner
+        var shouldWait = ShouldWaitForCompletion(workflow.SpecJson);
         var runResult = await _n8nProvider.RunWorkflowAsync(
             workflow.N8nWorkflowId,
             request.InputJson,
             workflow.OwnerUserId,
             request.OwnerUserId.ToString(),
-            waitForCompletion: true,
+            waitForCompletion: shouldWait,
             timeoutSeconds: 300,
             idempotencyKey: idempotencyKey,
             cancellationToken: cancellationToken);
@@ -135,5 +139,35 @@ public class ExecuteWorkflowCommandHandler : IRequestHandler<ExecuteWorkflowComm
         return ExecuteWorkflowResult.Succeeded(
             executionId,
             runResult.ExecutionId ?? string.Empty);
+    }
+
+    private static bool ShouldWaitForCompletion(string specJson)
+    {
+        if (string.IsNullOrWhiteSpace(specJson))
+        {
+            return true;
+        }
+
+        try
+        {
+            var spec = JsonSerializer.Deserialize<WorkflowSpecDto>(specJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new CaseInsensitiveJsonStringEnumConverter() }
+            });
+
+            if (spec?.Steps == null)
+            {
+                return true;
+            }
+
+            return !spec.Steps.Any(step =>
+                step.Type == StepType.Action &&
+                step.Action?.ActionType == ActionType.Wait);
+        }
+        catch
+        {
+            return true;
+        }
     }
 }

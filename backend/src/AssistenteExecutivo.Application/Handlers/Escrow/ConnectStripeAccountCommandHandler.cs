@@ -35,10 +35,21 @@ public class ConnectStripeAccountCommandHandler : IRequestHandler<ConnectStripeA
         if (account.OwnerUserId != request.OwnerUserId)
             throw new DomainException("Domain:UsuarioNaoAutorizado");
 
-        var connectedAccountId = await _paymentGateway.ConnectAccountAsync(
-            request.OwnerUserId,
-            request.AuthorizationCode,
-            cancellationToken);
+        string connectedAccountId;
+
+        // If the code starts with "acct_", it's already a Stripe Account ID (for testing/manual setup)
+        if (request.AuthorizationCode.StartsWith("acct_", StringComparison.OrdinalIgnoreCase))
+        {
+            connectedAccountId = request.AuthorizationCode;
+        }
+        else
+        {
+            // Otherwise, it's an OAuth authorization code that needs to be exchanged
+            connectedAccountId = await _paymentGateway.ConnectAccountAsync(
+                request.OwnerUserId,
+                request.AuthorizationCode,
+                cancellationToken);
+        }
 
         account.ConnectStripeAccount(connectedAccountId);
 

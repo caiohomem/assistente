@@ -33,3 +33,63 @@ export async function depositEscrowClient(input: {
     },
   );
 }
+
+export async function requestPayoutClient(input: {
+  escrowAccountId: string;
+  partyId?: string;
+  amount: number;
+  currency?: string;
+  description?: string;
+}) {
+  return apiClient.post<{ transactionId: string }>(
+    `/api/escrow/accounts/${input.escrowAccountId}/payouts`,
+    {
+      partyId: input.partyId,
+      amount: input.amount,
+      currency: input.currency ?? "BRL",
+      description: input.description,
+    },
+  );
+}
+
+export async function approvePayoutClient(
+  escrowAccountId: string,
+  transactionId: string,
+) {
+  return apiClient.post<void>(
+    `/api/escrow/accounts/${escrowAccountId}/transactions/${transactionId}/approve`,
+    {},
+  );
+}
+
+export async function rejectPayoutClient(
+  escrowAccountId: string,
+  transactionId: string,
+  reason: string,
+) {
+  return apiClient.post<void>(
+    `/api/escrow/accounts/${escrowAccountId}/transactions/${transactionId}/reject`,
+    { reason },
+  );
+}
+
+export async function executePayoutClient(
+  escrowAccountId: string,
+  transactionId: string,
+  stripeTransferId?: string,
+) {
+  return apiClient.post<void>(
+    `/api/escrow/accounts/${escrowAccountId}/transactions/${transactionId}/execute`,
+    { stripeTransferId },
+  );
+}
+
+export async function connectStripeAccountClient(
+  escrowAccountId: string,
+  authorizationCode: string,
+) {
+  return apiClient.post<void>(
+    `/api/escrow/accounts/${escrowAccountId}/connect-stripe`,
+    { authorizationCode },
+  );
+}

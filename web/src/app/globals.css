@@ -372,3 +372,21 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 200% 200%;
   animation: gradientShift 8s ease infinite;
 }
+
+select {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-color: hsl(var(--border));
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+select option {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+select:focus {
+  border-color: hsl(var(--primary));
+  outline: 1px solid transparent;
+  box-shadow: 0 0 0 1px hsl(var(--primary));
+}

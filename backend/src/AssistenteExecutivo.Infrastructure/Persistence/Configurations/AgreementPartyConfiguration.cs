@@ -28,6 +28,8 @@ public class AgreementPartyConfiguration : IEntityTypeConfiguration<AgreementPar
 
         builder.Property(p => p.ContactId);
         builder.Property(p => p.CompanyId);
+        builder.Property(p => p.StripeAccountId)
+            .HasMaxLength(255);
         builder.Property(p => p.HasAccepted).IsRequired();
         builder.Property(p => p.AcceptedAt);
         builder.Property(p => p.CreatedAt).IsRequired();

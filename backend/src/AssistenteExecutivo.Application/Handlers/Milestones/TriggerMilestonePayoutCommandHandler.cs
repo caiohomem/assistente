@@ -7,6 +7,7 @@ using AssistenteExecutivo.Domain.Enums;
 using AssistenteExecutivo.Domain.Exceptions;
 using AssistenteExecutivo.Domain.Interfaces;
 using AssistenteExecutivo.Domain.ValueObjects;
+using Microsoft.EntityFrameworkCore;
 using MediatR;
 
 namespace AssistenteExecutivo.Application.Handlers.Milestones;
@@ -75,8 +76,8 @@ public class TriggerMilestonePayoutCommandHandler : IRequestHandler<TriggerMiles
 
         agreement.CompleteMilestone(milestone.MilestoneId, "Payout solicitado", transaction.TransactionId, _clock);
 
-        await _escrowAccountRepository.UpdateAsync(escrowAccount, cancellationToken);
-        await _agreementRepository.UpdateAsync(agreement, cancellationToken);
+        // Explicitly add the new transaction to the context
+        await _escrowAccountRepository.AddTransactionAsync(transaction, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await PublishEventsAsync(escrowAccount, agreement, cancellationToken);

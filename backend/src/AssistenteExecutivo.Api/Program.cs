@@ -1,3 +1,4 @@
+using AssistenteExecutivo.Application.Json;
 using AssistenteExecutivo.Api.Auth;
 using AssistenteExecutivo.Api.Extensions;
 using AssistenteExecutivo.Api.Middleware;
@@ -257,6 +258,7 @@ try
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            options.JsonSerializerOptions.Converters.Add(new CaseInsensitiveJsonStringEnumConverter());
         });
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>

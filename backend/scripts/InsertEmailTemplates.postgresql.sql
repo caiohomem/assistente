@@ -1,13 +1,10 @@
 -- Script para inserir templates de email do sistema
 -- Este script cria templates profissionais de email para o Assistente Executivo
 
--- Verificar se já existem templates
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM "EmailTemplates" LIMIT 1) THEN
-        RAISE NOTICE 'Templates de email já existem. Pulando inserção.';
-        RETURN;
-    END IF;
+    DELETE FROM "EmailTemplates"
+    WHERE "TemplateType" IN (1, 2, 3, 4, 5, 6);
 
     -- Template de Boas-vindas (UserCreated)
     INSERT INTO "EmailTemplates" ("Id", "Name", "TemplateType", "Subject", "HtmlBody", "IsActive", "CreatedAt")
@@ -422,6 +419,353 @@ BEGIN
         
         <div class="footer">
             <p><strong>Assistente Executivo</strong></p>
+        </div>
+    </div>
+</body>
+</html>',
+        true,
+        NOW()
+    );
+
+    -- Template de Proposta de Acordo (AgreementProposal)
+    INSERT INTO "EmailTemplates" ("Id", "Name", "TemplateType", "Subject", "HtmlBody", "IsActive", "CreatedAt")
+    VALUES (
+        gen_random_uuid(),
+        'Acordo - Proposta de Aceite',
+        4, -- AgreementProposal
+        'Aceite do acordo: {{ AgreementTitle }}',
+        '<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposta de Acordo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, ''Segoe UI'', Roboto, ''Helvetica Neue'', Arial, sans-serif;
+            line-height: 1.6;
+            color: #18181b;
+            background-color: #f8fafc;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            color: #ffffff;
+            padding: 36px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 36px 30px;
+            background-color: #ffffff;
+        }
+        .content h2 {
+            color: #18181b;
+            font-size: 20px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .content p {
+            color: #52525b;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .details {
+            background-color: #f4f4f5;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .details p {
+            margin-bottom: 8px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 24px;
+            text-align: center;
+            border-top: 1px solid #e4e4e7;
+        }
+        .footer p {
+            color: #71717a;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Proposta de Acordo</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, {{ PartyName }}!</h2>
+            <p>Você recebeu um acordo de comissão para aceite.</p>
+            <div class="details">
+                <p><strong>Acordo:</strong> {{ AgreementTitle }}</p>
+                <p><strong>Valor total:</strong> {{ Currency }} {{ TotalValue }}</p>
+                <p><strong>Sua participação:</strong> {{ SplitPercentage }}%</p>
+                <p><strong>Validade:</strong> {{ ExpiresAt }}</p>
+                <p><strong>Descrição:</strong> {{ Description }}</p>
+                <p><strong>Termos:</strong> {{ Terms }}</p>
+            </div>
+            <div style="text-align: center;">
+                <a href="{{ AcceptUrl }}" class="button">Aceitar proposta</a>
+            </div>
+            <p style="color: #71717a; font-size: 14px; margin-top: 20px;">
+                Se você tiver dúvidas, entre em contato com o responsável pelo acordo.
+            </p>
+        </div>
+        <div class="footer">
+            <p><strong>Assistente Executivo</strong></p>
+            <p>Este acordo expira em {{ ExpiresAt }}.</p>
+        </div>
+    </div>
+</body>
+</html>',
+        true,
+        NOW()
+    );
+
+    -- Template de Lembrete de Aceite (AgreementReminder)
+    INSERT INTO "EmailTemplates" ("Id", "Name", "TemplateType", "Subject", "HtmlBody", "IsActive", "CreatedAt")
+    VALUES (
+        gen_random_uuid(),
+        'Acordo - Lembrete de Aceite',
+        5, -- AgreementReminder
+        'Lembrete: aceite do acordo {{ AgreementTitle }}',
+        '<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lembrete de Aceite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, ''Segoe UI'', Roboto, ''Helvetica Neue'', Arial, sans-serif;
+            line-height: 1.6;
+            color: #18181b;
+            background-color: #fff7ed;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%);
+            color: #ffffff;
+            padding: 36px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 36px 30px;
+            background-color: #ffffff;
+        }
+        .content h2 {
+            color: #18181b;
+            font-size: 20px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .content p {
+            color: #52525b;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .details {
+            background-color: #ffedd5;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .details p {
+            margin-bottom: 8px;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background-color: #fff7ed;
+            padding: 24px;
+            text-align: center;
+            border-top: 1px solid #fed7aa;
+        }
+        .footer p {
+            color: #7c2d12;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Lembrete de Aceite</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, {{ PartyName }}!</h2>
+            <p>Este é um lembrete para você aceitar o acordo abaixo.</p>
+            <div class="details">
+                <p><strong>Acordo:</strong> {{ AgreementTitle }}</p>
+                <p><strong>Valor total:</strong> {{ Currency }} {{ TotalValue }}</p>
+                <p><strong>Sua participação:</strong> {{ SplitPercentage }}%</p>
+                <p><strong>Validade:</strong> {{ ExpiresAt }}</p>
+            </div>
+            <div style="text-align: center;">
+                <a href="{{ AcceptUrl }}" class="button">Aceitar proposta</a>
+            </div>
+            <p style="color: #7c2d12; font-size: 14px; margin-top: 20px;">
+                Este acordo expira em {{ ExpiresAt }}.
+            </p>
+        </div>
+        <div class="footer">
+            <p><strong>Assistente Executivo</strong></p>
+            <p>Se você já aceitou, pode ignorar este lembrete.</p>
+        </div>
+    </div>
+</body>
+</html>',
+        true,
+        NOW()
+    );
+
+    -- Template de Acordo Aprovado (AgreementApproved)
+    INSERT INTO "EmailTemplates" ("Id", "Name", "TemplateType", "Subject", "HtmlBody", "IsActive", "CreatedAt")
+    VALUES (
+        gen_random_uuid(),
+        'Acordo - Aprovado',
+        6, -- AgreementApproved
+        'Acordo aprovado: {{ AgreementTitle }}',
+        '<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acordo Aprovado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, ''Segoe UI'', Roboto, ''Helvetica Neue'', Arial, sans-serif;
+            line-height: 1.6;
+            color: #18181b;
+            background-color: #ecfdf3;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            color: #ffffff;
+            padding: 36px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 36px 30px;
+            background-color: #ffffff;
+        }
+        .content h2 {
+            color: #18181b;
+            font-size: 20px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .content p {
+            color: #52525b;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .details {
+            background-color: #dcfce7;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .details p {
+            margin-bottom: 8px;
+        }
+        .footer {
+            background-color: #ecfdf3;
+            padding: 24px;
+            text-align: center;
+            border-top: 1px solid #bbf7d0;
+        }
+        .footer p {
+            color: #166534;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Acordo aprovado</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, {{ PartyName }}!</h2>
+            <p>Todos os participantes aprovaram o acordo abaixo.</p>
+            <div class="details">
+                <p><strong>Acordo:</strong> {{ AgreementTitle }}</p>
+                <p><strong>Valor total:</strong> {{ Currency }} {{ TotalValue }}</p>
+                <p><strong>Sua participação:</strong> {{ SplitPercentage }}%</p>
+                <p><strong>Aprovado em:</strong> {{ ApprovedAt }}</p>
+            </div>
+            <p style="color: #166534; font-size: 14px; margin-top: 20px;">
+                O acordo agora está ativo. Você pode acompanhar os próximos passos no sistema.
+            </p>
+        </div>
+        <div class="footer">
+            <p><strong>Assistente Executivo</strong></p>
+            <p>Obrigado por confirmar o acordo.</p>
         </div>
     </div>
 </body>

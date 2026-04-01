@@ -207,6 +207,16 @@ internal class MockEmailService : IEmailService
     {
         return Task.CompletedTask;
     }
+
+    public Task SendEmailAsync(
+        string recipientEmail,
+        string recipientName,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
 }
 
 internal class MockIdGenerator : IIdGenerator

@@ -9,4 +9,5 @@ public interface IEscrowAccountRepository
     Task<List<EscrowTransaction>> ListTransactionsAsync(Guid escrowAccountId, CancellationToken cancellationToken = default);
     Task AddAsync(EscrowAccount escrowAccount, CancellationToken cancellationToken = default);
     Task UpdateAsync(EscrowAccount escrowAccount, CancellationToken cancellationToken = default);
+    Task AddTransactionAsync(EscrowTransaction transaction, CancellationToken cancellationToken = default);
 }

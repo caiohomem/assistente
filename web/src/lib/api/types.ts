@@ -1,5 +1,7 @@
 "use client"
 
+import { redirectToLogin } from "@/lib/bff"
+
 export interface ApiErrorResponse {
   message?: string | null
   error?: string | null
@@ -33,7 +35,7 @@ export const extractApiErrorMessage = (data: unknown): string | undefined => {
     if (payload.errors && typeof payload.errors === "object" && !Array.isArray(payload.errors)) {
       const entries = Object.entries(payload.errors as Record<string, unknown>)
       const messages: string[] = []
-      for (const [field, value] of entries) {
+      for (const [, value] of entries) {
         if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
           messages.push(value[0])
         } else if (typeof value === "string" && value.trim().length > 0) {
@@ -138,6 +140,9 @@ export const buildApiError = async (res: Response): Promise<Error> => {
 export const throwIfErrorResponse = async (res: Response): Promise<void> => {
   if (res.ok) {
     return
+  }
+  if (res.status === 401) {
+    redirectToLogin()
   }
   throw await buildApiError(res)
 }

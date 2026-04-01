@@ -17,6 +17,7 @@ public class AgreementParty
         string? email,
         Percentage splitPercentage,
         PartyRole role,
+        string? stripeAccountId,
         IClock clock)
     {
         if (partyId == Guid.Empty)
@@ -25,6 +26,9 @@ public class AgreementParty
         if (string.IsNullOrWhiteSpace(partyName))
             throw new DomainException("Domain:PartyNameObrigatorio");
 
+        if (string.IsNullOrWhiteSpace(email))
+            throw new DomainException("Domain:PartyEmailObrigatorio");
+
         if (splitPercentage == null)
             throw new DomainException("Domain:SplitPercentageObrigatorio");
 
@@ -32,9 +36,10 @@ public class AgreementParty
         ContactId = contactId;
         CompanyId = companyId;
         PartyName = partyName.Trim();
-        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        Email = email.Trim();
         SplitPercentage = splitPercentage;
         Role = role;
+        StripeAccountId = NormalizeStripeAccountId(stripeAccountId);
         CreatedAt = clock.UtcNow;
         HasAccepted = false;
     }
@@ -47,6 +52,8 @@ public class AgreementParty
     public string? Email { get; private set; }
     public Percentage SplitPercentage { get; private set; } = null!;
     public PartyRole Role { get; private set; }
+    public string? StripeAccountId { get; private set; }
+    public DateTime? StripeConnectedAt { get; private set; }
     public bool HasAccepted { get; private set; }
     public DateTime? AcceptedAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -59,6 +66,7 @@ public class AgreementParty
         string? email,
         Percentage splitPercentage,
         PartyRole role,
+        string? stripeAccountId,
         IClock clock)
     {
         return new AgreementParty(
@@ -69,6 +77,7 @@ public class AgreementParty
             email,
             splitPercentage,
             role,
+            stripeAccountId,
             clock);
     }
 
@@ -99,10 +108,43 @@ public class AgreementParty
             PartyName = partyName.Trim();
 
         if (email != null)
-            Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new DomainException("Domain:PartyEmailObrigatorio");
+
+            Email = email.Trim();
+        }
 
         ContactId = contactId;
         CompanyId = companyId;
+    }
+
+    internal void UpdateStripeAccountId(string? stripeAccountId)
+    {
+        StripeAccountId = NormalizeStripeAccountId(stripeAccountId);
+    }
+
+    internal void ConnectStripeAccount(string accountId, IClock clock)
+    {
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new DomainException("Domain:ContaStripeInvalida");
+
+        StripeAccountId = accountId.Trim();
+        StripeConnectedAt = clock.UtcNow;
+    }
+
+    internal void DisconnectStripeAccount()
+    {
+        StripeAccountId = null;
+        StripeConnectedAt = null;
+    }
+
+    private static string? NormalizeStripeAccountId(string? stripeAccountId)
+    {
+        if (string.IsNullOrWhiteSpace(stripeAccountId))
+            return null;
+
+        return stripeAccountId.Trim();
     }
 
     internal void SetAgreementId(Guid agreementId)

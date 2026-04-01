@@ -10,5 +10,12 @@ public interface IEmailService
         string recipientName,
         Dictionary<string, object> templateValues,
         CancellationToken cancellationToken = default);
+
+    Task SendEmailAsync(
+        string recipientEmail,
+        string recipientName,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken = default);
 }
 

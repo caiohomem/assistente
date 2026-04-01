@@ -1,0 +1,1217 @@
+{
+  "name": "Commission :: Agreement Acceptance",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "commission-acceptance",
+        "options": {}
+      },
+      "id": "7ca67ac8-f17c-4c23-93ac-e130b7abbfd3",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        9696,
+        3168
+      ],
+      "webhookId": "commission-acceptance"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KEYCLOAK_TOKEN_URL || 'https://keycloak.callback-local-cchagas.xyz/realms/assistenteexecutivo/protocol/openid-connect/token' }}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $env.KEYCLOAK_CLIENT_ID || 'assistente-api' }}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{ $env.KEYCLOAK_CLIENT_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "473c16b6-f190-4b93-a09e-0b9528e06c9b",
+      "name": "Get OAuth Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9904,
+        2944
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Webhook Trigger').item.json.body.agreementId + '/acceptance/pending?ownerUserId=' + $('Webhook Trigger').item.json.body.ownerUserId + '&maxDays=' + ($('Webhook Trigger').item.json.body.maxDays || '') + ($('Webhook Trigger').item.json.body.emailTemplateName ? '&templateName=' + encodeURIComponent($('Webhook Trigger').item.json.body.emailTemplateName) : '') + '&includeAccepted=false' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2752b671-f64d-45ff-af74-4cb5580e039f",
+      "name": "Get Pending Parties",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9904,
+        3168
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "b5054830-16fb-48e8-a47e-47514a603a66",
+              "leftValue": "={{ $json.parties.filter(p => !p.hasAccepted).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6a35ef73-c21b-48d6-a536-3f0672fcc142",
+      "name": "Has Pending Parties?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        10032,
+        3360
+      ],
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json;\nconst parties = payload.parties || [];\nreturn parties.map(p => ({\n  json: {\n    ...payload,\n    party: p\n  }\n}));\n"
+      },
+      "id": "c2c4e00b-5d0a-4706-b5cf-2160aba47ab1",
+      "name": "Build Party Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10224,
+        3168
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { sentCount: items.length } }];\n"
+      },
+      "id": "7b5a087f-aeab-4ca8-9dbc-0599deb9d82d",
+      "name": "After Send Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10640,
+        3184
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "suporte@assistente.live",
+        "toEmail": "={{ $json.party.email }}",
+        "subject": "={{ $json.party.emailSubject || ('Aceite do acordo: ' + $json.title) }}",
+        "html": "={{ $json.party.emailHtml || `<div style='font-family:Arial,sans-serif;line-height:1.5'>` + `<p>Você foi convidado(a) a aceitar o acordo abaixo.</p>` + `<h2>${$json.title}</h2>` + `<p style='margin-top:24px'><a href='${$json.party.acceptUrl || ''}' style='background:#1c7ed6;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px'>Aceitar proposta</a></p>` + `</div>` }}",
+        "additionalFields": {}
+      },
+      "id": "81713e95-b07f-4e4a-8c32-af2d9f60bca0",
+      "name": "Send Agreement Email",
+      "type": "n8n-nodes-base.mailjet",
+      "typeVersion": 1,
+      "position": [
+        10432,
+        3168
+      ],
+      "credentials": {
+        "mailjetEmailApi": {
+          "id": "48xpjc7zDExHyuvn",
+          "name": "Mailjet Email account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Webhook Trigger').item.json.body.agreementId + '/acceptance/status?ownerUserId=' + $('Webhook Trigger').item.json.body.ownerUserId + '&maxDays=' + ($('Webhook Trigger').item.json.body.maxDays || '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7777275c-03d6-4ed0-84d6-695fb8cc5544",
+      "name": "Check Acceptance Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10784,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Webhook Trigger').item.json.body.agreementId + '/acceptance/status?ownerUserId=' + $('Webhook Trigger').item.json.body.ownerUserId + '&maxDays=' + ($('Webhook Trigger').item.json.body.maxDays || '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token (Reminder)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "def3c80c-4b02-4183-93c2-0a26c9db4306",
+      "name": "Check Acceptance Status (Reminder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10752,
+        3680
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isExpired }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "faaa6e98-d0a9-4435-8f17-79673736fbb7",
+      "name": "All Accepted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11008,
+        3392
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.allAccepted }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "740fe809-11a4-49ab-ad4c-5dce51c07c0f"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9108bbae-3f04-4b2d-8ddb-d206f1554ca3",
+      "name": "All Accepted? (Reminder)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        10992,
+        3696
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isExpired }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1c8af98c-3b88-4900-9cea-bcf5510c842d",
+      "name": "Expired?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11216,
+        3504
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isExpired }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "id": "8c6a4f27-7a18-4a4d-807c-42e63b972815"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "436a2c89-6beb-4da7-9254-4dc6c8cef2b4",
+      "name": "Expired? (Reminder)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11248,
+        3792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Webhook Trigger').item.json.body.agreementId + '/acceptance/cancel' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "adb749b3-6775-4d0c-8c9f-6fa14a185d5f",
+      "name": "Cancel Agreement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11344,
+        3168
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Webhook Trigger').item.json.body.agreementId + '/acceptance/cancel' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token (Reminder)').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "1dd3f073-f732-48a4-9929-39f42368e57c",
+      "name": "Cancel Agreement (Reminder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11616,
+        3776
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KEYCLOAK_TOKEN_URL || 'https://keycloak.callback-local-cchagas.xyz/realms/assistenteexecutivo/protocol/openid-connect/token' }}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $env.KEYCLOAK_CLIENT_ID || 'assistente-api' }}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{ $env.KEYCLOAK_CLIENT_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8295d06d-9adf-40bc-9e0d-30ef3aeced24",
+      "name": "Get OAuth Token (Reminder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11648,
+        3152
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Webhook Trigger').item.json.body.agreementId + '/acceptance/pending?ownerUserId=' + $('Webhook Trigger').item.json.body.ownerUserId + '&maxDays=' + ($('Webhook Trigger').item.json.body.maxDays || '') + ($('Webhook Trigger').item.json.body.reminderTemplateName ? '&templateName=' + encodeURIComponent($('Webhook Trigger').item.json.body.reminderTemplateName) : '') + '&includeAccepted=false' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6f6da70c-ca2f-45d0-ab61-62331fb00fa2",
+      "name": "Get Pending Parties (Reminder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11616,
+        3408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.parties || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              },
+              "id": "6f1fe5b9-f338-44a3-b4e5-16b90db50b95"
+            },
+            {
+              "id": "eddb30b2-c38f-4984-bcbe-cee916dfd4d4",
+              "leftValue": "={{ $json.parties.filter(p => !p.hasAccepted).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "906dd329-d0e2-48f8-8874-260793654589",
+      "name": "Has Pending Parties? (Reminder)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11808,
+        3344
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json;\nconst parties = payload.parties || [];\nreturn parties.map(p => ({\n  json: {\n    ...payload,\n    party: p\n  }\n}));\n"
+      },
+      "id": "db3c37ae-47ec-4c32-977c-aa1d8dfa4a4a",
+      "name": "Build Reminder Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12048,
+        3360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { sentCount: items.length } }];\n"
+      },
+      "id": "9d98d63d-de29-4598-bc82-a6bb4174a065",
+      "name": "After Send Reminder Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12304,
+        3600
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "suporte@assistente.live",
+        "toEmail": "={{ $json.party.email }}",
+        "subject": "={{ $json.party.emailSubject || ('Lembrete: aceite do acordo ' + $json.title) }}",
+        "html": "={{ $json.party.emailHtml || `<div style='font-family:Arial,sans-serif;line-height:1.5'>` + `<p>Este é um lembrete para aceitar o acordo abaixo.</p>` + `<h2>${$json.title}</h2>` + `<p style='margin-top:24px'><a href='${$json.party.acceptUrl || ''}' style='background:#1c7ed6;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px'>Aceitar proposta</a></p>` + `</div>` }}",
+        "additionalFields": {}
+      },
+      "id": "018f7143-2893-4a61-aec5-e6af72a00623",
+      "name": "Send Reminder Email",
+      "type": "n8n-nodes-base.mailjet",
+      "typeVersion": 1,
+      "position": [
+        12256,
+        3360
+      ],
+      "credentials": {
+        "mailjetEmailApi": {
+          "id": "48xpjc7zDExHyuvn",
+          "name": "Mailjet Email account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": "={{ $('Webhook Trigger').item.json.body.reminderIntervalDays || 1 }}",
+        "unit": "days"
+      },
+      "id": "3b3a822f-700c-4d99-aa43-d2b887ace718",
+      "name": "Wait Reminder Days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        11408,
+        3344
+      ],
+      "webhookId": "ccc17958-cade-4830-b64d-4056413d646c"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "commission-acceptance/confirm",
+        "options": {}
+      },
+      "id": "c792cbfb-6d39-435b-9785-71e45e4f4bdb",
+      "name": "Acceptance Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        9696,
+        4192
+      ],
+      "webhookId": "commission-acceptance-confirm"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json.body && typeof $json.body === 'object' ? $json.body : $json;\nconst token = payload.token || payload.acceptToken || payload.acceptanceToken || '';\nconst ownerUserId = payload.ownerUserId || payload.owner_user_id || '';\nreturn [{\n  json: {\n    token,\n    ownerUserId\n  }\n}];\n"
+      },
+      "id": "5ed31483-c027-4e68-8c41-16f8780725f8",
+      "name": "Normalize Acceptance Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9904,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/acceptance/preview?token=' + encodeURIComponent($('Normalize Acceptance Payload').item.json.token || '') }}",
+        "options": {}
+      },
+      "id": "decb85b7-1ac2-4cab-ab57-18b7e807ab09",
+      "name": "Get Acceptance Preview",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10112,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $('Normalize Acceptance Payload').item.json;\nconst preview = $json || {};\nreturn [{\n  json: {\n    token: payload.token,\n    ownerUserId: preview.ownerUserId,\n    maxDays: preview.maxDays,\n    agreementId: preview.agreementId,\n    partyId: preview.partyId\n  }\n}];\n"
+      },
+      "id": "20969905-74ad-4040-90e5-2c352c5579c8",
+      "name": "Merge Acceptance Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10320,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KEYCLOAK_TOKEN_URL || 'https://keycloak.callback-local-cchagas.xyz/realms/assistenteexecutivo/protocol/openid-connect/token' }}",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $env.KEYCLOAK_CLIENT_ID || 'assistente-api' }}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{ $env.KEYCLOAK_CLIENT_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "04e59329-9b36-417f-8654-559bf69df624",
+      "name": "Get OAuth Token (Acceptance)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10512,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Merge Acceptance Data').item.json.agreementId + '/parties/' + $('Merge Acceptance Data').item.json.partyId + '/accept' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token (Acceptance)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "51de066e-3b76-408c-b418-9197c008c852",
+      "name": "Accept Agreement Party",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10720,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Merge Acceptance Data').item.json.agreementId + '/acceptance/status?ownerUserId=' + $('Merge Acceptance Data').item.json.ownerUserId + '&maxDays=' + ($('Merge Acceptance Data').item.json.maxDays || '') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token (Acceptance)').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9db4ad29-b9b2-4436-9e07-6143794c2a93",
+      "name": "Check Acceptance Status (Callback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10928,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.allAccepted }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "efb02131-1371-4721-9fc0-2ba2212185c2"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "72ae9e7c-ecea-4776-8bed-1ad69e617d75",
+      "name": "All Accepted? (Callback)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11136,
+        4192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isExpired }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "aec06e30-dd8b-4b8c-8f64-7a6202532899",
+      "name": "Expired? (Callback)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11344,
+        4256
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL + '/api/commission-agreements/' + $('Merge Acceptance Data').item.json.agreementId + '/acceptance/cancel' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get OAuth Token (Acceptance)').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ownerUserId",
+              "value": "={{ $('Merge Acceptance Data').item.json.ownerUserId }}"
+            },
+            {
+              "name": "reason",
+              "value": "Prazo máximo de aceite expirado."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ccc1a958-e2b9-47bc-877c-4af92b42571e",
+      "name": "Cancel Agreement (Callback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11552,
+        4192
+      ]
+    }
+  ],
+  "pinData": {
+    "Webhook Trigger": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.assistente.live",
+            "content-length": "247",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "2001:818:d845:6300:a44a:8563:dbe:cdf8",
+            "cf-ipcountry": "PT",
+            "cf-ray": "9b85e5ec0c1a4899-LIS",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "c522c709-2d20-4d38-9b06-a2efb8c02432",
+            "connection": "keep-alive",
+            "content-type": "application/json; charset=utf-8",
+            "traceparent": "00-a274634adc90213b70d2d33399f01769-aab3669865e5bd5f-00",
+            "x-forwarded-for": "2001:818:d845:6300:a44a:8563:dbe:cdf8",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "agreementId": "eb084c58-2855-4660-afc4-94c1b39aad33",
+            "ownerUserId": "f0e736c3-e0ca-4a9f-a146-135cbe9ef911",
+            "maxDays": 7,
+            "reminderIntervalDays": 1,
+            "emailTemplateName": "Acordo - Proposta de Aceite",
+            "reminderTemplateName": "Acordo - Lembrete de Aceite"
+          },
+          "webhookUrl": "https://n8n.assistente.live/webhook/commission-acceptance",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get OAuth Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get OAuth Token": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Parties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Parties": {
+      "main": [
+        [
+          {
+            "node": "Has Pending Parties?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Pending Parties?": {
+      "main": [
+        [
+          {
+            "node": "Build Party Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Acceptance Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After Send Emails": {
+      "main": [
+        [
+          {
+            "node": "Check Acceptance Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Acceptance Status": {
+      "main": [
+        [
+          {
+            "node": "All Accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Accepted?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Expired?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expired?": {
+      "main": [
+        [
+          {
+            "node": "Cancel Agreement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Reminder Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Accepted? (Reminder)": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Expired? (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expired? (Reminder)": {
+      "main": [
+        [
+          {
+            "node": "Cancel Agreement (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Reminder Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get OAuth Token (Reminder)": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Parties (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Parties (Reminder)": {
+      "main": [
+        [
+          {
+            "node": "Has Pending Parties? (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Pending Parties? (Reminder)": {
+      "main": [
+        [
+          {
+            "node": "Build Reminder Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Acceptance Status (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After Send Reminder Emails": {
+      "main": [
+        [
+          {
+            "node": "Check Acceptance Status (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Acceptance Status (Reminder)": {
+      "main": [
+        [
+          {
+            "node": "All Accepted? (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Reminder Days": {
+      "main": [
+        [
+          {
+            "node": "Get OAuth Token (Reminder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Party Items": {
+      "main": [
+        [
+          {
+            "node": "Send Agreement Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Agreement Email": {
+      "main": [
+        [
+          {
+            "node": "After Send Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reminder Items": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reminder Email": {
+      "main": [
+        [
+          {
+            "node": "After Send Reminder Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acceptance Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Acceptance Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Acceptance Payload": {
+      "main": [
+        [
+          {
+            "node": "Get Acceptance Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Acceptance Preview": {
+      "main": [
+        [
+          {
+            "node": "Merge Acceptance Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Acceptance Data": {
+      "main": [
+        [
+          {
+            "node": "Get OAuth Token (Acceptance)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get OAuth Token (Acceptance)": {
+      "main": [
+        [
+          {
+            "node": "Accept Agreement Party",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept Agreement Party": {
+      "main": [
+        [
+          {
+            "node": "Check Acceptance Status (Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Acceptance Status (Callback)": {
+      "main": [
+        [
+          {
+            "node": "All Accepted? (Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Accepted? (Callback)": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Expired? (Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expired? (Callback)": {
+      "main": [
+        [
+          {
+            "node": "Cancel Agreement (Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "358be949-e32e-4367-b7c6-faaf4dcf5905",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b5c03580beac688b106dd6e6ed227a7036702ae2a6f92447ab5f0acaa63cc6af"
+  },
+  "id": "wDZBzzxLmG5vWQtB",
+  "tags": [
+    {
+      "updatedAt": "2026-01-03T18:38:14.892Z",
+      "createdAt": "2026-01-03T18:38:14.892Z",
+      "id": "2IAzbVPlkbpaLLGh",
+      "name": "commission"
+    },
+    {
+      "updatedAt": "2026-01-03T18:38:14.894Z",
+      "createdAt": "2026-01-03T18:38:14.894Z",
+      "id": "VL0ND3hNpsSJpW3u",
+      "name": "agreement-acceptance"
+    }
+  ]
+}

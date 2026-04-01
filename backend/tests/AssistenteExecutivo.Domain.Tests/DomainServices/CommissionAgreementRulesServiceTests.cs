@@ -22,8 +22,8 @@ public class CommissionAgreementRulesServiceTests
     public void EnsureCanActivate_WhenSplitNotHundred_ShouldThrow()
     {
         var agreement = CreateAgreement();
-        var partyA = agreement.AddParty(Guid.NewGuid(), null, null, "Parte A", null, Percentage.Create(40), PartyRole.Agent, _clock);
-        var partyB = agreement.AddParty(Guid.NewGuid(), null, null, "Parte B", null, Percentage.Create(40), PartyRole.Agent, _clock);
+        var partyA = agreement.AddParty(Guid.NewGuid(), null, null, "Parte A", null, Percentage.Create(40), PartyRole.Agent, null, _clock);
+        var partyB = agreement.AddParty(Guid.NewGuid(), null, null, "Parte B", null, Percentage.Create(40), PartyRole.Agent, null, _clock);
         agreement.AcceptAgreement(partyA.PartyId, _clock);
         agreement.AcceptAgreement(partyB.PartyId, _clock);
         agreement.AddMilestone(Guid.NewGuid(), "Entrega", Money.Create(1000, "BRL"), DateTime.UtcNow.AddDays(1), _clock);

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getBffSession } from "@/lib/bff";
 import { getLetterheadByIdClient } from "@/lib/api/automationApiClient";
 import { EditarPapelTimbradoClient } from "./EditarPapelTimbradoClient";
 import { LayoutWrapper } from "@/components/LayoutWrapper";
@@ -25,12 +24,6 @@ export default function EditarPapelTimbradoPage() {
       if (!letterheadId) return;
 
       try {
-        const session = await getBffSession();
-        if (!session.authenticated) {
-          window.location.href = `/login?returnUrl=${encodeURIComponent(`/automacao/papeis-timbrados/${letterheadId}/editar`)}`;
-          return;
-        }
-
         const l = await getLetterheadByIdClient(letterheadId);
         if (!isMounted) return;
         setLetterhead(l);

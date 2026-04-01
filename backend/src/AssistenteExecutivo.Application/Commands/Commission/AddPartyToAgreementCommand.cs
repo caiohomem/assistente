@@ -13,5 +13,6 @@ public class AddPartyToAgreementCommand : IRequest<Unit>
     public string? Email { get; set; }
     public decimal SplitPercentage { get; set; }
     public PartyRole Role { get; set; }
+    public string? StripeAccountId { get; set; }
     public Guid RequestedBy { get; set; }
 }

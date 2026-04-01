@@ -62,6 +62,28 @@ public class EmailService : IEmailService
         }
     }
 
+    public async Task SendEmailAsync(
+        string recipientEmail,
+        string recipientName,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+        {
+            _logger.LogWarning("Email não enviado: destinatário vazio.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(htmlBody))
+        {
+            _logger.LogWarning("Email não enviado: assunto ou corpo vazios.");
+            return;
+        }
+
+        await SendEmailViaMailjetAsync(recipientEmail, recipientName, subject, htmlBody, cancellationToken);
+    }
+
     private async Task SendEmailViaMailjetAsync(
         string recipientEmail,
         string recipientName,
@@ -143,4 +165,3 @@ public class EmailService : IEmailService
         }
     }
 }
-

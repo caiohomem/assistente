@@ -69,6 +69,7 @@
     "NomeEmpresaObrigatorio": "Il nome dell'azienda è obbligatorio",
     "DomainObrigatorio": "Domain è obbligatorio",
     "MediaRefObrigatorio": "MediaRef è obbligatorio",
+    "PartyEmailObrigatorio": "Email della parte è obbligatoria",
     "TagMaximoCaracteres": "L'etichetta supera il numero massimo di caratteri",
     "IdempotencyKeyMinimoCaracteres": "IdempotencyKey deve avere un numero minimo di caratteri",
     "EmailInvalido": "Email non valida: {0}",
@@ -78,6 +79,7 @@
     "TamanhoArquivoInvalido": "Dimensione del file non valida",
     "CreditAmountNaoPodeSerNegativo": "CreditAmount non può essere negativo",
     "CreditAmountResultadoNegativo": "CreditAmount risulterebbe in un valore negativo",
+    "StripeErro": "Errore durante l'elaborazione del pagamento Stripe: {0}",
     "TelefoneInvalido": "Telefono non valido: {0}",
     "NomeMinimoCaracteres": "Il nome deve avere un numero minimo di caratteri"
   },

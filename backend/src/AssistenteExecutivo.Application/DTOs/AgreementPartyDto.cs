@@ -11,6 +11,7 @@ public class AgreementPartyDto
     public string? Email { get; set; }
     public decimal SplitPercentage { get; set; }
     public PartyRole Role { get; set; }
+    public string? StripeAccountId { get; set; }
     public bool HasAccepted { get; set; }
     public DateTime? AcceptedAt { get; set; }
 }
